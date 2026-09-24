@@ -214,6 +214,22 @@ r.post('/products/:id', uploadProduct, async (req, res, next) => {
   res.redirect(`/admin/products/${id}`);
 });
 
+r.post('/products/:id/gallery/:rowId/cover', async (req, res, next) => {
+  const id = lib.int(req.params.id);
+  const rowId = lib.int(req.params.rowId);
+  const product = await one('SELECT id, image_id FROM products WHERE id=$1', [id]);
+  if (!product) return next();
+  const row = await one('SELECT * FROM product_images WHERE id=$1 AND product_id=$2', [rowId, id]);
+  if (!row) return next();
+  await tx(async (c) => {
+    await c.query('UPDATE products SET image_id=$1, updated_at=now() WHERE id=$2', [row.image_id, id]);
+    if (product.image_id) await c.query('UPDATE product_images SET image_id=$1 WHERE id=$2', [product.image_id, rowId]);
+    else await c.query('DELETE FROM product_images WHERE id=$1', [rowId]);
+  });
+  notice(req, 'Foto de portada actualizada.');
+  res.redirect(`/admin/products/${id}`);
+});
+
 r.post('/products/:id/delete', async (req, res) => {
   const id = lib.int(req.params.id);
   const used = await one('SELECT 1 FROM order_items WHERE product_id=$1 LIMIT 1', [id]);

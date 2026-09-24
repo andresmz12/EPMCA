@@ -117,11 +117,13 @@ section.block.alt { background: var(--bg-2); border-top: 1px solid var(--line); 
 
 /* Product grid */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(214px, 1fr)); gap: 20px; }
-.card { display: flex; flex-direction: column; position: relative; }
+.card { display: flex; flex-direction: column; position: relative; border-radius: var(--r); transition: box-shadow .15s, transform .15s; }
+.card:hover { box-shadow: 0 10px 24px -12px rgba(17,18,20,.22); transform: translateY(-2px); }
 .card .pic { background: var(--kraft); border-radius: var(--r); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 14px; text-decoration: none; }
-.card .pic svg { width: 100%; height: 100%; }
+.card .pic svg { width: 100%; height: 100%; transition: transform .25s; }
 .card .pic.has-img { padding: 0; }
-.card .pic img { width: 100%; height: 100%; object-fit: cover; }
+.card .pic img { width: 100%; height: 100%; object-fit: cover; transition: transform .25s; }
+.card:hover .pic img, .card:hover .pic svg { transform: scale(1.05); }
 .card .body { padding: 14px 0 0; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .card .name { font-weight: 700; font-size: 18px; line-height: 1.25; text-decoration: none; }
 .card .name:hover { text-decoration: underline; }
@@ -129,7 +131,8 @@ section.block.alt { background: var(--bg-2); border-top: 1px solid var(--line); 
 .price { font-family: var(--head); font-weight: 700; font-size: 20px; }
 .price s { color: var(--muted); font-weight: 600; font-size: 15px; margin-left: 6px; }
 .price .per { font-family: "Source Sans 3", Arial, sans-serif; font-size: 15px; font-weight: 400; color: var(--muted); }
-.tagline { position: absolute; top: 10px; left: 10px; background: #fff; border: 1px solid var(--line); font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 2px; }
+.tagline { position: absolute; top: 10px; left: 10px; background: #fff; border: 1px solid var(--line); font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 2px; z-index: 1; }
+.badge-off { display: inline-block; background: var(--ok); color: #fff; font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 2px; margin-left: 8px; vertical-align: middle; }
 .stock { font-size: 14px; font-weight: 600; }
 .stock.low { color: var(--warn); }
 .stock.out { color: var(--err); }
@@ -158,10 +161,11 @@ table.sizes td a { font-weight: 700; }
 
 /* Product page */
 .pdp { display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; padding: 32px 0 64px; align-items: start; }
-.pdp .gallery { background: var(--kraft); border-radius: var(--r); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 40px; }
+.pdp .gallery { background: var(--kraft); border-radius: var(--r); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 40px; cursor: zoom-in; }
 .pdp .gallery.has-img { padding: 0; }
 .pdp .gallery svg { width: 100%; height: 100%; }
-.pdp .gallery img { width: 100%; height: 100%; object-fit: cover; }
+.pdp .gallery img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
+.pdp .gallery.has-img:hover img { transform: scale(1.35); }
 .thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .thumbs .thumb { width: 64px; height: 64px; padding: 0; border-radius: var(--r); overflow: hidden; background: var(--kraft); border: 2px solid transparent; cursor: pointer; }
 .thumbs .thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -172,6 +176,7 @@ table.sizes td a { font-weight: 700; }
 .specs { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 16px; }
 .specs th { text-align: left; font-weight: 600; color: var(--muted); width: 40%; padding: 9px 0; border-bottom: 1px solid var(--line-2); }
 .specs td { padding: 9px 0; border-bottom: 1px solid var(--line-2); }
+.buybox { border: 1px solid var(--line); border-radius: 10px; padding: 20px; box-shadow: 0 8px 28px -18px rgba(17,18,20,.35); }
 .buy { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; margin: 22px 0; }
 .buy .btn { flex: 1; min-width: 200px; }
 .prose p { white-space: pre-line; color: var(--ink-2); }

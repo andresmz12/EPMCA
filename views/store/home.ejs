@@ -48,7 +48,7 @@
         <div class="body">
           <a class="name" href="/products/<%= p.slug %>"><%= pt(p, 'name') %></a>
           <p class="desc"><%= pt(p, 'short_desc') %></p>
-          <div class="price"><%= money(p.price_cents) %><% if (p.compare_at_cents > p.price_cents) { %><s><%= money(p.compare_at_cents) %></s><% } %> <span class="per"><%= p.pack_size > 1 ? '' : t('per_box') %></span></div>
+          <div class="price"><%= money(p.price_cents) %><% if (p.compare_at_cents > p.price_cents) { %><s><%= money(p.compare_at_cents) %></s><span class="badge-off">-<%= Math.round((1 - p.price_cents / p.compare_at_cents) * 100) %>%</span><% } %> <span class="per"><%= p.pack_size > 1 ? '' : t('per_box') %></span></div>
           <%- include('_stock', { p }) %>
           <form method="post" action="/cart/add">
             <input type="hidden" name="product_id" value="<%= p.id %>">

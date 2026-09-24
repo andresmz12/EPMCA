@@ -47,10 +47,11 @@
       <% if (gallery && gallery.length) { %>
       <div class="gallerygrid">
         <% gallery.forEach(function (g) { %>
-        <label class="galitem">
+        <div class="galitem">
           <img src="/img/<%= g.image_id %>" alt="">
-          <span class="rm"><input type="checkbox" name="remove_gallery" value="<%= g.id %>"> Quitar</span>
-        </label>
+          <% if (p.id) { %><button type="submit" formaction="/admin/products/<%= p.id %>/gallery/<%= g.id %>/cover" formmethod="post" class="cover" title="Usar como foto principal">★</button><% } %>
+          <label class="rm"><input type="checkbox" name="remove_gallery" value="<%= g.id %>"> Quitar</label>
+        </div>
         <% }) %>
       </div>
       <% } %>
