@@ -94,6 +94,12 @@ CREATE TABLE IF NOT EXISTS admin_users (
   password_hash TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- New admins default to 'owner' with full access so existing single-admin
+-- stores aren't locked out; the "add admin" form defaults new invites to
+-- limited staff instead.
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'owner' CHECK (role IN ('owner','staff'));
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS perm_orders BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS perm_store BOOLEAN NOT NULL DEFAULT true;
 
 CREATE TABLE IF NOT EXISTS subscriptions (
   id SERIAL PRIMARY KEY,

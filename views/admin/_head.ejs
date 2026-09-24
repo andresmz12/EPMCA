@@ -12,12 +12,18 @@
 <aside class="side">
   <a class="brand" href="/admin"><img src="/logo-mark.png" alt=""><span>EMPA<b>CALO</b><small>ADMIN</small></span></a>
   <a class="nav <%= section==='dash'?'on':'' %>" href="/admin">Resumen</a>
+  <% if (can.orders) { %>
   <a class="nav <%= section==='orders'?'on':'' %>" href="/admin/orders">Pedidos</a>
-  <a class="nav <%= section==='products'?'on':'' %>" href="/admin/products">Productos</a>
   <a class="nav <%= section==='customers'?'on':'' %>" href="/admin/customers">Clientes</a>
+  <% } %>
+  <% if (can.store) { %>
+  <a class="nav <%= section==='products'?'on':'' %>" href="/admin/products">Productos</a>
   <a class="nav <%= section==='coupons'?'on':'' %>" href="/admin/coupons">Cupones</a>
   <a class="nav <%= section==='settings'?'on':'' %>" href="/admin/settings">Configuración</a>
+  <% } %>
+  <% if (can.users) { %>
   <a class="nav <%= section==='users'?'on':'' %>" href="/admin/users">Usuarios admin</a>
+  <% } %>
   <div class="spacer"></div>
   <a class="nav" href="/" target="_blank" rel="noopener">Ver tienda ↗</a>
   <form method="post" action="/admin/logout"><button>Cerrar sesión</button></form>

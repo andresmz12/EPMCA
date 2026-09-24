@@ -59,7 +59,7 @@ r.post('/login', async (req, res) => {
   }
   req.session.regenerate((err) => {
     if (err) throw err;
-    req.session.admin = { id: admin.id, email: admin.email };
+    req.session.admin = { id: admin.id, email: admin.email, role: admin.role, perm_orders: admin.perm_orders, perm_store: admin.perm_store };
     res.redirect('/admin');
   });
 });
@@ -70,6 +70,23 @@ r.post('/logout', (req, res) => {
 });
 
 r.use((req, res, next) => (req.session.admin ? next() : res.redirect('/admin/login')));
+
+r.use((req, res, next) => {
+  const a = req.session.admin;
+  res.locals.can = {
+    orders: a.role === 'owner' || a.perm_orders,
+    store: a.role === 'owner' || a.perm_store,
+    users: a.role === 'owner',
+  };
+  next();
+});
+
+function requirePerm(key) {
+  return (req, res, next) => {
+    if (res.locals.can[key]) return next();
+    res.status(403).send('No tienes permiso para ver esta sección. Pídele acceso a un administrador.');
+  };
+}
 
 const notice = (req, text, type = 'ok') => { req.session.notice = { text, type }; };
 const PAID = `status IN ('paid','shipped','delivered')`;
@@ -107,6 +124,7 @@ r.get('/', async (req, res) => {
 });
 
 /* ───────────── Products ───────────── */
+r.use('/products', requirePerm('store'));
 r.get('/products', async (req, res) => {
   const products = await all(`SELECT p.*, COALESCE((SELECT sum(oi.qty) FROM order_items oi JOIN orders o ON o.id=oi.order_id
                                 WHERE oi.product_id=p.id AND o.${PAID}),0)::int AS sold
@@ -236,6 +254,7 @@ r.post('/products/:id/delete', async (req, res) => {
 });
 
 /* ───────────── Orders ───────────── */
+r.use('/orders', requirePerm('orders'));
 function orderFilter(query) {
   const where = [], params = [];
   if (query.status && lib.STATUS_ES[query.status]) { params.push(query.status); where.push(`status=$${params.length}`); }
@@ -310,6 +329,7 @@ r.post('/orders/:id', async (req, res, next) => {
 });
 
 /* ───────────── Customers ───────────── */
+r.use(['/customers', '/customers.csv'], requirePerm('orders'));
 r.get('/customers', async (req, res) => {
   const search = String(req.query.q || '').trim().toLowerCase();
   const params = [];
@@ -335,6 +355,7 @@ r.get('/customers.csv', async (req, res) => {
 });
 
 /* ───────────── Coupons ───────────── */
+r.use('/coupons', requirePerm('store'));
 r.get('/coupons', async (req, res) => {
   const list = await all('SELECT * FROM coupons ORDER BY created_at DESC');
   res.render('admin/coupons', { section: 'coupons', list, error: null, form: {} });
@@ -373,6 +394,7 @@ r.post('/coupons/:id/delete', async (req, res) => {
 });
 
 /* ───────────── Settings ───────────── */
+r.use('/settings', requirePerm('store'));
 const SETTING_FIELDS = ['store_name', 'support_email', 'support_phone', 'pickup_address', 'announcement_en', 'announcement_es'];
 r.get('/settings', (req, res) => res.render('admin/settings', { section: 'settings' }));
 r.post('/settings', upload.single('hero'), async (req, res) => {
@@ -397,23 +419,30 @@ r.post('/settings', upload.single('hero'), async (req, res) => {
 });
 
 /* ───────────── Admin users ───────────── */
+r.use('/users', requirePerm('users'));
+
 r.get('/users', async (req, res) => {
-  const list = await all('SELECT id, email, created_at FROM admin_users ORDER BY created_at');
+  const list = await all('SELECT id, email, role, perm_orders, perm_store, created_at FROM admin_users ORDER BY created_at');
   res.render('admin/users', { section: 'users', list, error: null });
 });
 
 r.post('/users', async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
+  const role = req.body.role === 'owner' ? 'owner' : 'staff';
+  const permOrders = role === 'owner' || req.body.perm_orders === 'on';
+  const permStore = role === 'owner' || req.body.perm_store === 'on';
   let error = null;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) error = 'Ingresa un correo válido.';
   else if (password.length < 8) error = 'La contraseña debe tener al menos 8 caracteres.';
+  else if (role === 'staff' && !permOrders && !permStore) error = 'Elige al menos un permiso (Pedidos o Tienda).';
   else if (await one('SELECT 1 FROM admin_users WHERE email=$1', [email])) error = 'Ya existe un admin con ese correo.';
   if (error) {
-    const list = await all('SELECT id, email, created_at FROM admin_users ORDER BY created_at');
+    const list = await all('SELECT id, email, role, perm_orders, perm_store, created_at FROM admin_users ORDER BY created_at');
     return res.status(400).render('admin/users', { section: 'users', list, error });
   }
-  await q('INSERT INTO admin_users(email, password_hash) VALUES($1,$2)', [email, auth.hashPassword(password)]);
+  await q('INSERT INTO admin_users(email, password_hash, role, perm_orders, perm_store) VALUES($1,$2,$3,$4,$5)',
+    [email, auth.hashPassword(password), role, permOrders, permStore]);
   notice(req, `Admin ${email} creado.`);
   res.redirect('/admin/users');
 });
