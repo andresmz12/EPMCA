@@ -28,9 +28,40 @@
     </nav>
     <div class="right">
       <span class="lang"><a href="?lang=en" class="<%= lang==='en'?'on':'' %>">EN</a> / <a href="?lang=es" class="<%= lang==='es'?'on':'' %>">ES</a></span>
+      <a class="acct-link" href="<%= customer ? '/account' : '/account/login' %>"><%= customer ? t('nav_account') : t('nav_login') %></a>
       <a class="cart-btn" href="/cart"><span class="lbl"><%= t('nav_cart') %></span><span class="n"><%= cartCount %></span></a>
     </div>
   </div>
 </header>
 <main>
 <% if (flash) { %><div class="wrap"><div class="flash <%= flash.type %>"><%= t(flash.key) %></div></div><% } %>
+<% if (cartAdded) { %>
+<div class="modal-back" id="added-modal">
+  <div class="modal-box">
+    <button type="button" class="modal-x" id="added-close" aria-label="<%= t('close') %>">&times;</button>
+    <div class="modal-added-head">
+      <span class="check">&#10003;</span><h3><%= t('modal_added_title') %></h3>
+    </div>
+    <div class="modal-added-item">
+      <div class="thumb"><% if (cartAdded.image_id) { %><img src="/img/<%= cartAdded.image_id %>" alt=""><% } else { %><%- boxSvg('') %><% } %></div>
+      <div>
+        <div class="name"><%= (lang === 'es' && cartAdded.name_es) || cartAdded.name %></div>
+        <div class="muted small"><%= t('qty') %>: <%= cartAdded.qty %> &middot; <%= money(cartAdded.price_cents * cartAdded.qty) %></div>
+      </div>
+    </div>
+    <div class="modal-added-actions">
+      <button type="button" class="btn ghost" id="added-continue"><%= t('modal_continue') %></button>
+      <a class="btn orange" href="/cart"><%= t('modal_view_cart', { n: cartCount }) %></a>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var m = document.getElementById('added-modal');
+  function close() { m.remove(); }
+  document.getElementById('added-close').addEventListener('click', close);
+  document.getElementById('added-continue').addEventListener('click', close);
+  m.addEventListener('click', function (e) { if (e.target === m) close(); });
+})();
+</script>
+<% } %>

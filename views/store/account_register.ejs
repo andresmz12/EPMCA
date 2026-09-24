@@ -1,0 +1,17 @@
+<%- include('_head') %>
+<div class="wrap page">
+  <div class="authbox">
+    <h1 style="font-size:28px"><%= t('account_create') %></h1>
+    <p class="muted small"><%= t('account_create_sub') %></p>
+    <% if (error) { %><div class="flash err"><%= error %></div><% } %>
+    <form method="post" action="/account/register" class="panel">
+      <div class="field"><label for="name"><%= t('full_name') %></label><input id="name" name="name" required autocomplete="name" value="<%= form.name || '' %>"></div>
+      <div class="field"><label for="email"><%= t('email') %></label><input id="email" type="email" name="email" required autocomplete="email" value="<%= form.email || '' %>"></div>
+      <div class="field"><label for="password"><%= t('password') %></label><input id="password" type="password" name="password" required minlength="8" autocomplete="new-password"></div>
+      <div class="hint" style="margin:-8px 0 14px"><%= t('account_password_hint') %></div>
+      <button class="btn orange block"><%= t('account_create') %></button>
+    </form>
+    <p class="muted small" style="margin-top:16px"><%= t('account_has_account') %> <a class="textlink" href="/account/login"><%= t('account_login') %></a></p>
+  </div>
+</div>
+<%- include('_foot') %>

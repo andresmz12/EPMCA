@@ -1,17 +1,11 @@
 const express = require('express');
-const crypto = require('crypto');
 const multer = require('multer');
 const { q, one, all, tx } = require('../db');
 const lib = require('../lib');
+const auth = require('../auth');
 const orders = require('../orders');
 
 const r = express.Router();
-const isProd = process.env.NODE_ENV === 'production';
-
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || (isProd ? '' : 'admin@empacalo.net')).toLowerCase();
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (isProd ? '' : 'admin123');
-if (!ADMIN_EMAIL || !ADMIN_PASSWORD) console.warn('⚠️  Define ADMIN_EMAIL y ADMIN_PASSWORD para poder entrar al panel.');
-else if (!process.env.ADMIN_PASSWORD) console.warn('⚠️  Usando credenciales de admin de desarrollo (admin@empacalo.net / admin123).');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -23,12 +17,6 @@ const uploadProduct = multer({
   limits: { fileSize: 3 * 1024 * 1024, files: 9 },
   fileFilter: (req, file, cb) => cb(null, /^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)),
 }).fields([{ name: 'image', maxCount: 1 }, { name: 'gallery', maxCount: 8 }]);
-
-const safeEqual = (a, b) => {
-  const x = crypto.createHash('sha256').update(String(a)).digest();
-  const y = crypto.createHash('sha256').update(String(b)).digest();
-  return crypto.timingSafeEqual(x, y);
-};
 
 // Basic brute-force protection: 8 failed attempts per IP per 15 min.
 const attempts = new Map();
@@ -59,18 +47,19 @@ r.use((req, res, next) => {
 
 r.get('/login', (req, res) => res.render('admin/login', { error: null }));
 
-r.post('/login', (req, res) => {
+r.post('/login', async (req, res) => {
   const ip = req.ip;
   if (tooMany(ip)) return res.status(429).render('admin/login', { error: 'Demasiados intentos. Espera 15 minutos.' });
   const email = String(req.body.email || '').trim().toLowerCase();
-  const ok = ADMIN_EMAIL && ADMIN_PASSWORD && safeEqual(email, ADMIN_EMAIL) && safeEqual(req.body.password || '', ADMIN_PASSWORD);
+  const admin = email && (await one('SELECT * FROM admin_users WHERE email=$1', [email]));
+  const ok = admin && auth.verifyPassword(req.body.password || '', admin.password_hash);
   if (!ok) {
     attempts.get(ip).push(Date.now());
     return res.status(401).render('admin/login', { error: 'Correo o contraseña incorrectos.' });
   }
   req.session.regenerate((err) => {
     if (err) throw err;
-    req.session.admin = { email };
+    req.session.admin = { id: admin.id, email: admin.email };
     res.redirect('/admin');
   });
 });
@@ -405,6 +394,44 @@ r.post('/settings', upload.single('hero'), async (req, res) => {
   if (oldHero && values.hero_image_id !== undefined && values.hero_image_id !== oldHero) await q('DELETE FROM images WHERE id=$1', [lib.int(oldHero)]);
   notice(req, 'Configuración guardada.');
   res.redirect('/admin/settings');
+});
+
+/* ───────────── Admin users ───────────── */
+r.get('/users', async (req, res) => {
+  const list = await all('SELECT id, email, created_at FROM admin_users ORDER BY created_at');
+  res.render('admin/users', { section: 'users', list, error: null });
+});
+
+r.post('/users', async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+  let error = null;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) error = 'Ingresa un correo válido.';
+  else if (password.length < 8) error = 'La contraseña debe tener al menos 8 caracteres.';
+  else if (await one('SELECT 1 FROM admin_users WHERE email=$1', [email])) error = 'Ya existe un admin con ese correo.';
+  if (error) {
+    const list = await all('SELECT id, email, created_at FROM admin_users ORDER BY created_at');
+    return res.status(400).render('admin/users', { section: 'users', list, error });
+  }
+  await q('INSERT INTO admin_users(email, password_hash) VALUES($1,$2)', [email, auth.hashPassword(password)]);
+  notice(req, `Admin ${email} creado.`);
+  res.redirect('/admin/users');
+});
+
+r.post('/users/:id/delete', async (req, res) => {
+  const id = lib.int(req.params.id);
+  if (id === req.session.admin.id) {
+    notice(req, 'No puedes eliminar tu propia cuenta mientras tienes sesión iniciada.', 'err');
+    return res.redirect('/admin/users');
+  }
+  const total = (await one('SELECT count(*)::int AS n FROM admin_users')).n;
+  if (total <= 1) {
+    notice(req, 'Debe quedar al menos un admin.', 'err');
+    return res.redirect('/admin/users');
+  }
+  await q('DELETE FROM admin_users WHERE id=$1', [id]);
+  notice(req, 'Admin eliminado.');
+  res.redirect('/admin/users');
 });
 
 module.exports = r;

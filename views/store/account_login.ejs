@@ -1,0 +1,14 @@
+<%- include('_head') %>
+<div class="wrap page">
+  <div class="authbox">
+    <h1 style="font-size:28px"><%= t('account_login') %></h1>
+    <% if (error) { %><div class="flash err"><%= error %></div><% } %>
+    <form method="post" action="/account/login" class="panel">
+      <div class="field"><label for="email"><%= t('email') %></label><input id="email" type="email" name="email" required autocomplete="email" autofocus></div>
+      <div class="field"><label for="password"><%= t('password') %></label><input id="password" type="password" name="password" required autocomplete="current-password"></div>
+      <button class="btn orange block"><%= t('account_login') %></button>
+    </form>
+    <p class="muted small" style="margin-top:16px"><%= t('account_no_account') %> <a class="textlink" href="/account/register"><%= t('account_create') %></a></p>
+  </div>
+</div>
+<%- include('_foot') %>

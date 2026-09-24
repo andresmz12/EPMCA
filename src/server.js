@@ -57,10 +57,13 @@ app.use(async (req, res, next) => {
     settings, lang, t: makeT(lang), money: lib.money, path: req.path,
     cartCount: Object.values(cart).reduce((s, n) => s + (Number(n) || 0), 0),
     flash: req.session.flash || null, stripeEnabled: payments.enabled, boxSvg: lib.boxSvg,
+    customer: req.session.customer || null, US_STATES: lib.US_STATES,
+    cartAdded: req.session.cartAdded || null,
     // Product text in the visitor's language (falls back to English)
     pt: (p, f) => (lang === 'es' && p[f + '_es']) || p[f],
   });
   delete req.session.flash;
+  delete req.session.cartAdded;
   next();
 });
 

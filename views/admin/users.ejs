@@ -1,0 +1,29 @@
+<%- include('_head') %>
+<div class="top"><h1>Usuarios admin</h1></div>
+<div class="grid cols2">
+  <div class="card"><div class="table-wrap"><table>
+    <thead><tr><th>Correo</th><th>Desde</th><th></th></tr></thead>
+    <tbody>
+    <% list.forEach(function (u) { %>
+    <tr>
+      <td><b><%= u.email %></b><% if (u.id === admin.id) { %> <span class="pill on">Tú</span><% } %></td>
+      <td class="small"><%= fmtDate(u.created_at, false) %></td>
+      <td class="num">
+        <% if (u.id !== admin.id) { %>
+        <form method="post" action="/admin/users/<%= u.id %>/delete" style="display:inline" data-confirm="¿Eliminar el acceso de <%= u.email %>?"><button class="btn danger sm">Eliminar</button></form>
+        <% } %>
+      </td>
+    </tr>
+    <% }) %>
+    </tbody>
+  </table></div></div>
+  <form class="card" method="post" action="/admin/users">
+    <h2>Agregar admin</h2>
+    <p class="hint" style="margin-top:-6px">Dale acceso al panel a otra persona de tu equipo con su propio correo y contraseña.</p>
+    <% if (error) { %><div class="notice err"><%= error %></div><% } %>
+    <div class="field"><label>Correo</label><input name="email" type="email" required placeholder="nombre@empacalo.net"></div>
+    <div class="field"><label>Contraseña</label><input name="password" type="password" required minlength="8" placeholder="Mínimo 8 caracteres"></div>
+    <button class="btn orange" style="width:100%;justify-content:center">Crear admin</button>
+  </form>
+</div>
+<%- include('_foot') %>

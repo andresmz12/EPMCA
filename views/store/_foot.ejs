@@ -23,6 +23,9 @@
   </div>
 </footer>
 <script>
+document.querySelectorAll('form[data-confirm]').forEach(function (f) {
+  f.addEventListener('submit', function (e) { if (!window.confirm(f.dataset.confirm)) e.preventDefault(); });
+});
 document.querySelectorAll('[data-step]').forEach(function (b) {
   b.addEventListener('click', function () {
     var i = b.parentNode.querySelector('input'); var v = (parseInt(i.value, 10) || 0) + parseInt(b.dataset.step, 10);

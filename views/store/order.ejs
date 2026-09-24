@@ -3,7 +3,20 @@
   <div class="thanks">
     <h1 style="font-size:clamp(30px,4vw,44px)"><%= t('thanks_title', { name: order.name.split(' ')[0] }) %></h1>
     <p class="lead" style="font-size:18px"><%= t('thanks_sub', { number: order.number }) %></p>
-    <p><span class="status-pill <%= order.status %>"><%= t('st_' + order.status) %></span></p>
+    <% const steps = ['pending', 'paid', 'shipped', 'delivered']; const stepIdx = steps.indexOf(order.status); %>
+    <% if (order.status === 'cancelled') { %>
+      <p><span class="status-pill cancelled"><%= t('st_cancelled') %></span></p>
+    <% } else { %>
+      <div class="tracker">
+        <% steps.forEach(function (s, i) { %>
+        <div class="tstep <%= i <= stepIdx ? 'done' : '' %> <%= i === stepIdx ? 'current' : '' %>">
+          <span class="tdot"><%= i < stepIdx ? '✓' : i + 1 %></span>
+          <span class="tlabel"><%= t('st_' + s) %></span>
+        </div>
+        <% if (i < steps.length - 1) { %><span class="tline <%= i < stepIdx ? 'done' : '' %>"></span><% } %>
+        <% }) %>
+      </div>
+    <% } %>
     <p class="muted">
       <% if (order.status === 'paid') { %><%= t('thanks_paid') %><% } else if (order.status === 'pending') { %><%= t('thanks_pending', { email: order.email }) %><% } %>
       <% if (order.fulfillment === 'pickup' && order.status !== 'cancelled') { %><br><%= t('thanks_pickup') %><% } %>

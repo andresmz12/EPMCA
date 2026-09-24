@@ -1,0 +1,64 @@
+<%- include('_head') %>
+<div class="wrap page">
+  <div class="top" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+    <h1 style="font-size:28px;margin:0"><%= t('account_title') %></h1>
+    <form method="post" action="/account/logout"><button class="linkbtn"><%= t('account_logout') %></button></form>
+  </div>
+  <div class="two">
+    <div>
+      <% if (subJustCreated) { %><div class="flash ok"><%= t('sub_created') %></div><% } %>
+      <% if (subs.length) { %>
+      <h2 style="font-size:20px"><%= t('sub_my_subs') %></h2>
+      <% subs.forEach(function (s) { %>
+      <div class="panel" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+          <div>
+            <b><%= s.interval === 'week' ? t('sub_weekly') : t('sub_monthly') %></b>
+            <div class="muted small"><%= s.items.map(function (it) { return it.qty + '× ' + it.name; }).join(', ') %></div>
+          </div>
+          <span class="pill <%= s.status === 'active' ? 'on' : 'off' %>"><%= s.status === 'active' ? t('sub_active') : t('sub_cancelled_status') %></span>
+          <b><%= money(s.total_cents) %></b>
+          <% if (s.status === 'active') { %>
+          <form method="post" action="/account/subscriptions/<%= s.id %>/cancel" data-confirm="<%= t('sub_cancel_confirm') %>"><button class="linkbtn"><%= t('sub_cancel') %></button></form>
+          <% } %>
+        </div>
+      </div>
+      <% }) %>
+      <% } %>
+      <h2 style="font-size:20px"><%= t('account_orders') %></h2>
+      <% if (!orders.length) { %>
+        <p class="muted"><%= t('account_no_orders') %> <a class="textlink" href="/#shop"><%= t('continue_shopping') %></a></p>
+      <% } %>
+      <% orders.forEach(function (o) { %>
+      <div class="panel" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+          <div>
+            <a class="textlink" style="font-weight:700" href="/order/<%= o.number %>"><%= o.number %></a>
+            <div class="muted small"><%= new Date(o.created_at).toLocaleDateString(lang === 'es' ? 'es-US' : 'en-US', { dateStyle: 'medium' }) %></div>
+          </div>
+          <span class="status-pill <%= o.status %>"><%= t('st_' + o.status) %></span>
+          <b><%= money(o.total_cents) %></b>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+    <aside class="panel gray">
+      <h3><%= t('account_profile') %></h3>
+      <form method="post" action="/account/address">
+        <div class="field"><label><%= t('full_name') %></label><input name="name" value="<%= customer.name || '' %>"></div>
+        <div class="field"><label><%= t('phone') %></label><input name="phone" type="tel" value="<%= customer.phone || '' %>"></div>
+        <div class="field"><label><%= t('address') %></label><input name="address1" value="<%= customer.address1 || '' %>"></div>
+        <div class="field"><label><%= t('address2') %></label><input name="address2" value="<%= customer.address2 || '' %>"></div>
+        <div class="row3">
+          <div class="field"><label><%= t('city') %></label><input name="city" value="<%= customer.city || '' %>"></div>
+          <div class="field"><label><%= t('state') %></label>
+            <select name="state"><option value=""><%= t('select_state') %></option><% US_STATES.forEach(function (s) { %><option <%= customer.state === s ? 'selected' : '' %>><%= s %></option><% }) %></select></div>
+          <div class="field"><label><%= t('zip') %></label><input name="zip" value="<%= customer.zip || '' %>"></div>
+        </div>
+        <div class="hint" style="margin-bottom:10px"><%= t('account_address_hint') %></div>
+        <button class="btn orange block"><%= t('account_save') %></button>
+      </form>
+    </aside>
+  </div>
+</div>
+<%- include('_foot') %>

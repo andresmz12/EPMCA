@@ -39,6 +39,23 @@
       <a class="btn orange block <%= priced.lines.some(l => l.overStock) ? 'disabled' : '' %>" href="/checkout" <%= priced.lines.some(l => l.overStock) ? 'aria-disabled=true style=pointer-events:none;opacity:.45' : '' %>><%= t('checkout') %></a>
     </aside>
   </div>
+  <% if (stripeEnabled && !priced.lines.some(l => l.overStock)) { %>
+  <div class="panel" style="margin-top:20px">
+    <h3><%= t('sub_title') %></h3>
+    <p class="muted small" style="margin-bottom:14px"><%= t('sub_sub') %></p>
+    <% if (customer) { %>
+    <form method="post" action="/account/subscribe" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <select name="interval" style="width:auto">
+        <option value="week"><%= t('sub_weekly') %></option>
+        <option value="month" selected><%= t('sub_monthly') %></option>
+      </select>
+      <button class="btn ghost"><%= t('sub_start') %></button>
+    </form>
+    <% } else { %>
+      <a class="btn ghost" href="/account/login"><%= t('sub_login_first') %></a>
+    <% } %>
+  </div>
+  <% } %>
   <% } %>
 </div>
 <%- include('_foot') %>

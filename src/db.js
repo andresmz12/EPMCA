@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { hashPassword } = require('./auth');
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -80,6 +81,55 @@ CREATE TABLE IF NOT EXISTS customers (
   phone TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS address1 TEXT NOT NULL DEFAULT '';
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS address2 TEXT NOT NULL DEFAULT '';
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS city TEXT NOT NULL DEFAULT '';
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS state TEXT NOT NULL DEFAULT '';
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS zip TEXT NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS admin_users (
+  id SERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id SERIAL PRIMARY KEY,
+  customer_id INT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  stripe_subscription_id TEXT UNIQUE NOT NULL,
+  interval TEXT NOT NULL CHECK (interval IN ('week','month')),
+  items JSONB NOT NULL,
+  subtotal_cents INT NOT NULL DEFAULT 0,
+  shipping_cents INT NOT NULL DEFAULT 0,
+  tax_cents INT NOT NULL DEFAULT 0,
+  total_cents INT NOT NULL DEFAULT 0,
+  fulfillment TEXT NOT NULL DEFAULT 'delivery' CHECK (fulfillment IN ('delivery','pickup')),
+  address1 TEXT NOT NULL DEFAULT '',
+  address2 TEXT NOT NULL DEFAULT '',
+  city TEXT NOT NULL DEFAULT '',
+  state TEXT NOT NULL DEFAULT '',
+  zip TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','cancelled')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  cancelled_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS subscriptions_customer_idx ON subscriptions(customer_id);
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS subtotal_cents INT NOT NULL DEFAULT 0;
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS shipping_cents INT NOT NULL DEFAULT 0;
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS tax_cents INT NOT NULL DEFAULT 0;
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS total_cents INT NOT NULL DEFAULT 0;
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '';
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS subscription_id INT REFERENCES subscriptions(id) ON DELETE SET NULL;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_invoice_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_stripe_invoice_uidx ON orders(stripe_invoice_id) WHERE stripe_invoice_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS coupons (
   id SERIAL PRIMARY KEY,
@@ -200,6 +250,13 @@ async function migrate() {
       `INSERT INTO coupons(code,type,value,min_subtotal_cents) VALUES('WELCOME10','percent',10,0) ON CONFLICT DO NOTHING`
     );
     console.log('Base de datos inicializada con productos de ejemplo.');
+  }
+  const noAdmins = (await pool.query('SELECT count(*)::int AS n FROM admin_users')).rows[0].n === 0;
+  const envEmail = (process.env.ADMIN_EMAIL || (process.env.NODE_ENV === 'production' ? '' : 'admin@empacalo.net')).toLowerCase();
+  const envPassword = process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'admin123');
+  if (noAdmins && envEmail && envPassword) {
+    await pool.query('INSERT INTO admin_users(email, password_hash) VALUES($1,$2) ON CONFLICT (email) DO NOTHING', [envEmail, hashPassword(envPassword)]);
+    console.log(`Admin inicial creado: ${envEmail}`);
   }
 }
 

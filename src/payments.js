@@ -2,6 +2,7 @@
 // en modo "pago manual" y tú confirmas el pago desde el admin.
 const { one } = require('./db');
 const orders = require('./orders');
+const subscriptions = require('./subscriptions');
 
 const key = process.env.STRIPE_SECRET_KEY;
 const stripe = key ? require('stripe')(key) : null;
@@ -62,6 +63,18 @@ async function webhook(req, res) {
     return res.status(400).send(`Webhook error: ${e.message}`);
   }
   const s = event.data.object;
+  if (event.type === 'checkout.session.completed' && s.mode === 'subscription') {
+    await subscriptions.handleCheckoutCompleted(s);
+    return res.json({ received: true });
+  }
+  if (event.type === 'invoice.paid') {
+    await subscriptions.handleInvoicePaid(s);
+    return res.json({ received: true });
+  }
+  if (event.type === 'customer.subscription.deleted') {
+    await subscriptions.handleSubscriptionDeleted(s);
+    return res.json({ received: true });
+  }
   const orderId = Number(s.metadata && s.metadata.order_id);
   if (orderId) {
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
