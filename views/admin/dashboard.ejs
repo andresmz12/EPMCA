@@ -17,6 +17,14 @@
   <div class="seg"><% [7,30,90].forEach(function (d) { %><a class="<%= days===d?'on':'' %>" href="?d=<%= d %>"><%= d %> días</a><% }) %></div>
 </div>
 
+<form class="card reportbar" method="get" action="/admin/reports/sales.pdf">
+  <b>Descargar reporte de ventas</b>
+  <label>Desde <input type="date" name="from" value="<%= range.from %>" required></label>
+  <label>Hasta <input type="date" name="to" value="<%= range.to %>" required></label>
+  <button class="btn ghost sm">PDF</button>
+  <button class="btn ghost sm" formaction="/admin/reports/sales.xlsx">Excel</button>
+</form>
+
 <div class="grid kpis">
   <div class="card kpi"><div class="lbl">Ingresos</div><div class="val"><%= money(cur.revenue) %></div><div class="delta <%= deltaCls(delta.revenue) %>"><%= deltaTxt(delta.revenue) %></div></div>
   <div class="card kpi"><div class="lbl">Pedidos</div><div class="val"><%= cur.orders %></div><div class="delta <%= deltaCls(delta.orders) %>"><%= deltaTxt(delta.orders) %></div></div>

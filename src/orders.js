@@ -4,6 +4,55 @@ const lib = require('./lib');
 class StockError extends Error {}
 class CouponUsedError extends Error {}
 
+// Guest/admin-entered orders may only refresh the profile of a guest record;
+// anyone can type any email, so a registered account's name/phone is never overwritten.
+async function upsertGuestCustomer(c, form) {
+  const { rows: [cust] } = await c.query(
+    `INSERT INTO customers(email,name,phone) VALUES(lower($1),$2,$3)
+     ON CONFLICT (email) DO UPDATE SET
+       name  = CASE WHEN customers.password_hash IS NULL THEN EXCLUDED.name ELSE customers.name END,
+       phone = CASE WHEN customers.password_hash IS NULL THEN COALESCE(NULLIF(EXCLUDED.phone,''), customers.phone) ELSE customers.phone END
+     RETURNING id`, [form.email, form.name, form.phone]);
+  return cust;
+}
+
+/**
+ * Order entered by staff (phone, walk-in, WhatsApp...). Prices can differ from
+ * the catalog; stock is reserved like a web order unless allowOversell is set.
+ */
+async function createManualOrder({ lines, form, amounts, paymentMethod, status, adminEmail, allowOversell }) {
+  return tx(async (c) => {
+    const ids = lines.map((l) => l.product_id);
+    const { rows: locked } = await c.query('SELECT id, name, stock FROM products WHERE id = ANY($1::int[]) FOR UPDATE', [ids]);
+    const byId = Object.fromEntries(locked.map((r) => [r.id, r]));
+    for (const l of lines) {
+      const p = byId[l.product_id];
+      if (!p) throw new StockError('?');
+      if (!allowOversell && p.stock < l.qty) throw new StockError(`${p.name} (hay ${p.stock})`);
+    }
+    for (const l of lines) {
+      await c.query('UPDATE products SET stock = GREATEST(stock - $1, 0), updated_at = now() WHERE id=$2', [l.qty, l.product_id]);
+    }
+    const cust = form.email ? await upsertGuestCustomer(c, form) : null;
+    const subtotal = lines.reduce((s, l) => s + l.unit_price_cents * l.qty, 0);
+    const discount = Math.min(amounts.discount, subtotal);
+    const total = subtotal - discount + amounts.shipping + amounts.tax;
+    const paid = ['paid', 'shipped', 'delivered'].includes(status);
+    const { rows: [order] } = await c.query(
+      `INSERT INTO orders(number, access_token, customer_id, email, name, phone, fulfillment, address1, address2, city, state, zip,
+         subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, status, payment_method, notes, source, created_by, paid_at)
+       VALUES($1,$2,$3,lower($4),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,'admin',$21, ${paid ? 'now()' : 'NULL'}) RETURNING *`,
+      [lib.orderNumber(), lib.token(), cust ? cust.id : null, form.email, form.name, form.phone, form.fulfillment,
+       form.address1, form.address2, form.city, form.state, form.zip,
+       subtotal, discount, amounts.shipping, amounts.tax, total, status, paymentMethod, form.notes, adminEmail]);
+    for (const l of lines) {
+      await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty) VALUES($1,$2,$3,$4,$5)',
+        [order.id, l.product_id, byId[l.product_id].name, l.unit_price_cents, l.qty]);
+    }
+    return order;
+  });
+}
+
 /**
  * Creates an order atomically: locks product rows, re-checks stock, reserves it,
  * counts the coupon use and upserts the customer.
@@ -25,14 +74,7 @@ async function createOrder({ priced, form, paymentMethod, customerId = null }) {
         'UPDATE coupons SET uses = uses + 1 WHERE id=$1 AND (max_uses IS NULL OR uses < max_uses)', [priced.coupon.id]);
       if (!rowCount) throw new StockError(); // coupon ran out in a race
     }
-    // Guest checkouts may only refresh the profile of a guest record; anyone can
-    // type any email, so a registered account's name/phone is never overwritten.
-    const cust = customerId ? { id: customerId } : (await c.query(
-      `INSERT INTO customers(email,name,phone) VALUES(lower($1),$2,$3)
-       ON CONFLICT (email) DO UPDATE SET
-         name  = CASE WHEN customers.password_hash IS NULL THEN EXCLUDED.name ELSE customers.name END,
-         phone = CASE WHEN customers.password_hash IS NULL THEN COALESCE(NULLIF(EXCLUDED.phone,''), customers.phone) ELSE customers.phone END
-       RETURNING id`, [form.email, form.name, form.phone])).rows[0];
+    const cust = customerId ? { id: customerId } : await upsertGuestCustomer(c, form);
 
     if (priced.coupon && priced.coupon.once_per_customer) {
       const { rowCount } = await c.query(
@@ -77,4 +119,4 @@ async function cancelOrder(orderId) {
   });
 }
 
-module.exports = { createOrder, markPaid, cancelOrder, StockError, CouponUsedError };
+module.exports = { createOrder, createManualOrder, markPaid, cancelOrder, StockError, CouponUsedError };

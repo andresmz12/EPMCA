@@ -82,8 +82,14 @@ async function priceCart(cart, couponCode, settings, fulfillment = 'delivery') {
 
 const STATUS_ES = { pending: 'Pendiente', paid: 'Pagado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado' };
 const STATUS_EN = { pending: 'Awaiting payment', paid: 'Paid — preparing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' };
+// stripe/manual come from the website; the rest are for orders entered in the admin.
+const PAYMENT_ES = {
+  stripe: 'Tarjeta en línea (Stripe)', manual: 'Pago manual (web)', cash: 'Efectivo', zelle: 'Zelle',
+  transfer: 'Transferencia', card: 'Tarjeta en persona', check: 'Cheque', other: 'Otro',
+};
+const MANUAL_PAYMENTS = ['cash', 'zelle', 'transfer', 'card', 'check', 'other'];
 
-module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN };
+module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN, PAYMENT_ES, MANUAL_PAYMENTS };
 
 /**
  * Draws an isometric cardboard box to scale from a "24 × 30 × 36" style string.

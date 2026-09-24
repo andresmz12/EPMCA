@@ -12,9 +12,11 @@
     "compression": "^1.8.2",
     "connect-pg-simple": "^10.0.0",
     "ejs": "^6.0.1",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "multer": "^2.4.0",
+    "pdfkit": "^0.20.2",
     "pg": "^8.23.0",
     "stripe": "^22.6.2"
   },

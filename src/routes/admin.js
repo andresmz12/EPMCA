@@ -4,6 +4,7 @@ const { q, one, all, tx, clearSettingsCache } = require('../db');
 const lib = require('../lib');
 const auth = require('../auth');
 const orders = require('../orders');
+const reports = require('../reports');
 const { limiter } = require('../ratelimit');
 
 const r = express.Router();
@@ -36,6 +37,7 @@ const loginLimit = limiter({ max: 8, windowMs: 15 * 60 * 1000 });
 
 r.use((req, res, next) => {
   res.locals.STATUS = lib.STATUS_ES;
+  res.locals.PAYMENT = lib.PAYMENT_ES;
   res.locals.fmtDate = (d, time = true) => d ? new Date(d).toLocaleString('es-US', { timeZone: 'America/Chicago', dateStyle: 'medium', ...(time ? { timeStyle: 'short' } : {}) }) : '—';
   res.locals.notice = req.session.notice || null;
   delete req.session.notice;
@@ -120,12 +122,20 @@ r.get('/', async (req, res) => {
   const recent = await all('SELECT * FROM orders ORDER BY created_at DESC LIMIT 8');
   const lowStock = await all('SELECT id, name, stock FROM products WHERE active AND stock <= 20 ORDER BY stock ASC LIMIT 6');
   const pct = (a, b) => (b ? Math.round(((a - b) / b) * 100) : null);
+  const to = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+  const fromD = new Date(`${to}T12:00:00Z`);
+  fromD.setUTCDate(fromD.getUTCDate() - (days - 1));
   res.render('admin/dashboard', {
     section: 'dash', days, cur, newCustomers, pending, series, top, recent, lowStock,
+    range: { from: fromD.toISOString().slice(0, 10), to },
     aov: cur.orders ? Math.round(cur.revenue / cur.orders) : 0,
     delta: { revenue: pct(cur.revenue, prev.revenue), orders: pct(cur.orders, prev.orders) },
   });
 });
+
+/* ───────────── Sales reports (same audience as the dashboard) ───────────── */
+r.get('/reports/sales.xlsx', (req, res) => reports.salesXlsx(res, reports.parseRange(req.query)));
+r.get('/reports/sales.pdf', (req, res) => reports.salesPdf(res, reports.parseRange(req.query)));
 
 /* ───────────── Products ───────────── */
 r.use('/products', requirePerm('store'));
@@ -135,6 +145,9 @@ r.get('/products', async (req, res) => {
                               FROM products p ORDER BY p.sort, p.id`);
   res.render('admin/products', { section: 'products', products });
 });
+
+r.get('/products/inventory.xlsx', (req, res) => reports.inventoryXlsx(res));
+r.get('/products/inventory.pdf', (req, res) => reports.inventoryPdf(res));
 
 r.get('/products/new', (req, res) =>
   res.render('admin/product_form', { section: 'products', p: { active: true, pack_size: 1, stock: 0, sort: 0 }, gallery: [], error: null }));
@@ -301,6 +314,61 @@ r.get('/orders/export.csv', async (req, res) => {
   }).join(',')));
   res.set('Content-Type', 'text/csv; charset=utf-8').set('Content-Disposition', `attachment; filename="pedidos-${new Date().toISOString().slice(0, 10)}.csv"`);
   res.send('﻿' + lines.join('\n'));
+});
+
+r.get('/orders/export.xlsx', (req, res) => reports.ordersXlsx(res, orderFilter(req.query)));
+
+/* Orders entered by staff (phone, walk-in, WhatsApp...) */
+const manualForm = async (res, form, error, status = 200) => {
+  const products = await all('SELECT id, name, dimensions, price_cents, stock, active FROM products ORDER BY active DESC, sort, id');
+  res.status(status).render('admin/order_new', { section: 'orders', products, form, error, PAYMENTS: lib.MANUAL_PAYMENTS.map((k) => [k, lib.PAYMENT_ES[k]]) });
+};
+
+r.get('/orders/new', (req, res) => manualForm(res, { status: 'paid', payment_method: 'cash', fulfillment: 'pickup', qty: {}, price: {} }, null));
+
+r.post('/orders/new', async (req, res) => {
+  const b = req.body;
+  const str = (k, n = 200) => String(b[k] || '').trim().slice(0, n);
+  const form = {
+    name: str('name'), email: str('email').toLowerCase(), phone: str('phone', 60), fulfillment: b.fulfillment === 'delivery' ? 'delivery' : 'pickup',
+    address1: str('address1'), address2: str('address2'), city: str('city'), state: str('state').toUpperCase(), zip: str('zip', 10), notes: str('notes', 2000),
+    status: lib.STATUS_ES[b.status] && b.status !== 'cancelled' ? b.status : 'pending',
+    payment_method: lib.MANUAL_PAYMENTS.includes(b.payment_method) ? b.payment_method : 'other',
+    shipping: b.shipping || '', discount: b.discount || '', tax: b.tax || '', allow_oversell: b.allow_oversell === 'on', qty: {}, price: {},
+  };
+  const lines = [];
+  for (const [k, v] of Object.entries(b)) {
+    const m = /^qty_(\d+)$/.exec(k);
+    if (!m) continue;
+    const qty = Math.max(0, Math.min(lib.int(v), 100000));
+    form.qty[m[1]] = v;
+    form.price[m[1]] = b[`price_${m[1]}`] || '';
+    if (!qty) continue;
+    const price = lib.toCents(b[`price_${m[1]}`]);
+    if (price == null) return manualForm(res, form, 'Revisa el precio de los productos que agregaste.', 400);
+    lines.push({ product_id: lib.int(m[1]), qty, unit_price_cents: price });
+  }
+  const amounts = { shipping: lib.toCents(form.shipping) || 0, discount: lib.toCents(form.discount) || 0, tax: lib.toCents(form.tax) || 0 };
+  let error = null;
+  if (!form.name) error = 'Escribe el nombre del cliente.';
+  else if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) error = 'El correo no es válido (puedes dejarlo vacío).';
+  else if (!lines.length) error = 'Agrega al menos un producto con cantidad.';
+  else if (form.fulfillment === 'delivery' && (!form.address1 || !form.city || !lib.US_STATES.includes(form.state) || !/^\d{5}(-\d{4})?$/.test(form.zip))) {
+    error = 'Para envío, completa dirección, ciudad, estado y código postal (5 dígitos).';
+  }
+  if (error) return manualForm(res, form, error, 400);
+  if (form.fulfillment === 'pickup') form.address1 = form.address2 = form.city = form.state = form.zip = '';
+  try {
+    const order = await orders.createManualOrder({
+      lines, form, amounts, paymentMethod: form.payment_method, status: form.status,
+      adminEmail: res.locals.admin.email, allowOversell: form.allow_oversell,
+    });
+    notice(req, `Pedido ${order.number} registrado.`);
+    res.redirect(`/admin/orders/${order.id}`);
+  } catch (e) {
+    if (e instanceof orders.StockError) return manualForm(res, form, `No hay suficiente stock de: ${e.message}. Ajusta la cantidad o marca "vender aunque no haya stock".`, 400);
+    throw e;
+  }
 });
 
 r.get('/orders/:id', async (req, res, next) => {

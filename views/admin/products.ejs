@@ -1,5 +1,11 @@
 <%- include('_head') %>
-<div class="top"><div><h1>Productos</h1><div class="muted small"><%= products.length %> productos</div></div><a class="btn orange" href="/admin/products/new">+ Nuevo producto</a></div>
+<div class="top"><div><h1>Productos</h1><div class="muted small"><%= products.length %> productos · <%= products.reduce(function (s, p) { return s + p.stock; }, 0).toLocaleString('en-US') %> cajas en stock</div></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn ghost sm" href="/admin/products/inventory.pdf">Inventario PDF</a>
+    <a class="btn ghost sm" href="/admin/products/inventory.xlsx">Inventario Excel</a>
+    <a class="btn orange sm" href="/admin/products/new">+ Nuevo producto</a>
+  </div>
+</div>
 <div class="card"><div class="table-wrap"><table>
   <thead><tr><th>Producto</th><th class="num">Precio</th><th class="num">Stock</th><th class="num">Vendidos</th><th>Estado</th><th></th></tr></thead>
   <tbody>

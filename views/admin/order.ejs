@@ -1,6 +1,6 @@
 <%- include('_head') %>
 <div class="top">
-  <div><a class="muted small" href="/admin/orders">← Pedidos</a><h1>Pedido <%= order.number %></h1><div class="muted small"><%= fmtDate(order.created_at) %> · <%= order.payment_method === 'stripe' ? 'Pago con tarjeta (Stripe)' : 'Pago manual' %></div></div>
+  <div><a class="muted small" href="/admin/orders">← Pedidos</a><h1>Pedido <%= order.number %></h1><div class="muted small"><%= fmtDate(order.created_at) %> · <%= PAYMENT[order.payment_method] || order.payment_method %><% if (order.source === 'admin') { %> · Registrado en admin<%= order.created_by ? ' por ' + order.created_by : '' %><% } %><% if (order.subscription_id) { %> · Pedido recurrente<% } %></div></div>
   <span class="pill <%= order.status %>" style="font-size:14px;padding:6px 14px"><%= STATUS[order.status] %></span>
 </div>
 <div class="grid cols2">

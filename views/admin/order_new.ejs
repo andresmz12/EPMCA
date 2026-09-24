@@ -1,0 +1,91 @@
+<%- include('_head') %>
+<% const cents = (c) => (Number(c || 0) / 100).toFixed(2); %>
+<div class="top"><div><a class="muted small" href="/admin/orders">← Pedidos</a><h1>Registrar pedido</h1><div class="muted small">Para ventas hechas fuera de la web: teléfono, WhatsApp, en bodega…</div></div></div>
+<% if (error) { %><div class="notice err"><%= error %></div><% } %>
+<form method="post" action="/admin/orders/new">
+<div class="grid cols2">
+  <div class="grid" style="gap:16px">
+    <div class="card">
+      <h2>Productos</h2>
+      <div class="table-wrap"><table class="manual-lines">
+        <thead><tr><th>Producto</th><th class="num">Stock</th><th>Cantidad</th><th>Precio c/u (USD)</th><th class="num">Total</th></tr></thead>
+        <tbody>
+        <% products.forEach(function (p) { %>
+        <tr data-line>
+          <td><b><%= p.name %></b><div class="muted small"><%= p.dimensions %><%= p.active ? '' : ' · oculto en la tienda' %></div></td>
+          <td class="num"><%= p.stock %></td>
+          <td><input type="number" name="qty_<%= p.id %>" min="0" value="<%= form.qty[p.id] || '' %>" placeholder="0"></td>
+          <td><input name="price_<%= p.id %>" inputmode="decimal" value="<%= form.price[p.id] || cents(p.price_cents) %>"></td>
+          <td class="num" data-total>—</td>
+        </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+      <div class="hint">El precio viene del catálogo; cámbialo si acordaste otro con el cliente.</div>
+      <div class="f3" style="margin-top:14px">
+        <div class="field"><label>Envío (USD)</label><input name="shipping" inputmode="decimal" value="<%= form.shipping %>" placeholder="0.00"></div>
+        <div class="field"><label>Descuento (USD)</label><input name="discount" inputmode="decimal" value="<%= form.discount %>" placeholder="0.00"></div>
+        <div class="field"><label>Impuesto (USD)</label><input name="tax" inputmode="decimal" value="<%= form.tax %>" placeholder="0.00"></div>
+      </div>
+      <p style="text-align:right;margin:4px 0 0;font-size:18px">Total: <b id="grand">$0.00</b></p>
+      <label class="check"><input type="checkbox" name="allow_oversell" <%= form.allow_oversell ? 'checked' : '' %>> Vender aunque el stock del sistema no alcance (el stock queda en 0)</label>
+    </div>
+    <div class="card">
+      <h2>Pago y estado</h2>
+      <div class="f2">
+        <div class="field"><label>Método de pago</label>
+          <select name="payment_method"><% PAYMENTS.forEach(function (p) { %><option value="<%= p[0] %>" <%= form.payment_method === p[0] ? 'selected' : '' %>><%= p[1] %></option><% }) %></select></div>
+        <div class="field"><label>Estado</label>
+          <select name="status"><% ['pending', 'paid', 'shipped', 'delivered'].forEach(function (s) { %><option value="<%= s %>" <%= form.status === s ? 'selected' : '' %>><%= STATUS[s] %></option><% }) %></select></div>
+      </div>
+      <div class="field"><label>Notas internas</label><textarea name="notes" rows="3"><%= form.notes || '' %></textarea></div>
+    </div>
+  </div>
+  <div class="grid" style="gap:16px">
+    <div class="card">
+      <h2>Cliente</h2>
+      <div class="field"><label>Nombre *</label><input name="name" required value="<%= form.name || '' %>"></div>
+      <div class="f2">
+        <div class="field"><label>Correo</label><input name="email" type="email" value="<%= form.email || '' %>" placeholder="Opcional"></div>
+        <div class="field"><label>Teléfono</label><input name="phone" value="<%= form.phone || '' %>"></div>
+      </div>
+      <div class="hint">Con correo, el pedido queda en el historial del cliente.</div>
+    </div>
+    <div class="card">
+      <h2>Entrega</h2>
+      <label class="check"><input type="radio" name="fulfillment" value="pickup" <%= form.fulfillment !== 'delivery' ? 'checked' : '' %>> Recoge / entregado en persona</label>
+      <label class="check"><input type="radio" name="fulfillment" value="delivery" <%= form.fulfillment === 'delivery' ? 'checked' : '' %>> Envío a dirección</label>
+      <div id="addr" style="margin-top:10px">
+        <div class="field"><label>Dirección</label><input name="address1" value="<%= form.address1 || '' %>"></div>
+        <div class="field"><label>Apto / suite</label><input name="address2" value="<%= form.address2 || '' %>"></div>
+        <div class="f3">
+          <div class="field"><label>Ciudad</label><input name="city" value="<%= form.city || '' %>"></div>
+          <div class="field"><label>Estado</label><input name="state" maxlength="2" value="<%= form.state || '' %>" placeholder="TX" style="text-transform:uppercase"></div>
+          <div class="field"><label>ZIP</label><input name="zip" value="<%= form.zip || '' %>"></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn orange" style="justify-content:center;padding:13px">Registrar pedido</button>
+  </div>
+</div>
+</form>
+<script>
+(function () {
+  var f = document.querySelector('form[action="/admin/orders/new"]');
+  var num = function (v) { var n = parseFloat(String(v).replace(/[$,\s]/g, '')); return isFinite(n) ? n : 0; };
+  var fmt = function (n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  function sync() {
+    var sub = 0;
+    f.querySelectorAll('[data-line]').forEach(function (tr) {
+      var q = num(tr.querySelector('input[name^=qty_]').value), p = num(tr.querySelector('input[name^=price_]').value);
+      tr.querySelector('[data-total]').textContent = q ? fmt(q * p) : '—';
+      sub += q * p;
+    });
+    var total = sub - Math.min(num(f.discount.value), sub) + num(f.shipping.value) + num(f.tax.value);
+    document.getElementById('grand').textContent = fmt(total);
+    document.getElementById('addr').hidden = f.querySelector('input[name=fulfillment]:checked').value !== 'delivery';
+  }
+  f.addEventListener('input', sync); f.addEventListener('change', sync); sync();
+})();
+</script>
+<%- include('_foot') %>
