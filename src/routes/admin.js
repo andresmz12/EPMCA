@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const { q, one, all, tx } = require('../db');
+const { q, one, all, tx, clearSettingsCache } = require('../db');
 const lib = require('../lib');
 const auth = require('../auth');
 const orders = require('../orders');
@@ -437,6 +437,7 @@ r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings')
     }
   });
   if (oldHero && values.hero_image_id !== undefined && values.hero_image_id !== oldHero) await q('DELETE FROM images WHERE id=$1', [lib.int(oldHero)]);
+  clearSettingsCache();
   notice(req, 'Configuración guardada.');
   res.redirect('/admin/settings');
 });

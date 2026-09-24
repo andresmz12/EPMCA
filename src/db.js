@@ -289,11 +289,18 @@ async function migrate() {
   }
 }
 
+// Settings are read on every page view but change rarely; cache briefly.
+let settingsCache = null;
+let settingsAt = 0;
 async function getSettings() {
+  if (settingsCache && Date.now() - settingsAt < 30000) return settingsCache;
   const rows = await all('SELECT key, value FROM settings');
   const s = { ...DEFAULT_SETTINGS };
   for (const r of rows) s[r.key] = r.value;
+  settingsCache = s;
+  settingsAt = Date.now();
   return s;
 }
+const clearSettingsCache = () => { settingsCache = null; };
 
-module.exports = { pool, q, one, all, tx, migrate, getSettings };
+module.exports = { pool, q, one, all, tx, migrate, getSettings, clearSettingsCache };

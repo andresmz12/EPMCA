@@ -6,6 +6,7 @@ const orders = require('../orders');
 const payments = require('../payments');
 const subscriptions = require('../subscriptions');
 const { limiter } = require('../ratelimit');
+const seo = require('../seo');
 
 const r = express.Router();
 
@@ -15,6 +16,9 @@ const contactLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const couponText = (t, msg) => (msg ? t(msg.key, msg.vars) : null);
+
+// Private/per-visitor pages stay out of search results.
+r.use(['/cart', '/checkout', '/account', '/order'], (req, res, next) => { res.locals.noindex = true; next(); });
 
 // Only follow the Referer back if it points at this site (no open redirect).
 function backTo(req) {
@@ -27,7 +31,8 @@ function backTo(req) {
 
 r.get('/', async (req, res) => {
   const products = await all('SELECT * FROM products WHERE active ORDER BY sort, id');
-  res.render('store/home', { products, title: null });
+  const { siteUrl, settings, t, money } = res.locals;
+  res.render('store/home', { products, title: null, jsonld: seo.homeLd({ siteUrl, settings, t, money }) });
 });
 
 r.get('/products/:slug', async (req, res, next) => {
@@ -36,7 +41,15 @@ r.get('/products/:slug', async (req, res, next) => {
   const others = await all('SELECT * FROM products WHERE active AND id<>$1 ORDER BY sort, id LIMIT 4', [product.id]);
   const extra = await all('SELECT image_id FROM product_images WHERE product_id=$1 ORDER BY sort, id', [product.id]);
   const images = [...(product.image_id ? [product.image_id] : []), ...extra.map((r) => r.image_id)];
-  res.render('store/product', { product, others, images, title: product.name });
+  const { siteUrl, settings, pt, t, money, altUrl, lang } = res.locals;
+  const name = pt(product, 'name');
+  const description = [pt(product, 'short_desc'), product.dimensions, `${money(product.price_cents)} ${t('per_box')}`, t('info_ship_d')]
+    .filter(Boolean).join(' · ').slice(0, 300);
+  res.render('store/product', {
+    product, others, images, title: name, description, ogType: 'product',
+    ogImage: images.length ? `/img/${images[0]}` : null,
+    jsonld: seo.productLd({ siteUrl, settings, product, images, pt, url: altUrl(lang) }),
+  });
 });
 
 r.post('/cart/add', async (req, res) => {
@@ -327,7 +340,7 @@ r.post('/account/address', async (req, res) => {
 r.get('/contact', (req, res) => {
   const { customer, t } = res.locals;
   const form = customer ? { name: customer.name, email: customer.email, phone: customer.phone } : {};
-  res.render('store/contact', { error: null, sent: false, form, title: t('contact_title') });
+  res.render('store/contact', { error: null, sent: false, form, title: t('contact_title'), description: t('contact_sub') });
 });
 
 r.post('/contact', async (req, res) => {

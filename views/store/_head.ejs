@@ -3,12 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><%= title ? title + ' | ' + settings.store_name : settings.store_name + ' | ' + t('hero_title') %></title>
-<meta name="description" content="<%= t('hero_sub') %>">
+<%
+  const pageTitle = title ? title + ' | ' + settings.store_name : settings.store_name + ' | ' + t('hero_title');
+  const pageDesc = locals.description || t('hero_sub');
+  const indexable = !locals.noindex;
+  const ogImg = siteUrl + (locals.ogImage || (settings.hero_image_id ? '/img/' + settings.hero_image_id : '/logo.png'));
+%>
+<title><%= pageTitle %></title>
+<meta name="description" content="<%= pageDesc %>">
+<% if (indexable) { %>
+<link rel="canonical" href="<%= altUrl(lang) %>">
+<link rel="alternate" hreflang="en" href="<%= altUrl('en') %>">
+<link rel="alternate" hreflang="es" href="<%= altUrl('es') %>">
+<link rel="alternate" hreflang="x-default" href="<%= altUrl('en') %>">
+<% } else { %>
+<meta name="robots" content="noindex, follow">
+<% } %>
+<meta property="og:site_name" content="<%= settings.store_name %>">
+<meta property="og:type" content="<%= locals.ogType || 'website' %>">
+<meta property="og:title" content="<%= pageTitle %>">
+<meta property="og:description" content="<%= pageDesc %>">
+<meta property="og:url" content="<%= altUrl(lang) %>">
+<meta property="og:image" content="<%= ogImg %>">
+<meta property="og:locale" content="<%= lang === 'es' ? 'es_US' : 'en_US' %>">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#EEA331">
+<% [].concat(locals.jsonld || []).forEach(function (j) { %><script type="application/ld+json"><%- JSON.stringify(j).replace(/</g, '\\u003c') %></script>
+<% }) %>
 <link rel="icon" href="/logo-mark.png">
+<link rel="apple-touch-icon" href="/logo-mark.png">
 <link rel="preload" href="/fonts/source-sans-3-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/montserrat-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/css/store.css">
+<link rel="stylesheet" href="/css/store.css?v=<%= assetV %>">
 </head>
 <body>
 <% const ann = settings['announcement_' + lang]; if (ann) { %>

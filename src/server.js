@@ -3,14 +3,21 @@ const express = require('express');
 const session = require('express-session');
 const PgStore = require('connect-pg-simple')(session);
 const compression = require('compression');
-const { pool, migrate, getSettings, one } = require('./db');
+const { pool, migrate, getSettings, one, all } = require('./db');
 const lib = require('./lib');
 const { makeT, LANGS } = require('./i18n');
 const payments = require('./payments');
+const seo = require('./seo');
 const { isProd } = require('./env');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const PUBLIC_URL = (process.env.PUBLIC_URL || '').trim().replace(/\/$/, '');
+let canonicalHost = null;
+try { canonicalHost = PUBLIC_URL ? new URL(PUBLIC_URL).host : null; } catch { console.warn('⚠️  PUBLIC_URL no es una URL válida; se ignora.'); }
+// Changes on every deploy so browsers fetch the new CSS instead of a 7-day-old copy.
+const ASSET_V = (process.env.RAILWAY_GIT_COMMIT_SHA || Date.now().toString(36)).slice(0, 8);
+const siteUrlOf = (req) => (canonicalHost ? PUBLIC_URL : `${req.protocol}://${req.get('host')}`);
 
 if (!process.env.SESSION_SECRET && isProd) {
   console.error('Falta SESSION_SECRET en producción.');
@@ -30,6 +37,13 @@ app.use((req, res, next) => {
   res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   if (isProd) res.set('Strict-Transport-Security', 'max-age=15552000');
   next();
+});
+
+// One canonical domain (e.g. the *.up.railway.app address and www redirect to
+// PUBLIC_URL) so search engines don't see the same store twice.
+app.use((req, res, next) => {
+  if (!canonicalHost || req.method !== 'GET' || req.path === '/healthz' || req.get('host') === canonicalHost) return next();
+  res.redirect(301, PUBLIC_URL + req.originalUrl);
 });
 
 // Stripe webhook needs the raw body, so it's mounted before the JSON/urlencoded parsers.
@@ -63,6 +77,29 @@ app.get('/img/:id', async (req, res) => {
   res.set('Content-Type', img.mime).set('Cache-Control', 'public, max-age=31536000, immutable').send(img.data);
 });
 
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send([
+    'User-agent: *',
+    'Disallow: /admin',
+    'Disallow: /checkout',
+    'Disallow: /order/',
+    '',
+    `Sitemap: ${siteUrlOf(req)}/sitemap.xml`,
+    '',
+  ].join('\n'));
+});
+
+app.get('/sitemap.xml', async (req, res) => {
+  const products = await all('SELECT slug, updated_at FROM products WHERE active ORDER BY sort, id');
+  const newest = products.reduce((m, p) => (p.updated_at > m ? p.updated_at : m), new Date(0));
+  const pages = [
+    { path: '/', lastmod: products.length ? newest : null },
+    ...products.map((p) => ({ path: `/products/${p.slug}`, lastmod: p.updated_at })),
+    { path: '/contact' },
+  ];
+  res.type('application/xml').set('Cache-Control', 'public, max-age=3600').send(seo.sitemap(siteUrlOf(req), pages));
+});
+
 app.use(
   session({
     store: new PgStore({ pool, tableName: 'session', createTableIfMissing: false }),
@@ -77,11 +114,21 @@ app.use(
 // Shared template locals
 app.use(async (req, res, next) => {
   const settings = await getSettings();
-  if (req.query.lang && LANGS.includes(req.query.lang)) req.session.lang = req.query.lang;
-  const lang = req.session.lang || (/^es\b/i.test(req.get('accept-language') || '') ? 'es' : 'en');
+  // "?lang=es" is a real, crawlable URL for the Spanish version; the choice is
+  // remembered in a plain cookie (not the session, so crawlers don't create sessions).
+  let lang;
+  if (LANGS.includes(req.query.lang)) {
+    lang = req.query.lang;
+    res.cookie('lang', lang, { maxAge: 365 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'lax', secure: isProd });
+  } else {
+    const fromCookie = /(?:^|;\s*)lang=(en|es)(?:;|$)/.exec(req.headers.cookie || '');
+    lang = (fromCookie && fromCookie[1]) || req.session.lang || (/^es\b/i.test(req.get('accept-language') || '') ? 'es' : 'en');
+  }
   const cart = req.session.cart || {};
+  const siteUrl = siteUrlOf(req);
   Object.assign(res.locals, {
-    settings, lang, t: makeT(lang), money: lib.money, path: req.path,
+    settings, lang, t: makeT(lang), money: lib.money, path: req.path, siteUrl, assetV: ASSET_V,
+    altUrl: (l) => `${siteUrl}${req.path}${l === 'es' ? '?lang=es' : ''}`,
     cartCount: Object.values(cart).reduce((s, n) => s + (Number(n) || 0), 0),
     flash: req.session.flash || null, stripeEnabled: payments.enabled, boxSvg: lib.boxSvg,
     customer: req.session.customer || null, US_STATES: lib.US_STATES,
@@ -97,7 +144,7 @@ app.use(async (req, res, next) => {
 app.use('/admin', require('./routes/admin'));
 app.use('/', require('./routes/store'));
 
-app.use((req, res) => res.status(404).render('store/404'));
+app.use((req, res) => res.status(404).render('store/404', { noindex: true }));
 
 app.use((err, req, res, next) => {
   console.error(err);
