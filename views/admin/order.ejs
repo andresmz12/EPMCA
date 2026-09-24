@@ -1,0 +1,51 @@
+<%- include('_head') %>
+<div class="top">
+  <div><a class="muted small" href="/admin/orders">← Pedidos</a><h1>Pedido <%= order.number %></h1><div class="muted small"><%= fmtDate(order.created_at) %> · <%= order.payment_method === 'stripe' ? 'Pago con tarjeta (Stripe)' : 'Pago manual' %></div></div>
+  <span class="pill <%= order.status %>" style="font-size:14px;padding:6px 14px"><%= STATUS[order.status] %></span>
+</div>
+<div class="grid cols2">
+  <div class="grid" style="gap:16px">
+    <div class="card">
+      <h2>Productos</h2>
+      <table><thead><tr><th>Producto</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th></tr></thead><tbody>
+      <% items.forEach(function (it) { %><tr><td><%= it.name %></td><td class="num"><%= it.qty %></td><td class="num"><%= money(it.unit_price_cents) %></td><td class="num"><%= money(it.unit_price_cents * it.qty) %></td></tr><% }) %>
+      </tbody></table>
+      <dl class="dl totals" style="margin-top:16px;grid-template-columns:1fr auto">
+        <dt>Subtotal</dt><dd class="num"><%= money(order.subtotal_cents) %></dd>
+        <% if (order.discount_cents) { %><dt>Descuento (<%= order.coupon_code %>)</dt><dd>−<%= money(order.discount_cents) %></dd><% } %>
+        <dt><%= order.fulfillment === 'pickup' ? 'Recoge en bodega' : 'Envío' %></dt><dd><%= money(order.shipping_cents) %></dd>
+        <% if (order.tax_cents) { %><dt>Impuesto</dt><dd><%= money(order.tax_cents) %></dd><% } %>
+        <dt style="color:var(--ink);font-weight:800">Total</dt><dd><b style="font-size:18px"><%= money(order.total_cents) %></b></dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h2>Cliente</h2>
+      <dl class="dl">
+        <dt>Nombre</dt><dd><%= order.name %></dd>
+        <dt>Correo</dt><dd><a href="mailto:<%= order.email %>"><%= order.email %></a></dd>
+        <dt>Teléfono</dt><dd><%= order.phone ? order.phone : '—' %></dd>
+        <dt><%= order.fulfillment === 'pickup' ? 'Entrega' : 'Dirección' %></dt>
+        <dd><%= order.fulfillment === 'pickup' ? 'Recoge en bodega' + (settings.pickup_address ? ' (' + settings.pickup_address + ')' : '') : order.address1 + (order.address2 ? ', ' + order.address2 : '') + ', ' + order.city + ', ' + order.state + ' ' + order.zip %></dd>
+        <dt>Historial</dt><dd><%= history.n %> pedido<%= history.n === 1 ? '' : 's' %> · <%= money(history.spent) %> gastado · <a href="/admin/orders?q=<%= encodeURIComponent(order.email) %>">ver pedidos</a></dd>
+      </dl>
+    </div>
+  </div>
+  <form class="card" method="post" action="/admin/orders/<%= order.id %>" <%= order.status !== 'cancelled' ? 'data-confirm-cancel' : '' %>>
+    <h2>Gestionar</h2>
+    <div class="field"><label>Estado</label>
+      <select name="status" <%= order.status === 'cancelled' ? 'disabled' : '' %>><% Object.keys(STATUS).forEach(function (s) { %><option value="<%= s %>" <%= order.status === s ? 'selected' : '' %>><%= STATUS[s] %></option><% }) %></select>
+      <div class="hint">Cancelar devuelve las cajas al inventario. Si el cliente pagó con Stripe, haz el reembolso desde Stripe.</div>
+    </div>
+    <div class="field"><label>Número de rastreo / info de entrega</label><input name="tracking" value="<%= order.tracking %>" placeholder="Ej: UPS 1Z999... o 'Listo para recoger'"><div class="hint">El cliente lo ve en la página de su pedido.</div></div>
+    <div class="field"><label>Notas</label><textarea name="notes" rows="4"><%= order.notes %></textarea></div>
+    <button class="btn orange" style="width:100%;justify-content:center">Guardar</button>
+    <p class="small muted" style="margin-bottom:0">Enlace del cliente: <a href="/order/<%= order.number %>?t=<%= order.access_token %>" target="_blank" rel="noopener">ver pedido ↗</a></p>
+  </form>
+</div>
+<script>
+(function () {
+  var f = document.querySelector('form[data-confirm-cancel]'); if (!f) return;
+  f.addEventListener('submit', function (e) { if (f.status.value === 'cancelled' && !confirm('¿Cancelar este pedido? Las cajas volverán al inventario.')) e.preventDefault(); });
+})();
+</script>
+<%- include('_foot') %>

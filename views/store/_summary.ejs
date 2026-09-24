@@ -1,0 +1,5 @@
+<div class="sumrow"><span><%= t('subtotal') %> · <%= priced.count %> <%= t('items') %></span><span><%= money(priced.subtotal) %></span></div>
+<% if (priced.discount) { %><div class="sumrow"><span><%= t('discount') %> (<%= priced.coupon.code %>)</span><span class="neg">−<%= money(priced.discount) %></span></div><% } %>
+<div class="sumrow"><span><%= priced.pickup ? t('pickup') : t('shipping') %></span><span><%= priced.shipping ? money(priced.shipping) : t('free') %></span></div>
+<% if (priced.tax) { %><div class="sumrow"><span><%= t('tax') %></span><span><%= money(priced.tax) %></span></div><% } %>
+<div class="sumrow total"><span><%= t('total') %></span><span><%= money(priced.total) %></span></div>

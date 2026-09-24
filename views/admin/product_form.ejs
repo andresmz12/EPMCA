@@ -1,0 +1,53 @@
+<%- include('_head') %>
+<% const cents = (c) => c == null || c === '' ? '' : (c / 100).toFixed(2); %>
+<div class="top">
+  <div><a class="muted small" href="/admin/products">← Productos</a><h1><%= p.id ? p.name : 'Nuevo producto' %></h1></div>
+  <% if (p.id) { %><a class="btn ghost sm" href="/products/<%= p.slug %>" target="_blank" rel="noopener">Ver en tienda ↗</a><% } %>
+</div>
+<% if (error) { %><div class="notice err"><%= error %></div><% } %>
+<form method="post" action="/admin/products<%= p.id ? '/' + p.id : '' %>" enctype="multipart/form-data">
+<div class="grid cols2">
+  <div class="card">
+    <div class="field"><label>Nombre (inglés) *</label><input name="name" required value="<%= p.name || '' %>" placeholder='16 × 16 × 16" Double Wall Box'></div>
+    <div class="field"><label>Descripción corta (inglés)</label><input name="short_desc" value="<%= p.short_desc || '' %>" maxlength="200"><div class="hint">Aparece en la tarjeta del producto.</div></div>
+    <div class="field"><label>Descripción completa (inglés)</label><textarea name="description" rows="7"><%= p.description || '' %></textarea></div>
+    <div class="f3">
+      <div class="field"><label>Precio (USD) *</label><input name="price" inputmode="decimal" required value="<%= cents(p.price_cents) %>" placeholder="5.99"></div>
+      <div class="field"><label>Precio anterior</label><input name="compare_at" inputmode="decimal" value="<%= cents(p.compare_at_cents) %>" placeholder="Opcional"><div class="hint">Se muestra tachado.</div></div>
+      <div class="field"><label>Stock</label><input name="stock" type="number" min="0" value="<%= p.stock ?? 0 %>"></div>
+    </div>
+    <div class="f3">
+      <div class="field"><label>Medidas</label><input name="dimensions" value="<%= p.dimensions || '' %>" placeholder='16" × 16" × 16"'><div class="hint">Se usa para dibujar la caja si no hay foto.</div></div>
+      <div class="field"><label>Unidades por paquete</label><input name="pack_size" type="number" min="1" value="<%= p.pack_size || 1 %>"></div>
+      <div class="field"><label>Orden</label><input name="sort" type="number" value="<%= p.sort || 0 %>"><div class="hint">Menor = aparece primero.</div></div>
+    </div>
+    <h2 style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">Texto en español</h2>
+    <p class="hint" style="margin-top:-8px;margin-bottom:14px">Lo que ven los clientes con la tienda en español. Si lo dejas vacío, se muestra el texto en inglés.</p>
+    <div class="field"><label>Nombre (español)</label><input name="name_es" value="<%= p.name_es || '' %>" placeholder='Caja doble pared 16 × 16 × 16"'></div>
+    <div class="field"><label>Descripción corta (español)</label><input name="short_desc_es" value="<%= p.short_desc_es || '' %>" maxlength="200"></div>
+    <div class="field"><label>Descripción completa (español)</label><textarea name="description_es" rows="5"><%= p.description_es || '' %></textarea></div>
+    <div class="field"><label>URL (slug)</label><input name="slug" value="<%= p.slug || '' %>" placeholder="se genera del nombre"></div>
+  </div>
+  <div class="grid" style="gap:16px">
+    <div class="card">
+      <h2>Visibilidad</h2>
+      <label class="check"><input type="checkbox" name="active" <%= p.active ? 'checked' : '' %>> Visible en la tienda</label>
+      <label class="check"><input type="checkbox" name="featured" <%= p.featured ? 'checked' : '' %>> Marcar como "Más vendida"</label>
+    </div>
+    <div class="card">
+      <h2>Foto</h2>
+      <div class="imgprev"><%- include('_pic', { p }) %></div>
+      <input type="file" name="image" accept="image/png,image/jpeg,image/webp">
+      <div class="hint">PNG, JPG o WebP, máximo 3 MB. Sin foto se muestra un dibujo de la caja a escala.</div>
+      <% if (p.image_id) { %><label class="check"><input type="checkbox" name="remove_image"> Quitar foto</label><% } %>
+    </div>
+    <button class="btn orange" style="justify-content:center;padding:13px"><%= p.id ? 'Guardar cambios' : 'Crear producto' %></button>
+  </div>
+</div>
+</form>
+<% if (p.id) { %>
+<form method="post" action="/admin/products/<%= p.id %>/delete" data-confirm="¿Eliminar este producto? Si tiene pedidos, solo se ocultará." style="margin-top:24px">
+  <button class="btn danger sm">Eliminar producto</button>
+</form>
+<% } %>
+<%- include('_foot') %>

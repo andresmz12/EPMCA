@@ -1,0 +1,42 @@
+<%- include('_head') %>
+<% const cents = (c) => (Number(c || 0) / 100).toFixed(2); %>
+<div class="top"><h1>Configuración</h1></div>
+<form method="post" action="/admin/settings" class="grid cols2" enctype="multipart/form-data">
+  <div class="grid" style="gap:16px">
+    <div class="card">
+      <h2>Tienda</h2>
+      <div class="field"><label>Nombre de la tienda</label><input name="store_name" value="<%= settings.store_name %>"></div>
+      <div class="f2">
+        <div class="field"><label>Correo de contacto</label><input name="support_email" type="email" value="<%= settings.support_email %>"></div>
+        <div class="field"><label>Teléfono</label><input name="support_phone" value="<%= settings.support_phone %>" placeholder="(713) 555-0100"></div>
+      </div>
+      <div class="field"><label>Anuncio superior (inglés)</label><input name="announcement_en" value="<%= settings.announcement_en %>"></div>
+      <div class="field"><label>Anuncio superior (español)</label><input name="announcement_es" value="<%= settings.announcement_es %>"><div class="hint">Déjalos vacíos para ocultar la barra.</div></div>
+    </div>
+  </div>
+  <div class="grid" style="gap:16px">
+    <div class="card">
+      <h2>Envíos e impuestos</h2>
+      <div class="f2">
+        <div class="field"><label>Costo de envío ($)</label><input name="shipping_flat" inputmode="decimal" value="<%= cents(settings.shipping_flat_cents) %>"></div>
+        <div class="field"><label>Envío gratis desde ($)</label><input name="free_shipping_min" inputmode="decimal" value="<%= cents(settings.free_shipping_min_cents) %>"><div class="hint">0 = nunca gratis.</div></div>
+      </div>
+      <div class="field"><label>Impuesto de venta (%)</label><input name="tax_rate_percent" inputmode="decimal" value="<%= settings.tax_rate_percent %>"><div class="hint">Varía según el estado. Consulta a tu contador; si usas Stripe, Stripe Tax lo puede calcular por dirección.</div></div>
+      <label class="check"><input type="checkbox" name="pickup_enabled" <%= settings.pickup_enabled === 'true' ? 'checked' : '' %>> Permitir recoger en bodega (gratis)</label>
+      <div class="field" style="margin-top:10px"><label>Dirección de recogida</label><input name="pickup_address" value="<%= settings.pickup_address %>" placeholder="Dirección y horario de la bodega"></div>
+    </div>
+    <div class="card">
+      <h2>Foto principal de la tienda</h2>
+      <% if (settings.hero_image_id) { %><img src="/img/<%= settings.hero_image_id %>" alt="" style="width:100%;border-radius:8px;margin-bottom:10px;aspect-ratio:4/3;object-fit:cover"><% } %>
+      <input type="file" name="hero" accept="image/png,image/jpeg,image/webp">
+      <div class="hint">Aparece arriba en la página de inicio (formato horizontal 4:3, máximo 3 MB). Sin foto se muestran las cajas dibujadas a escala.</div>
+      <% if (settings.hero_image_id) { %><label class="check"><input type="checkbox" name="remove_hero"> Quitar foto</label><% } %>
+    </div>
+    <div class="card">
+      <h2>Pagos</h2>
+      <p class="small" style="margin:0"><%= stripeEnabled ? '✅ Stripe está conectado. Los clientes pagan con tarjeta.' : 'Stripe no está conectado: los pedidos quedan "Pendientes" y tú confirmas el pago manualmente. Para activarlo agrega STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET en Railway (ver README).' %></p>
+    </div>
+    <button class="btn orange" style="justify-content:center;padding:13px">Guardar configuración</button>
+  </div>
+</form>
+<%- include('_foot') %>

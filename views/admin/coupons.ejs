@@ -1,0 +1,39 @@
+<%- include('_head') %>
+<div class="top"><h1>Cupones</h1></div>
+<div class="grid cols2">
+  <div class="card"><div class="table-wrap"><table>
+    <thead><tr><th>Código</th><th>Descuento</th><th>Usos</th><th>Vence</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    <% if (!list.length) { %><tr><td colspan="6" class="muted">No hay cupones todavía.</td></tr><% } %>
+    <% list.forEach(function (c) { const expired = c.expires_at && new Date(c.expires_at) < new Date(); const used = c.max_uses != null && c.uses >= c.max_uses; %>
+    <tr>
+      <td><b style="font-family:ui-monospace,monospace"><%= c.code %></b><% if (c.min_subtotal_cents) { %><div class="muted small">Mínimo <%= money(c.min_subtotal_cents) %></div><% } %></td>
+      <td><%= c.type === 'percent' ? c.value + '%' : money(c.value) %></td>
+      <td><%= c.uses %><%= c.max_uses != null ? ' / ' + c.max_uses : '' %></td>
+      <td class="small"><%= c.expires_at ? fmtDate(c.expires_at, false) : 'Nunca' %></td>
+      <td><span class="pill <%= !c.active || expired || used ? 'off' : 'on' %>"><%= !c.active ? 'Pausado' : expired ? 'Vencido' : used ? 'Agotado' : 'Activo' %></span></td>
+      <td class="num" style="white-space:nowrap">
+        <form method="post" action="/admin/coupons/<%= c.id %>/toggle" style="display:inline"><button class="btn ghost sm"><%= c.active ? 'Pausar' : 'Activar' %></button></form>
+        <form method="post" action="/admin/coupons/<%= c.id %>/delete" style="display:inline" data-confirm="¿Eliminar el cupón <%= c.code %>?"><button class="btn danger sm">Eliminar</button></form>
+      </td>
+    </tr>
+    <% }) %>
+    </tbody>
+  </table></div></div>
+  <form class="card" method="post" action="/admin/coupons">
+    <h2>Nuevo cupón</h2>
+    <% if (error) { %><div class="notice err"><%= error %></div><% } %>
+    <div class="field"><label>Código</label><input name="code" required value="<%= form.code || '' %>" placeholder="VERANO15" style="text-transform:uppercase"></div>
+    <div class="f2">
+      <div class="field"><label>Tipo</label><select name="type"><option value="percent" <%= form.type !== 'fixed' ? 'selected' : '' %>>Porcentaje (%)</option><option value="fixed" <%= form.type === 'fixed' ? 'selected' : '' %>>Monto fijo ($)</option></select></div>
+      <div class="field"><label>Valor</label><input name="value" required inputmode="decimal" value="<%= form.value || '' %>" placeholder="15"></div>
+    </div>
+    <div class="f2">
+      <div class="field"><label>Compra mínima ($)</label><input name="min_subtotal" inputmode="decimal" value="<%= form.min_subtotal || '' %>" placeholder="Opcional"></div>
+      <div class="field"><label>Máximo de usos</label><input name="max_uses" type="number" min="1" value="<%= form.max_uses || '' %>" placeholder="Ilimitado"></div>
+    </div>
+    <div class="field"><label>Fecha de vencimiento</label><input name="expires_at" type="date" value="<%= form.expires_at || '' %>"></div>
+    <button class="btn orange" style="width:100%;justify-content:center">Crear cupón</button>
+  </form>
+</div>
+<%- include('_foot') %>

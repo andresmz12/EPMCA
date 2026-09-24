@@ -1,0 +1,18 @@
+<%- include('_head') %>
+<div class="top"><div><h1>Productos</h1><div class="muted small"><%= products.length %> productos</div></div><a class="btn orange" href="/admin/products/new">+ Nuevo producto</a></div>
+<div class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Producto</th><th class="num">Precio</th><th class="num">Stock</th><th class="num">Vendidos</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+  <% products.forEach(function (p) { %>
+  <tr>
+    <td><div class="prod"><div class="thumb"><%- include('_pic', { p }) %></div><div><a href="/admin/products/<%= p.id %>"><b><%= p.name %></b></a><div class="muted small"><%= p.dimensions %><%= p.featured ? ' · Destacado' : '' %></div></div></div></td>
+    <td class="num"><b><%= money(p.price_cents) %></b></td>
+    <td class="num"><span class="<%= p.stock === 0 ? 'pill cancelled' : p.stock <= 20 ? 'pill pending' : '' %>"><%= p.stock %></span></td>
+    <td class="num"><%= p.sold %></td>
+    <td><span class="pill <%= p.active ? 'on' : 'off' %>"><%= p.active ? 'Visible' : 'Oculto' %></span></td>
+    <td class="num"><a class="btn ghost sm" href="/admin/products/<%= p.id %>">Editar</a></td>
+  </tr>
+  <% }) %>
+  </tbody>
+</table></div></div>
+<%- include('_foot') %>

@@ -1,0 +1,103 @@
+<%- include('_head') %>
+<%
+  const W = 800, H = 260, padL = 60, padB = 30, padT = 12;
+  const maxRev = Math.max(...series.map(s => s.revenue), 0);
+  const niceStep = (m) => { if (m <= 0) return 2500; const raw = m / 4; const p = Math.pow(10, Math.floor(Math.log10(raw))); const n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; };
+  const step = niceStep(maxRev), yTop = step * 4;
+  const plotW = W - padL, plotH = H - padB - padT;
+  const bw = plotW / series.length, gap = Math.min(2 + bw * 0.18, 8);
+  const every = series.length <= 7 ? 1 : series.length <= 31 ? 5 : 15;
+  const dfmt = (d) => new Date(d).toLocaleDateString('es-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+  const short = (c) => c >= 100000 ? '$' + (c / 100000).toFixed(c % 100000 ? 1 : 0) + 'k' : '$' + Math.round(c / 100);
+  const deltaTxt = (v) => v == null ? 'sin datos del periodo anterior' : (v >= 0 ? '▲ ' : '▼ ') + Math.abs(v) + '% vs periodo anterior';
+  const deltaCls = (v) => v == null ? '' : v >= 0 ? 'up' : 'down';
+%>
+<div class="top">
+  <div><h1>Resumen</h1><div class="muted small">Ventas pagadas, enviadas y entregadas</div></div>
+  <div class="seg"><% [7,30,90].forEach(function (d) { %><a class="<%= days===d?'on':'' %>" href="?d=<%= d %>"><%= d %> días</a><% }) %></div>
+</div>
+
+<div class="grid kpis">
+  <div class="card kpi"><div class="lbl">Ingresos</div><div class="val"><%= money(cur.revenue) %></div><div class="delta <%= deltaCls(delta.revenue) %>"><%= deltaTxt(delta.revenue) %></div></div>
+  <div class="card kpi"><div class="lbl">Pedidos</div><div class="val"><%= cur.orders %></div><div class="delta <%= deltaCls(delta.orders) %>"><%= deltaTxt(delta.orders) %></div></div>
+  <div class="card kpi"><div class="lbl">Ticket promedio</div><div class="val"><%= money(aov) %></div><div class="delta"><%= cur.units %> cajas vendidas</div></div>
+  <div class="card kpi"><div class="lbl">Clientes nuevos</div><div class="val"><%= newCustomers %></div><div class="delta"><a href="/admin/orders?status=paid"><%= pending %> pedidos por despachar</a></div></div>
+</div>
+
+<div class="grid cols2" style="margin-top:16px">
+  <div class="card">
+    <h2>Ingresos por día</h2>
+    <div class="chart" id="chart">
+      <svg viewBox="0 0 <%= W %> <%= H %>" role="img" aria-label="Ingresos diarios de los últimos <%= days %> días">
+        <% for (let i = 0; i <= 4; i++) { const y = padT + plotH - (plotH * i / 4); %>
+          <line class="grid-line" x1="<%= padL %>" x2="<%= W %>" y1="<%= y %>" y2="<%= y %>"/>
+          <text class="axis" x="<%= padL - 8 %>" y="<%= y + 4 %>" text-anchor="end"><%= short(step * i) %></text>
+        <% } %>
+        <% series.forEach(function (s, i) {
+             const h = yTop ? (s.revenue / yTop) * plotH : 0; const x = padL + i * bw + gap / 2; const w = Math.max(1, bw - gap);
+             const y = padT + plotH - h; const r = Math.min(4, w / 2, h); %>
+          <g class="col" data-day="<%= dfmt(s.day) %>" data-rev="<%= money(s.revenue) %>" data-orders="<%= s.orders %>">
+            <% if (h > 0) { %><path class="bar-p" fill="#C97F14" d="M<%= x %>,<%= padT + plotH %> V<%= y + r %> Q<%= x %>,<%= y %> <%= x + r %>,<%= y %> H<%= x + w - r %> Q<%= x + w %>,<%= y %> <%= x + w %>,<%= y + r %> V<%= padT + plotH %> Z"/><% } %>
+            <rect class="hit" x="<%= padL + i * bw %>" y="<%= padT %>" width="<%= bw %>" height="<%= plotH %>"/>
+            <% if (i % every === 0 || i === series.length - 1) { %><text class="axis" x="<%= padL + i * bw + bw / 2 %>" y="<%= H - 6 %>" text-anchor="middle"><%= dfmt(s.day) %></text><% } %>
+          </g>
+        <% }) %>
+      </svg>
+      <div class="tip" id="tip"></div>
+    </div>
+    <details style="margin-top:10px"><summary class="small muted" style="cursor:pointer">Ver como tabla</summary>
+      <table class="small" style="margin-top:8px"><thead><tr><th>Día</th><th class="num">Pedidos</th><th class="num">Ingresos</th></tr></thead>
+      <tbody><% series.slice().reverse().forEach(function (s) { %><tr><td><%= dfmt(s.day) %></td><td class="num"><%= s.orders %></td><td class="num"><%= money(s.revenue) %></td></tr><% }) %></tbody></table>
+    </details>
+  </div>
+  <div class="grid" style="gap:16px">
+    <div class="card">
+      <h2>Más vendidos</h2>
+      <% if (!top.length) { %><p class="muted small">Aún no hay ventas en este periodo.</p><% } %>
+      <% const topMax = Math.max(...top.map(x => x.revenue), 1); top.forEach(function (p) { %>
+        <div class="list-row" style="display:block">
+          <div style="display:flex;justify-content:space-between;gap:10px"><span><%= p.name %></span><b><%= money(p.revenue) %></b></div>
+          <div class="muted small"><%= p.units %> unidades</div>
+          <div class="bar-track"><i style="width:<%= Math.round(p.revenue / topMax * 100) %>%"></i></div>
+        </div>
+      <% }) %>
+    </div>
+    <div class="card">
+      <h2>Inventario bajo</h2>
+      <% if (!lowStock.length) { %><p class="muted small">Todo el inventario está bien (más de 20 unidades).</p><% } %>
+      <% lowStock.forEach(function (p) { %>
+        <div class="list-row"><a href="/admin/products/<%= p.id %>"><%= p.name %></a><span class="pill <%= p.stock === 0 ? 'cancelled' : 'pending' %>"><%= p.stock === 0 ? 'Agotado' : p.stock + ' uds' %></span></div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="top" style="margin-bottom:10px"><h2 style="margin:0">Pedidos recientes</h2><a class="btn ghost sm" href="/admin/orders">Ver todos</a></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Pedido</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th class="num">Total</th></tr></thead>
+    <tbody>
+    <% if (!recent.length) { %><tr><td colspan="5" class="muted">Todavía no hay pedidos.</td></tr><% } %>
+    <% recent.forEach(function (o) { %>
+      <tr><td><a href="/admin/orders/<%= o.id %>"><b><%= o.number %></b></a></td><td><%= o.name %><div class="muted small"><%= o.email %></div></td>
+      <td class="small"><%= fmtDate(o.created_at) %></td><td><span class="pill <%= o.status %>"><%= STATUS[o.status] %></span></td><td class="num"><b><%= money(o.total_cents) %></b></td></tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+</div>
+<script>
+(function () {
+  var c = document.getElementById('chart'), tip = document.getElementById('tip');
+  c.querySelectorAll('g.col').forEach(function (g) {
+    g.addEventListener('mouseenter', function () {
+      var r = g.querySelector('rect.hit').getBoundingClientRect(), cr = c.getBoundingClientRect();
+      tip.innerHTML = '<b>' + g.dataset.rev + '</b>' + g.dataset.day + ' · ' + g.dataset.orders + ' pedido' + (g.dataset.orders === '1' ? '' : 's');
+      tip.style.left = (r.left - cr.left + r.width / 2) + 'px';
+      var bar = g.querySelector('path'); var top = bar ? bar.getBoundingClientRect().top : r.bottom;
+      tip.style.top = (top - cr.top - 4) + 'px'; tip.style.opacity = 1;
+    });
+    g.addEventListener('mouseleave', function () { tip.style.opacity = 0; });
+  });
+})();
+</script>
+<%- include('_foot') %>

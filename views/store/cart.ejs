@@ -1,0 +1,44 @@
+<%- include('_head') %>
+<div class="wrap page">
+  <h1 style="font-size:clamp(30px,4vw,44px)"><%= t('cart_title') %></h1>
+  <% if (!priced.lines.length) { %>
+    <div class="panel" style="text-align:center;padding:48px 20px">
+      <p class="muted"><%= t('cart_empty') %></p>
+      <a class="btn orange" href="/#shop"><%= t('continue_shopping') %></a>
+    </div>
+  <% } else { %>
+  <div class="two">
+    <form method="post" action="/cart/update" class="panel" id="cartform">
+      <% priced.lines.forEach(function (l) { const p = l.product; %>
+      <div class="line">
+        <a class="thumb" href="/products/<%= p.slug %>"><%- include('_pic', { p, fixed: false }) %></a>
+        <div>
+          <a class="name" href="/products/<%= p.slug %>"><%= pt(p, 'name') %></a>
+          <div class="muted small"><%= money(p.price_cents) %> <%= t('per_box') %></div>
+          <div class="controls">
+            <input type="number" name="qty_<%= p.id %>" value="<%= l.qty %>" min="0" max="999" aria-label="<%= t('qty') %>">
+            <button class="linkbtn" name="remove" value="<%= p.id %>"><%= t('remove') %></button>
+          </div>
+          <% if (l.overStock) { %><div class="stock out" style="margin-top:6px"><%= t('stock_warning', { n: p.stock }) %></div><% } %>
+        </div>
+        <div class="amt"><%= money(l.lineCents) %></div>
+      </div>
+      <% }) %>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;gap:12px;flex-wrap:wrap">
+        <a class="btn sm ghost" href="/#shop"><%= t('continue_shopping') %></a>
+        <button class="btn sm"><%= t('update') %></button>
+      </div>
+    </form>
+    <aside class="panel gray">
+      <h3><%= t('order_summary') %></h3>
+      <% if (priced.freeMin > 0) { const left = priced.freeMin - (priced.subtotal - priced.discount); %>
+        <div class="shipnote"><%= left > 0 ? t('free_ship_left', { amount: money(left) }) : t('free_ship_ok') %></div>
+      <% } %>
+      <%- include('_summary') %>
+      <%- include('_coupon', { back: 'cart' }) %>
+      <a class="btn orange block <%= priced.lines.some(l => l.overStock) ? 'disabled' : '' %>" href="/checkout" <%= priced.lines.some(l => l.overStock) ? 'aria-disabled=true style=pointer-events:none;opacity:.45' : '' %>><%= t('checkout') %></a>
+    </aside>
+  </div>
+  <% } %>
+</div>
+<%- include('_foot') %>

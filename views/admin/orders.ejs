@@ -1,0 +1,33 @@
+<%- include('_head') %>
+<% const qs = (o) => { const p = new URLSearchParams(); const v = Object.assign({ status, q: search }, o); for (const k in v) if (v[k]) p.set(k, v[k]); const s = p.toString(); return s ? '?' + s : ''; }; %>
+<div class="top"><div><h1>Pedidos</h1><div class="muted small"><%= total %> resultados</div></div><a class="btn ghost" href="/admin/orders/export.csv<%= qs({}) %>">Exportar CSV</a></div>
+<div class="filters">
+  <div class="tabs">
+    <a class="<%= !status ? 'on' : '' %>" href="/admin/orders<%= qs({ status: '' , page: '' }) %>">Todos</a>
+    <% Object.keys(STATUS).forEach(function (s) { %><a class="<%= status===s ? 'on' : '' %>" href="/admin/orders<%= qs({ status: s, page: '' }) %>"><%= STATUS[s] %> <span class="muted">(<%= counts[s] || 0 %>)</span></a><% }) %>
+  </div>
+  <form method="get"><% if (status) { %><input type="hidden" name="status" value="<%= status %>"><% } %><input name="q" value="<%= search %>" placeholder="Buscar por # pedido, nombre o correo"><button class="btn sm">Buscar</button></form>
+</div>
+<div class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Pedido</th><th>Fecha</th><th>Cliente</th><th>Entrega</th><th class="num">Cajas</th><th>Estado</th><th class="num">Total</th></tr></thead>
+  <tbody>
+  <% if (!list.length) { %><tr><td colspan="7" class="muted">No hay pedidos con esos filtros.</td></tr><% } %>
+  <% list.forEach(function (o) { %>
+  <tr>
+    <td><a href="/admin/orders/<%= o.id %>"><b><%= o.number %></b></a></td>
+    <td class="small"><%= fmtDate(o.created_at) %></td>
+    <td><%= o.name %><div class="muted small"><%= o.email %></div></td>
+    <td class="small"><%= o.fulfillment === 'pickup' ? 'Recoge' : o.city + ', ' + o.state %></td>
+    <td class="num"><%= o.units %></td>
+    <td><span class="pill <%= o.status %>"><%= STATUS[o.status] %></span></td>
+    <td class="num"><b><%= money(o.total_cents) %></b></td>
+  </tr>
+  <% }) %>
+  </tbody>
+</table></div></div>
+<% if (pages > 1) { %><div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+  <% if (page > 1) { %><a class="btn ghost sm" href="/admin/orders<%= qs({ page: page - 1 }) %>">← Anterior</a><% } %>
+  <span class="muted small" style="align-self:center">Página <%= page %> de <%= pages %></span>
+  <% if (page < pages) { %><a class="btn ghost sm" href="/admin/orders<%= qs({ page: page + 1 }) %>">Siguiente →</a><% } %>
+</div><% } %>
+<%- include('_foot') %>

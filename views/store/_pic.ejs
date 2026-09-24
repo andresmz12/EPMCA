@@ -1,0 +1,1 @@
+<% if (p.image_id) { %><img src="/img/<%= p.image_id %>" alt="<%= pt(p, 'name') %>" loading="lazy"><% } else { %><%- boxSvg(p.dimensions, { fixed: typeof fixed !== 'undefined' && fixed, label: !(typeof fixed !== 'undefined' && fixed) }) %><% } %>

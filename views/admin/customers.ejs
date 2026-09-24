@@ -1,0 +1,20 @@
+<%- include('_head') %>
+<div class="top"><div><h1>Clientes</h1><div class="muted small"><%= list.length %> clientes<%= list.length === 200 ? ' (mostrando los 200 más recientes)' : '' %></div></div><a class="btn ghost" href="/admin/customers.csv">Exportar CSV</a></div>
+<div class="filters"><form method="get" style="margin-left:0"><input name="q" value="<%= search %>" placeholder="Buscar por nombre, correo o teléfono"><button class="btn sm">Buscar</button></form></div>
+<div class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Cliente</th><th>Teléfono</th><th>Cliente desde</th><th class="num">Pedidos</th><th class="num">Total gastado</th><th>Último pedido</th></tr></thead>
+  <tbody>
+  <% if (!list.length) { %><tr><td colspan="6" class="muted">Aún no hay clientes.</td></tr><% } %>
+  <% list.forEach(function (c) { %>
+  <tr>
+    <td><b><%= c.name %></b><div class="muted small"><a href="mailto:<%= c.email %>"><%= c.email %></a></div></td>
+    <td class="small"><%= c.phone || '—' %></td>
+    <td class="small"><%= fmtDate(c.created_at, false) %></td>
+    <td class="num"><a href="/admin/orders?q=<%= encodeURIComponent(c.email) %>"><%= c.orders %></a></td>
+    <td class="num"><b><%= money(c.spent) %></b></td>
+    <td class="small"><%= fmtDate(c.last_order, false) %></td>
+  </tr>
+  <% }) %>
+  </tbody>
+</table></div></div>
+<%- include('_foot') %>

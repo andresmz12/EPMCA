@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin · <%= settings.store_name %></title>
+<link rel="icon" href="/logo-mark.png">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="layout">
+<aside class="side">
+  <a class="brand" href="/admin"><img src="/logo-mark.png" alt=""><span>EMPA<b>CALO</b><small>ADMIN</small></span></a>
+  <a class="nav <%= section==='dash'?'on':'' %>" href="/admin">Resumen</a>
+  <a class="nav <%= section==='orders'?'on':'' %>" href="/admin/orders">Pedidos</a>
+  <a class="nav <%= section==='products'?'on':'' %>" href="/admin/products">Productos</a>
+  <a class="nav <%= section==='customers'?'on':'' %>" href="/admin/customers">Clientes</a>
+  <a class="nav <%= section==='coupons'?'on':'' %>" href="/admin/coupons">Cupones</a>
+  <a class="nav <%= section==='settings'?'on':'' %>" href="/admin/settings">Configuración</a>
+  <div class="spacer"></div>
+  <a class="nav" href="/" target="_blank" rel="noopener">Ver tienda ↗</a>
+  <form method="post" action="/admin/logout"><button>Cerrar sesión</button></form>
+</aside>
+<main>
+<% if (notice) { %><div class="notice <%= notice.type %>"><%= notice.text %></div><% } %>

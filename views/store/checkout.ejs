@@ -1,0 +1,67 @@
+<%- include('_head') %>
+<div class="wrap page">
+  <h1 style="font-size:clamp(30px,4vw,44px)"><%= t('checkout') %></h1>
+  <% if (error) { %><div class="flash err"><%= error %></div><% } %>
+  <div class="two">
+    <form method="post" action="/checkout" class="panel" id="co" novalidate>
+      <fieldset>
+        <legend><%= t('contact_info') %></legend>
+        <div class="field"><label for="name"><%= t('full_name') %> *</label><input id="name" name="name" required autocomplete="name" value="<%= form.name || '' %>"></div>
+        <div class="row">
+          <div class="field"><label for="email"><%= t('email') %> *</label><input id="email" type="email" name="email" required autocomplete="email" value="<%= form.email || '' %>"></div>
+          <div class="field"><label for="phone"><%= t('phone') %></label><input id="phone" type="tel" name="phone" autocomplete="tel" value="<%= form.phone || '' %>"></div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend><%= t('fulfillment') %></legend>
+        <div class="choice">
+          <label><input type="radio" name="fulfillment" value="delivery" <%= form.fulfillment !== 'pickup' ? 'checked' : '' %>><%= t('delivery') %><span><%= delivery.shipping ? money(delivery.shipping) : t('free') %></span></label>
+          <% if (pickup) { %><label><input type="radio" name="fulfillment" value="pickup" <%= form.fulfillment === 'pickup' ? 'checked' : '' %>><%= t('pickup') %><span><%= t('free') %></span></label><% } %>
+        </div>
+        <div id="addr">
+          <div class="field"><label for="address1"><%= t('address') %> *</label><input id="address1" name="address1" autocomplete="address-line1" value="<%= form.address1 || '' %>"></div>
+          <div class="field"><label for="address2"><%= t('address2') %></label><input id="address2" name="address2" autocomplete="address-line2" value="<%= form.address2 || '' %>"></div>
+          <div class="row3">
+            <div class="field"><label for="city"><%= t('city') %> *</label><input id="city" name="city" autocomplete="address-level2" value="<%= form.city || '' %>"></div>
+            <div class="field"><label for="state"><%= t('state') %> *</label>
+              <select id="state" name="state" autocomplete="address-level1"><option value=""><%= t('select_state') %></option><% states.forEach(function (s) { %><option <%= form.state === s ? 'selected' : '' %>><%= s %></option><% }) %></select></div>
+            <div class="field"><label for="zip"><%= t('zip') %> *</label><input id="zip" name="zip" inputmode="numeric" autocomplete="postal-code" maxlength="10" value="<%= form.zip || '' %>"></div>
+          </div>
+        </div>
+        <% if (pickup && settings.pickup_address) { %><p id="pickupinfo" class="muted small" hidden><b><%= t('pickup_at') %>:</b> <%= settings.pickup_address %></p><% } %>
+      </fieldset>
+      <div class="field"><label for="notes"><%= t('notes') %></label><textarea id="notes" name="notes" rows="2"><%= form.notes || '' %></textarea></div>
+      <button class="btn orange block" id="paybtn"
+        data-label-d="<%= stripeEnabled ? t('pay_now', { amount: money(delivery.total) }) : t('place_order') %>"
+        data-label-p="<%= pickup ? (stripeEnabled ? t('pay_now', { amount: money(pickup.total) }) : t('place_order')) : '' %>">
+        <%= stripeEnabled ? t('pay_now', { amount: money(delivery.total) }) : t('place_order') %></button>
+      <p class="muted small" style="margin:12px 0 0;text-align:center"><%= stripeEnabled ? t('pay_stripe_note') : t('pay_manual_note') %></p>
+    </form>
+    <aside class="panel gray">
+      <h3><%= t('order_summary') %></h3>
+      <% delivery.lines.forEach(function (l) { %>
+        <div class="mini"><span><%= pt(l.product, 'name') %><br><span class="muted"><%= t('qty') %>: <%= l.qty %></span></span><b><%= money(l.lineCents) %></b></div>
+      <% }) %>
+      <div style="height:10px"></div>
+      <div id="sum-d"><%- include('_summary', { priced: delivery }) %></div>
+      <% if (pickup) { %><div id="sum-p" hidden><%- include('_summary', { priced: pickup }) %></div><% } %>
+      <%- include('_coupon', { priced: delivery, back: 'checkout' }) %>
+    </aside>
+  </div>
+</div>
+<script>
+(function () {
+  var f = document.getElementById('co'), btn = document.getElementById('paybtn');
+  function sync() {
+    var pick = (f.querySelector('input[name=fulfillment]:checked') || {}).value === 'pickup';
+    document.getElementById('addr').hidden = pick;
+    var pi = document.getElementById('pickupinfo'); if (pi) pi.hidden = !pick;
+    var sd = document.getElementById('sum-d'), sp = document.getElementById('sum-p');
+    if (sp) { sd.hidden = pick; sp.hidden = !pick; }
+    btn.textContent = pick ? btn.dataset.labelP : btn.dataset.labelD;
+  }
+  f.addEventListener('change', sync); sync();
+  f.addEventListener('submit', function () { setTimeout(function () { btn.disabled = true; }, 0); });
+})();
+</script>
+<%- include('_foot') %>

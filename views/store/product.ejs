@@ -1,0 +1,43 @@
+<%- include('_head') %>
+<div class="wrap">
+  <div class="crumbs"><a href="/#shop"><%= t('nav_shop') %></a> / <%= pt(product, 'name') %></div>
+  <div class="pdp">
+    <div class="gallery <%= product.image_id ? 'has-img' : '' %>"><%- include('_pic', { p: product, fixed: false }) %></div>
+    <div>
+      <h1><%= pt(product, 'name') %></h1>
+      <p class="muted"><%= pt(product, 'short_desc') %></p>
+      <div class="price"><%= money(product.price_cents) %><% if (product.compare_at_cents > product.price_cents) { %><s><%= money(product.compare_at_cents) %></s><% } %> <span class="per"><%= product.pack_size > 1 ? '' : t('per_box') %></span></div>
+      <%- include('_stock', { p: product }) %>
+      <table class="specs">
+        <tr><th><%= t('dimensions') %></th><td><%= product.dimensions || '—' %></td></tr>
+        <tr><th><%= t('strength') %></th><td><%= t('strength_val') %></td></tr>
+        <tr><th><%= t('nav_shipping') %></th><td><%= t('info_ship_d') %></td></tr>
+      </table>
+      <form method="post" action="/cart/add" class="buy">
+        <input type="hidden" name="product_id" value="<%= product.id %>">
+        <input type="hidden" name="next" value="cart">
+        <div class="qty">
+          <button type="button" data-step="-1" aria-label="-">−</button>
+          <input type="number" name="qty" value="<%= product.pack_size > 1 ? 1 : 10 %>" min="1" max="<%= Math.max(1, product.stock) %>" aria-label="<%= t('qty') %>">
+          <button type="button" data-step="1" aria-label="+">+</button>
+        </div>
+        <button class="btn orange" <%= product.stock <= 0 ? 'disabled' : '' %>><%= product.stock <= 0 ? t('out_of_stock') : t('add_to_cart') %></button>
+      </form>
+      <div class="prose"><p><%= pt(product, 'description') %></p></div>
+    </div>
+  </div>
+  <% if (others.length) { %>
+  <div style="padding-bottom:72px">
+    <h2 style="font-size:24px"><%= t('shop_title') %></h2>
+    <div class="grid">
+      <% others.forEach(function (p) { %>
+      <article class="card">
+        <a class="pic <%= p.image_id ? 'has-img' : '' %>" href="/products/<%= p.slug %>"><%- include('_pic', { p, fixed: true }) %></a>
+        <div class="body"><a class="name" href="/products/<%= p.slug %>" style="font-size:16px"><%= pt(p, 'name') %></a><div class="price" style="font-size:17px"><%= money(p.price_cents) %></div></div>
+      </article>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
+</div>
+<%- include('_foot') %>

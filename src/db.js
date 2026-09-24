@@ -1,0 +1,204 @@
+const { Pool } = require('pg');
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error('Falta la variable DATABASE_URL (conexión a PostgreSQL).');
+  process.exit(1);
+}
+
+// Railway's internal network doesn't use SSL; public proxies do.
+const needsSsl = /sslmode=require/.test(connectionString) || process.env.PGSSL === 'true';
+const pool = new Pool({
+  connectionString,
+  ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
+  max: 10,
+});
+
+const q = (text, params) => pool.query(text, params);
+const one = async (text, params) => (await pool.query(text, params)).rows[0] || null;
+const all = async (text, params) => (await pool.query(text, params)).rows;
+
+async function tx(fn) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS images (
+  id SERIAL PRIMARY KEY,
+  mime TEXT NOT NULL,
+  data BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS products (
+  id SERIAL PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  short_desc TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  dimensions TEXT NOT NULL DEFAULT '',
+  pack_size INT NOT NULL DEFAULT 1,
+  price_cents INT NOT NULL CHECK (price_cents >= 0),
+  compare_at_cents INT,
+  stock INT NOT NULL DEFAULT 0,
+  active BOOLEAN NOT NULL DEFAULT true,
+  featured BOOLEAN NOT NULL DEFAULT false,
+  sort INT NOT NULL DEFAULT 0,
+  image_id INT REFERENCES images(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS name_es TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS short_desc_es TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS description_es TEXT NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS customers (
+  id SERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS coupons (
+  id SERIAL PRIMARY KEY,
+  code TEXT UNIQUE NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('percent','fixed')),
+  value INT NOT NULL CHECK (value > 0),
+  min_subtotal_cents INT NOT NULL DEFAULT 0,
+  max_uses INT,
+  uses INT NOT NULL DEFAULT 0,
+  expires_at TIMESTAMPTZ,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id SERIAL PRIMARY KEY,
+  number TEXT UNIQUE NOT NULL,
+  access_token TEXT NOT NULL,
+  customer_id INT REFERENCES customers(id) ON DELETE SET NULL,
+  email TEXT NOT NULL,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL DEFAULT '',
+  fulfillment TEXT NOT NULL DEFAULT 'delivery' CHECK (fulfillment IN ('delivery','pickup')),
+  address1 TEXT NOT NULL DEFAULT '',
+  address2 TEXT NOT NULL DEFAULT '',
+  city TEXT NOT NULL DEFAULT '',
+  state TEXT NOT NULL DEFAULT '',
+  zip TEXT NOT NULL DEFAULT '',
+  subtotal_cents INT NOT NULL,
+  discount_cents INT NOT NULL DEFAULT 0,
+  shipping_cents INT NOT NULL DEFAULT 0,
+  tax_cents INT NOT NULL DEFAULT 0,
+  total_cents INT NOT NULL,
+  coupon_code TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','paid','shipped','delivered','cancelled')),
+  payment_method TEXT NOT NULL DEFAULT 'manual',
+  stripe_session_id TEXT,
+  tracking TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  paid_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS orders_created_idx ON orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS orders_email_idx ON orders(lower(email));
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  product_id INT REFERENCES products(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  unit_price_cents INT NOT NULL,
+  qty INT NOT NULL CHECK (qty > 0)
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "session" (
+  "sid" varchar NOT NULL COLLATE "default" PRIMARY KEY,
+  "sess" json NOT NULL,
+  "expire" timestamp(6) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+`;
+
+const DEFAULT_SETTINGS = {
+  store_name: process.env.STORE_NAME || 'EMPACALO',
+  shipping_flat_cents: '1500',
+  free_shipping_min_cents: '15000',
+  tax_rate_percent: '0',
+  pickup_enabled: 'false',
+  pickup_address: '',
+  support_email: 'info@empacalo.net',
+  support_phone: '',
+  announcement_en: 'We ship anywhere in the USA · Free shipping on orders over $150',
+  announcement_es: 'Enviamos a todo Estados Unidos · Envío gratis en pedidos desde $150',
+};
+
+// Precios de ejemplo: cámbialos desde el panel de administración.
+const DW_EN = 'Double-wall corrugated cardboard with a 275 lb bursting test. Two layers of fluting make these boxes much stiffer than standard single-wall moving boxes, so they hold their shape when stacked and loaded with heavy items.\n\nShips flat. Assembles in seconds with packing tape.';
+const DW_ES = 'Cartón corrugado de doble pared con prueba de estallido de 275 lb. Las dos capas de onda las hacen mucho más rígidas que una caja de mudanza normal: no se deforman al apilarlas ni con peso adentro.\n\nSe envían planas. Se arman en segundos con cinta de embalaje.';
+const SEED_PRODUCTS = [
+  { slug: 'box-12x12x12', dims: '12" × 12" × 12"', price: 399, stock: 500, featured: false, sort: 1,
+    short: 'Books, tools, parts and small heavy items.', short_es: 'Libros, herramientas, repuestos y cosas pesadas pequeñas.' },
+  { slug: 'box-16x16x16', dims: '16" × 16" × 16"', price: 599, stock: 500, featured: true, sort: 2,
+    short: 'The everyday size for shipping and moving.', short_es: 'El tamaño de todos los días para envíos y mudanzas.' },
+  { slug: 'box-24x24x30', dims: '24" × 24" × 30"', price: 1499, stock: 200, featured: false, sort: 3,
+    short: 'Small appliances, bedding, bulk shipments.', short_es: 'Electrodomésticos pequeños, cobijas, envíos grandes.' },
+  { slug: 'box-24x24x36', dims: '24" × 24" × 36"', price: 1699, stock: 200, featured: false, sort: 4,
+    short: 'Tall items: lamps, rolled rugs, décor.', short_es: 'Cosas altas: lámparas, tapetes enrollados, decoración.' },
+  { slug: 'box-24x30x36', dims: '24" × 30" × 36"', price: 1899, stock: 150, featured: false, sort: 5,
+    short: 'Our largest box for oversized items.', short_es: 'Nuestra caja más grande, para cosas voluminosas.' },
+].map((p) => {
+  const [a, b, c] = p.dims.match(/\d+/g);
+  return { ...p, pack: 1, compare: null, desc: DW_EN, desc_es: DW_ES,
+    name: `Double Wall Box ${a}×${b}×${c}"`, name_es: `Caja doble pared ${a}×${b}×${c}"` };
+});
+
+async function migrate() {
+  await pool.query(SCHEMA);
+  for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) {
+    await pool.query('INSERT INTO settings(key,value) VALUES($1,$2) ON CONFLICT (key) DO NOTHING', [k, v]);
+  }
+  const { rows } = await pool.query('SELECT count(*)::int AS n FROM products');
+  if (rows[0].n === 0 && process.env.SEED !== 'false') {
+    for (const p of SEED_PRODUCTS) {
+      await pool.query(
+        `INSERT INTO products(slug,name,short_desc,description,dimensions,pack_size,price_cents,compare_at_cents,stock,featured,sort,name_es,short_desc_es,description_es)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [p.slug, p.name, p.short, p.desc, p.dims, p.pack, p.price, p.compare, p.stock, p.featured, p.sort, p.name_es, p.short_es, p.desc_es]
+      );
+    }
+    await pool.query(
+      `INSERT INTO coupons(code,type,value,min_subtotal_cents) VALUES('WELCOME10','percent',10,0) ON CONFLICT DO NOTHING`
+    );
+    console.log('Base de datos inicializada con productos de ejemplo.');
+  }
+}
+
+async function getSettings() {
+  const rows = await all('SELECT key, value FROM settings');
+  const s = { ...DEFAULT_SETTINGS };
+  for (const r of rows) s[r.key] = r.value;
+  return s;
+}
+
+module.exports = { pool, q, one, all, tx, migrate, getSettings };

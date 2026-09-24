@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="<%= lang %>">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= title ? title + ' | ' + settings.store_name : settings.store_name + ' | ' + t('hero_title') %></title>
+<meta name="description" content="<%= t('hero_sub') %>">
+<link rel="icon" href="/logo-mark.png">
+<link rel="preload" href="/fonts/source-sans-3-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/montserrat-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/css/store.css">
+</head>
+<body>
+<% const ann = settings['announcement_' + lang]; if (ann) { %>
+<div class="topbar"><div class="wrap"><span><%= ann %></span><% if (settings.support_email) { %><span class="contact"><a href="mailto:<%= settings.support_email %>"><%= settings.support_email %></a><%= settings.support_phone ? ' · ' + settings.support_phone : '' %></span><% } %></div></div>
+<% } %>
+<header class="site">
+  <div class="wrap nav">
+    <a class="brand" href="/" aria-label="<%= settings.store_name %>">
+      <img src="/logo-mark.png" alt="">
+      <span class="word"><span class="name">EMPA<b>CALO</b></span><span class="sub">PACKING SUPPLIES</span></span>
+    </a>
+    <nav class="links">
+      <a href="/#shop"><%= t('nav_shop') %></a>
+      <a href="/#sizes"><%= t('nav_sizes') %></a>
+      <a href="/#shipping"><%= t('nav_shipping') %></a>
+      <a href="/#faq"><%= t('nav_faq') %></a>
+    </nav>
+    <div class="right">
+      <span class="lang"><a href="?lang=en" class="<%= lang==='en'?'on':'' %>">EN</a> / <a href="?lang=es" class="<%= lang==='es'?'on':'' %>">ES</a></span>
+      <a class="cart-btn" href="/cart"><span class="lbl"><%= t('nav_cart') %></span><span class="n"><%= cartCount %></span></a>
+    </div>
+  </div>
+</header>
+<main>
+<% if (flash) { %><div class="wrap"><div class="flash <%= flash.type %>"><%= t(flash.key) %></div></div><% } %>

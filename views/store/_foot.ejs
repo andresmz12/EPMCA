@@ -1,0 +1,34 @@
+</main>
+<footer class="site">
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <a class="brand" href="/"><img src="/logo-mark.png" alt="" style="background:#fff;border-radius:3px;padding:2px"><span class="word"><span class="name">EMPA<b>CALO</b></span><span class="sub">PACKING SUPPLIES</span></span></a>
+        <p style="margin-top:14px;max-width:340px"><%= t('hero_sub') %></p>
+      </div>
+      <div>
+        <h4><%= t('nav_shop') %></h4>
+        <p><a href="/#shop"><%= t('nav_shop') %></a></p>
+        <p><a href="/#sizes"><%= t('nav_sizes') %></a></p>
+        <p><a href="/#faq"><%= t('nav_faq') %></a></p>
+      </div>
+      <div>
+        <h4><%= t('footer_contact') %></h4>
+        <% if (settings.support_email) { %><p><a href="mailto:<%= settings.support_email %>"><%= settings.support_email %></a></p><% } %>
+        <% if (settings.support_phone) { %><p><a href="tel:<%= settings.support_phone.replace(/[^\d+]/g,'') %>"><%= settings.support_phone %></a></p><% } %>
+        <p><%= t('info_ship_d') %></p>
+      </div>
+    </div>
+    <div class="legal">© <%= new Date().getFullYear() %> <%= settings.store_name %>. <%= t('footer_rights') %></div>
+  </div>
+</footer>
+<script>
+document.querySelectorAll('[data-step]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var i = b.parentNode.querySelector('input'); var v = (parseInt(i.value, 10) || 0) + parseInt(b.dataset.step, 10);
+    var max = parseInt(i.max, 10) || 999; i.value = Math.max(parseInt(i.min, 10) || 1, Math.min(v, max));
+  });
+});
+</script>
+</body>
+</html>

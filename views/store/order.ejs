@@ -1,0 +1,33 @@
+<%- include('_head') %>
+<div class="wrap">
+  <div class="thanks">
+    <h1 style="font-size:clamp(30px,4vw,44px)"><%= t('thanks_title', { name: order.name.split(' ')[0] }) %></h1>
+    <p class="lead" style="font-size:18px"><%= t('thanks_sub', { number: order.number }) %></p>
+    <p><span class="status-pill <%= order.status %>"><%= t('st_' + order.status) %></span></p>
+    <p class="muted">
+      <% if (order.status === 'paid') { %><%= t('thanks_paid') %><% } else if (order.status === 'pending') { %><%= t('thanks_pending', { email: order.email }) %><% } %>
+      <% if (order.fulfillment === 'pickup' && order.status !== 'cancelled') { %><br><%= t('thanks_pickup') %><% } %>
+    </p>
+  </div>
+  <div class="panel gray" style="max-width:640px;margin:0 auto 80px">
+    <% items.forEach(function (it) { %>
+      <div class="mini"><span><%= (lang === 'es' && it.name_es) || it.name %><br><span class="muted"><%= t('qty') %>: <%= it.qty %></span></span><b><%= money(it.unit_price_cents * it.qty) %></b></div>
+    <% }) %>
+    <div style="height:10px"></div>
+    <div class="sumrow"><span><%= t('subtotal') %></span><span><%= money(order.subtotal_cents) %></span></div>
+    <% if (order.discount_cents) { %><div class="sumrow"><span><%= t('discount') %> (<%= order.coupon_code %>)</span><span class="neg">−<%= money(order.discount_cents) %></span></div><% } %>
+    <div class="sumrow"><span><%= order.fulfillment === 'pickup' ? t('pickup') : t('shipping') %></span><span><%= order.shipping_cents ? money(order.shipping_cents) : t('free') %></span></div>
+    <% if (order.tax_cents) { %><div class="sumrow"><span><%= t('tax') %></span><span><%= money(order.tax_cents) %></span></div><% } %>
+    <div class="sumrow total"><span><%= t('total') %></span><span><%= money(order.total_cents) %></span></div>
+    <div style="margin-top:18px" class="small">
+      <% if (order.fulfillment === 'pickup') { %>
+        <b><%= t('pickup_at') %>:</b> <%= settings.pickup_address %>
+      <% } else { %>
+        <b><%= t('ship_to') %>:</b> <%= order.address1 %><%= order.address2 ? ', ' + order.address2 : '' %>, <%= order.city %>, <%= order.state %> <%= order.zip %>
+      <% } %>
+      <% if (order.tracking) { %><br><b><%= t('track') %>:</b> <%= order.tracking %><% } %>
+    </div>
+    <p style="margin:24px 0 0;text-align:center"><a class="btn ghost sm" href="/"><%= t('back_home') %></a></p>
+  </div>
+</div>
+<%- include('_foot') %>

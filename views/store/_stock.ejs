@@ -1,0 +1,1 @@
+<% if (p.stock <= 0) { %><span class="stock out"><%= t('out_of_stock') %></span><% } else if (p.stock <= 20) { %><span class="stock low"><%= t('only_left', { n: p.stock }) %></span><% } else { %><span class="stock ok"><%= t('in_stock') %></span><% } %>

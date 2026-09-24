@@ -1,0 +1,14 @@
+<% if (priced.coupon) { %>
+  <form method="post" action="/cart/coupon" class="flash ok" style="display:flex;justify-content:space-between;align-items:center;margin:14px 0">
+    <span><%= t('coupon_applied', { code: priced.coupon.code }) %></span>
+    <input type="hidden" name="clear" value="1"><input type="hidden" name="back" value="<%= back %>">
+    <button class="linkbtn"><%= t('remove_coupon') %></button>
+  </form>
+<% } else { %>
+  <form method="post" action="/cart/coupon" class="coupon">
+    <input type="hidden" name="back" value="<%= back %>">
+    <input name="code" placeholder="<%= t('coupon') %>" value="<%= couponMsg ? (couponCode || '') : '' %>" aria-label="<%= t('coupon') %>" autocomplete="off">
+    <button class="btn sm ghost"><%= t('apply') %></button>
+  </form>
+  <% if (couponMsg) { %><div class="flash err" style="margin-top:-6px"><%= couponMsg %></div><% } %>
+<% } %>
