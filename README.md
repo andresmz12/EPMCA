@@ -32,9 +32,12 @@ Tecnología: Node.js 20+ · Express · PostgreSQL · (opcional) Stripe.
    |---|---|
    | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (Railway la conecta sola) |
    | `SESSION_SECRET` | una cadena larga aleatoria (ej. genera una en 1password o con `openssl rand -hex 32`) |
-   | `ADMIN_EMAIL` | tu correo para entrar al admin |
-   | `ADMIN_PASSWORD` | una contraseña fuerte |
+   | `ADMIN_EMAIL` | correo del **primer** admin (solo se usa la primera vez) |
+   | `ADMIN_PASSWORD` | contraseña del primer admin (solo la primera vez) |
    | `NODE_ENV` | `production` |
+   | `PUBLIC_URL` | `https://empacalo.us` — dominio oficial: el de Railway y `www` redirigen aquí, y se usa en el sitemap y en Google |
+
+   > Después del primer arranque, los admins viven en la base de datos: cambiar `ADMIN_PASSWORD` ya no hace nada. Cada admin cambia su clave en **Admin → Mi contraseña**, y el dueño invita/quita admins (con permisos de Pedidos, Tienda o completo) en **Admin → Usuarios admin**.
 
 5. **Genera el dominio**: servicio → **Settings** → **Networking** → **Generate Domain**.
    Luego puedes conectar tu propio dominio (ej. `shop.empacalo.net`) en la misma sección.
@@ -55,7 +58,7 @@ Para cobrar con tarjeta:
 2. En Stripe → **Developers → API keys**, copia la **Secret key** y ponla en Railway como `STRIPE_SECRET_KEY`.
 3. En Stripe → **Developers → Webhooks → Add endpoint**:
    - URL: `https://TU-DOMINIO/stripe/webhook`
-   - Eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
+   - Eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `invoice.paid`, `customer.subscription.deleted` (los dos últimos son para los pedidos recurrentes)
    - Copia el **Signing secret** y ponlo en Railway como `STRIPE_WEBHOOK_SECRET`.
 4. Prueba primero con las llaves de **modo prueba** (`sk_test_...`) y la tarjeta `4242 4242 4242 4242`.
 
@@ -73,7 +76,15 @@ npm install
 npm run dev               # http://localhost:3000  ·  admin: /admin
 ```
 
-Sin `ADMIN_EMAIL`/`ADMIN_PASSWORD`, en desarrollo el acceso es `admin@empacalo.net` / `admin123` (en producción es obligatorio definirlos).
+Sin `ADMIN_EMAIL`/`ADMIN_PASSWORD`, en desarrollo el acceso es `admin@empacalo.net` / `admin123`. En producción (o en cualquier deploy de Railway) es obligatorio definirlos.
+
+---
+
+## SEO
+
+Ya incluido: títulos y descripciones por página, canonical, versiones en inglés (`/`) y español (`/?lang=es`) enlazadas con hreflang, Open Graph para redes sociales, datos estructurados (Organization, FAQ, Product con precio/stock/envío, Breadcrumb), `/robots.txt` y `/sitemap.xml`. Carrito, checkout, cuenta y pedidos no se indexan.
+
+Después de publicar: verifica el dominio en [Google Search Console](https://search.google.com/search-console) y envía `https://empacalo.us/sitemap.xml`.
 
 ---
 
