@@ -15,6 +15,7 @@
   <% if (can.orders) { %>
   <a class="nav <%= section==='orders'?'on':'' %>" href="/admin/orders">Pedidos</a>
   <a class="nav <%= section==='customers'?'on':'' %>" href="/admin/customers">Clientes</a>
+  <a class="nav <%= section==='messages'?'on':'' %>" href="/admin/messages">Mensajes<% if (unreadMessages) { %> <span class="pill pending"><%= unreadMessages %></span><% } %></a>
   <% } %>
   <% if (can.store) { %>
   <a class="nav <%= section==='products'?'on':'' %>" href="/admin/products">Productos</a>

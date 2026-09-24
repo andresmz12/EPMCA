@@ -1,0 +1,30 @@
+<%- include('_head') %>
+<div class="wrap page">
+  <div class="two" style="grid-template-columns: 1fr 340px">
+    <div>
+      <h1><%= t('contact_title') %></h1>
+      <p class="muted" style="margin-bottom:22px"><%= t('contact_sub') %></p>
+      <% if (sent) { %>
+        <div class="flash ok"><%= t('contact_sent') %></div>
+      <% } else { %>
+        <% if (error) { %><div class="flash err"><%= error %></div><% } %>
+        <form method="post" action="/contact" class="panel">
+          <div class="field"><label for="name"><%= t('full_name') %></label><input id="name" name="name" required autocomplete="name" value="<%= form.name || '' %>"></div>
+          <div class="row">
+            <div class="field"><label for="email"><%= t('email') %></label><input id="email" type="email" name="email" required autocomplete="email" value="<%= form.email || '' %>"></div>
+            <div class="field"><label for="phone"><%= t('phone') %></label><input id="phone" type="tel" name="phone" autocomplete="tel" value="<%= form.phone || '' %>"></div>
+          </div>
+          <div class="field"><label for="message"><%= t('contact_message') %></label><textarea id="message" name="message" rows="6" required><%= form.message || '' %></textarea></div>
+          <button class="btn orange block"><%= t('contact_send') %></button>
+        </form>
+      <% } %>
+    </div>
+    <aside class="panel gray">
+      <h3><%= t('contact_direct_title') %></h3>
+      <% if (settings.support_email) { %><p><a href="mailto:<%= settings.support_email %>"><%= settings.support_email %></a></p><% } %>
+      <% if (settings.support_phone) { %><p><a href="tel:<%= settings.support_phone.replace(/[^\d+]/g,'') %>"><%= settings.support_phone %></a></p><% } %>
+      <p class="muted small" style="margin-top:14px"><%= t('contact_hours_note') %></p>
+    </aside>
+  </div>
+</div>
+<%- include('_foot') %>

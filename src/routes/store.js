@@ -1,5 +1,5 @@
 const express = require('express');
-const { all, one } = require('../db');
+const { all, one, q } = require('../db');
 const lib = require('../lib');
 const auth = require('../auth');
 const orders = require('../orders');
@@ -194,12 +194,16 @@ r.post('/account/register', async (req, res) => {
   if (existing && existing.password_hash) return fail('err_account_exists');
 
   const hash = auth.hashPassword(password);
+  const isNew = !existing;
   const customer = existing
     ? await one('UPDATE customers SET name=$1, password_hash=$2 WHERE id=$3 RETURNING *', [name, hash, existing.id])
     : await one('INSERT INTO customers(email, name, password_hash) VALUES($1,$2,$3) RETURNING *', [email, name, hash]);
+  const cart = req.session.cart, coupon = req.session.coupon;
   req.session.regenerate((err) => {
     if (err) throw err;
     req.session.customer = customerSession(customer);
+    req.session.cart = cart;
+    req.session.coupon = isNew ? (coupon || 'WELCOME10') : coupon;
     res.redirect('/account');
   });
 });
@@ -215,9 +219,12 @@ r.post('/account/login', async (req, res) => {
   const customer = email && (await one('SELECT * FROM customers WHERE email=$1', [email]));
   const ok = customer && auth.verifyPassword(req.body.password || '', customer.password_hash);
   if (!ok) return res.status(401).render('store/account_login', { error: t('err_login'), title: t('account_login') });
+  const cart = req.session.cart, coupon = req.session.coupon;
   req.session.regenerate((err) => {
     if (err) throw err;
     req.session.customer = customerSession(customer);
+    req.session.cart = cart;
+    req.session.coupon = coupon;
     res.redirect('/account');
   });
 });
@@ -278,6 +285,31 @@ r.post('/account/address', async (req, res) => {
   req.session.customer = customerSession(customer);
   req.session.flash = { type: 'ok', key: 'account_saved' };
   res.redirect('/account');
+});
+
+/* ───────────── Contact ───────────── */
+r.get('/contact', (req, res) => {
+  const { customer, t } = res.locals;
+  const form = customer ? { name: customer.name, email: customer.email, phone: customer.phone } : {};
+  res.render('store/contact', { error: null, sent: false, form, title: t('contact_title') });
+});
+
+r.post('/contact', async (req, res) => {
+  const { t } = res.locals;
+  const form = {
+    name: String(req.body.name || '').trim().slice(0, 200),
+    email: String(req.body.email || '').trim().toLowerCase().slice(0, 200),
+    phone: String(req.body.phone || '').trim().slice(0, 60),
+    message: String(req.body.message || '').trim().slice(0, 3000),
+  };
+  if (!form.name || !form.email || !form.message) {
+    return res.status(400).render('store/contact', { error: t('err_required'), sent: false, form, title: t('contact_title') });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    return res.status(400).render('store/contact', { error: t('err_email'), sent: false, form, title: t('contact_title') });
+  }
+  await q('INSERT INTO contact_messages(name, email, phone, message) VALUES($1,$2,$3,$4)', [form.name, form.email, form.phone, form.message]);
+  res.render('store/contact', { error: null, sent: true, form: {}, title: t('contact_title') });
 });
 
 module.exports = r;

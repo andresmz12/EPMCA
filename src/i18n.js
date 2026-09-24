@@ -64,6 +64,13 @@ const dict = {
     sub_cancelled: 'Recurring order cancelled.', sub_created: 'Your recurring order is active. It will ship automatically every cycle.',
     sub_my_subs: 'Recurring orders', sub_active: 'Active', sub_cancelled_status: 'Cancelled', sub_cancel: 'Cancel',
     sub_cancel_confirm: 'Cancel this recurring order? Future charges will stop.',
+    perks_title: 'Why create an account?', perks_track: 'Track every order and see its status, like Amazon.',
+    perks_fast: 'Checkout faster next time — your address is saved.', perks_recurring: 'Set up recurring orders that ship automatically.',
+    promo_pct: '10% off', promo_new_account: 'your first order — use code WELCOME10 at checkout.',
+    account_login_sub: 'Access your orders, address and recurring plans.',
+    nav_contact: 'Contact', contact_title: 'Contact us', contact_sub: "Questions about sizes, bulk orders, or your delivery? Send us a message and we'll get back to you.",
+    contact_message: 'Message', contact_send: 'Send message', contact_sent: "Thanks! We got your message and will reply soon.",
+    contact_direct_title: 'Or reach us directly', contact_hours_note: 'We usually reply within one business day.',
   },
   es: {
     nav_shop: 'Cajas', nav_sizes: 'Medidas', nav_shipping: 'Envíos', nav_faq: 'Preguntas', nav_cart: 'Carrito',
@@ -129,6 +136,13 @@ const dict = {
     sub_cancelled: 'Pedido recurrente cancelado.', sub_created: 'Tu pedido recurrente está activo. Se enviará automáticamente cada ciclo.',
     sub_my_subs: 'Pedidos recurrentes', sub_active: 'Activo', sub_cancelled_status: 'Cancelado', sub_cancel: 'Cancelar',
     sub_cancel_confirm: '¿Cancelar este pedido recurrente? Se detendrán los próximos cobros.',
+    perks_title: '¿Por qué crear una cuenta?', perks_track: 'Sigue cada pedido y su estado, como en Amazon.',
+    perks_fast: 'Paga más rápido la próxima vez — tu dirección queda guardada.', perks_recurring: 'Activa pedidos recurrentes que se envían solos.',
+    promo_pct: '10% de descuento', promo_new_account: 'en tu primer pedido — usa el código WELCOME10 al pagar.',
+    account_login_sub: 'Entra a tus pedidos, dirección y planes recurrentes.',
+    nav_contact: 'Contacto', contact_title: 'Contáctanos', contact_sub: '¿Preguntas sobre medidas, pedidos grandes o tu entrega? Escríbenos y te respondemos pronto.',
+    contact_message: 'Mensaje', contact_send: 'Enviar mensaje', contact_sent: '¡Gracias! Recibimos tu mensaje y te responderemos pronto.',
+    contact_direct_title: 'O contáctanos directo', contact_hours_note: 'Normalmente respondemos en menos de un día hábil.',
   },
 };
 

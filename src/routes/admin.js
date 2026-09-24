@@ -71,13 +71,14 @@ r.post('/logout', (req, res) => {
 
 r.use((req, res, next) => (req.session.admin ? next() : res.redirect('/admin/login')));
 
-r.use((req, res, next) => {
+r.use(async (req, res, next) => {
   const a = req.session.admin;
   res.locals.can = {
     orders: a.role === 'owner' || a.perm_orders,
     store: a.role === 'owner' || a.perm_store,
     users: a.role === 'owner',
   };
+  res.locals.unreadMessages = res.locals.can.orders ? (await one("SELECT count(*)::int AS n FROM contact_messages WHERE NOT read")).n : 0;
   next();
 });
 
@@ -352,6 +353,24 @@ r.get('/customers.csv', async (req, res) => {
   const out = ['name,email,phone,since,orders,spent'].concat(list.map((c) =>
     [esc(c.name), esc(c.email), esc(c.phone), c.created_at.toISOString().slice(0, 10), c.orders, (c.spent / 100).toFixed(2)].join(',')));
   res.set('Content-Type', 'text/csv; charset=utf-8').set('Content-Disposition', 'attachment; filename="clientes.csv"').send('﻿' + out.join('\n'));
+});
+
+/* ───────────── Contact messages ───────────── */
+r.use('/messages', requirePerm('orders'));
+r.get('/messages', async (req, res) => {
+  const list = await all('SELECT * FROM contact_messages ORDER BY created_at DESC');
+  res.render('admin/messages', { section: 'messages', list });
+});
+
+r.post('/messages/:id/read', async (req, res) => {
+  await q('UPDATE contact_messages SET read = NOT read WHERE id=$1', [lib.int(req.params.id)]);
+  res.redirect('/admin/messages');
+});
+
+r.post('/messages/:id/delete', async (req, res) => {
+  await q('DELETE FROM contact_messages WHERE id=$1', [lib.int(req.params.id)]);
+  notice(req, 'Mensaje eliminado.');
+  res.redirect('/admin/messages');
 });
 
 /* ───────────── Coupons ───────────── */
