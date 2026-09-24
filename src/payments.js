@@ -49,8 +49,12 @@ async function createCheckout(req, order, priced) {
 /** Called from the success page so orders get marked paid even if the webhook isn't set up. */
 async function syncFromSession(order, sessionId) {
   if (!enabled || !sessionId || order.stripe_session_id !== sessionId || order.status !== 'pending') return order;
-  const s = await stripe.checkout.sessions.retrieve(sessionId);
-  if (s.payment_status === 'paid') return (await orders.markPaid(order.id)) || order;
+  try {
+    const s = await stripe.checkout.sessions.retrieve(sessionId);
+    if (s.payment_status === 'paid') return (await orders.markPaid(order.id)) || order;
+  } catch (e) {
+    console.error('Stripe sync error:', e.message);
+  }
   return order;
 }
 

@@ -71,6 +71,8 @@ const dict = {
     nav_contact: 'Contact', contact_title: 'Contact us', contact_sub: "Questions about sizes, bulk orders, or your delivery? Send us a message and we'll get back to you.",
     contact_message: 'Message', contact_send: 'Send message', contact_sent: "Thanks! We got your message and will reply soon.",
     contact_direct_title: 'Or reach us directly', contact_hours_note: 'We usually reply within one business day.',
+    err_too_many: 'Too many attempts. Please wait a few minutes and try again.',
+    coupon_used: 'That code can only be used once per customer. Remove it to continue.',
   },
   es: {
     nav_shop: 'Cajas', nav_sizes: 'Medidas', nav_shipping: 'Envíos', nav_faq: 'Preguntas', nav_cart: 'Carrito',
@@ -143,6 +145,8 @@ const dict = {
     nav_contact: 'Contacto', contact_title: 'Contáctanos', contact_sub: '¿Preguntas sobre medidas, pedidos grandes o tu entrega? Escríbenos y te respondemos pronto.',
     contact_message: 'Mensaje', contact_send: 'Enviar mensaje', contact_sent: '¡Gracias! Recibimos tu mensaje y te responderemos pronto.',
     contact_direct_title: 'O contáctanos directo', contact_hours_note: 'Normalmente respondemos en menos de un día hábil.',
+    err_too_many: 'Demasiados intentos. Espera unos minutos e intenta de nuevo.',
+    coupon_used: 'Ese código solo se puede usar una vez por cliente. Quítalo para continuar.',
   },
 };
 

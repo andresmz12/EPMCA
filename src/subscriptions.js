@@ -68,9 +68,13 @@ async function createRecurringOrder(sub, invoiceId) {
 
 /** Backup path for the account page, in case the webhook isn't set up yet. */
 async function syncFromSession(sessionId) {
-  if (!stripe || !sessionId) return;
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
-  if (session.status === 'complete') await handleCheckoutCompleted(session);
+  if (!stripe || !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) return;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.status === 'complete') await handleCheckoutCompleted(session);
+  } catch (e) {
+    console.error('Subscription sync error:', e.message);
+  }
 }
 
 /** Called from the Stripe webhook when a subscription checkout completes. */
@@ -93,8 +97,10 @@ async function handleCheckoutCompleted(session) {
 
 /** Called from the webhook on every later billing cycle. */
 async function handleInvoicePaid(invoice) {
-  if (!invoice.subscription) return;
-  const sub = await one('SELECT * FROM subscriptions WHERE stripe_subscription_id=$1', [invoice.subscription]);
+  // API versions from 2025-03-31 on moved this under invoice.parent.
+  const subId = invoice.subscription || (invoice.parent && invoice.parent.subscription_details && invoice.parent.subscription_details.subscription);
+  if (!subId) return;
+  const sub = await one('SELECT * FROM subscriptions WHERE stripe_subscription_id=$1', [typeof subId === 'string' ? subId : subId.id]);
   if (!sub) return; // first invoice: checkout.session.completed will create it
   await createRecurringOrder(sub, invoice.id);
 }

@@ -7,7 +7,7 @@
     <% if (!list.length) { %><tr><td colspan="6" class="muted">No hay cupones todavía.</td></tr><% } %>
     <% list.forEach(function (c) { const expired = c.expires_at && new Date(c.expires_at) < new Date(); const used = c.max_uses != null && c.uses >= c.max_uses; %>
     <tr>
-      <td><b style="font-family:ui-monospace,monospace"><%= c.code %></b><% if (c.min_subtotal_cents) { %><div class="muted small">Mínimo <%= money(c.min_subtotal_cents) %></div><% } %></td>
+      <td><b style="font-family:ui-monospace,monospace"><%= c.code %></b><% if (c.min_subtotal_cents) { %><div class="muted small">Mínimo <%= money(c.min_subtotal_cents) %></div><% } %><% if (c.once_per_customer) { %><div class="muted small">1 uso por cliente</div><% } %></td>
       <td><%= c.type === 'percent' ? c.value + '%' : money(c.value) %></td>
       <td><%= c.uses %><%= c.max_uses != null ? ' / ' + c.max_uses : '' %></td>
       <td class="small"><%= c.expires_at ? fmtDate(c.expires_at, false) : 'Nunca' %></td>
@@ -33,6 +33,7 @@
       <div class="field"><label>Máximo de usos</label><input name="max_uses" type="number" min="1" value="<%= form.max_uses || '' %>" placeholder="Ilimitado"></div>
     </div>
     <div class="field"><label>Fecha de vencimiento</label><input name="expires_at" type="date" value="<%= form.expires_at || '' %>"></div>
+    <label class="check" style="margin-bottom:14px"><input type="checkbox" name="once_per_customer" <%= form.once_per_customer ? 'checked' : '' %>> Solo un uso por cliente (ej. descuento de bienvenida)</label>
     <button class="btn orange" style="width:100%;justify-content:center">Crear cupón</button>
   </form>
 </div>

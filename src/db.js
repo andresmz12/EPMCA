@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const { hashPassword } = require('./auth');
+const { isProd } = require('./env');
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -87,6 +88,10 @@ ALTER TABLE customers ADD COLUMN IF NOT EXISTS address2 TEXT NOT NULL DEFAULT ''
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS city TEXT NOT NULL DEFAULT '';
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS state TEXT NOT NULL DEFAULT '';
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS zip TEXT NOT NULL DEFAULT '';
+-- Signup has no email verification, so an account only sees orders placed
+-- after it was created; older guest orders stay behind their private link.
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS account_created_at TIMESTAMPTZ;
+UPDATE customers SET account_created_at = created_at WHERE password_hash IS NOT NULL AND account_created_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS admin_users (
   id SERIAL PRIMARY KEY,
@@ -149,6 +154,7 @@ CREATE TABLE IF NOT EXISTS coupons (
   active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS once_per_customer BOOLEAN NOT NULL DEFAULT false;
 
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
@@ -250,7 +256,11 @@ const SEED_PRODUCTS = [
 });
 
 async function migrate() {
+  const hadOncePerCustomer = (await pool.query(
+    "SELECT 1 FROM information_schema.columns WHERE table_name='coupons' AND column_name='once_per_customer'")).rowCount > 0;
   await pool.query(SCHEMA);
+  // WELCOME10 is advertised as "first order", so make it one-per-customer once.
+  if (!hadOncePerCustomer) await pool.query("UPDATE coupons SET once_per_customer=true WHERE upper(code)='WELCOME10'");
   for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) {
     await pool.query('INSERT INTO settings(key,value) VALUES($1,$2) ON CONFLICT (key) DO NOTHING', [k, v]);
   }
@@ -264,16 +274,18 @@ async function migrate() {
       );
     }
     await pool.query(
-      `INSERT INTO coupons(code,type,value,min_subtotal_cents) VALUES('WELCOME10','percent',10,0) ON CONFLICT DO NOTHING`
+      `INSERT INTO coupons(code,type,value,min_subtotal_cents,once_per_customer) VALUES('WELCOME10','percent',10,0,true) ON CONFLICT DO NOTHING`
     );
     console.log('Base de datos inicializada con productos de ejemplo.');
   }
   const noAdmins = (await pool.query('SELECT count(*)::int AS n FROM admin_users')).rows[0].n === 0;
-  const envEmail = (process.env.ADMIN_EMAIL || (process.env.NODE_ENV === 'production' ? '' : 'admin@empacalo.net')).toLowerCase();
-  const envPassword = process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'admin123');
+  const envEmail = (process.env.ADMIN_EMAIL || (isProd ? '' : 'admin@empacalo.net')).trim().toLowerCase();
+  const envPassword = process.env.ADMIN_PASSWORD || (isProd ? '' : 'admin123');
   if (noAdmins && envEmail && envPassword) {
-    await pool.query('INSERT INTO admin_users(email, password_hash) VALUES($1,$2) ON CONFLICT (email) DO NOTHING', [envEmail, hashPassword(envPassword)]);
+    await pool.query('INSERT INTO admin_users(email, password_hash) VALUES($1,$2) ON CONFLICT (email) DO NOTHING', [envEmail, await hashPassword(envPassword)]);
     console.log(`Admin inicial creado: ${envEmail}`);
+  } else if (noAdmins) {
+    console.warn('⚠️  No hay administradores. Define ADMIN_EMAIL y ADMIN_PASSWORD y reinicia para crear el primero.');
   }
 }
 

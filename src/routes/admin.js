@@ -4,41 +4,39 @@ const { q, one, all, tx } = require('../db');
 const lib = require('../lib');
 const auth = require('../auth');
 const orders = require('../orders');
+const { limiter } = require('../ratelimit');
 
 const r = express.Router();
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 3 * 1024 * 1024, files: 1 },
-  fileFilter: (req, file, cb) => cb(null, /^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)),
-});
-const uploadProduct = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 3 * 1024 * 1024, files: 9 },
-  fileFilter: (req, file, cb) => cb(null, /^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)),
-}).fields([{ name: 'image', maxCount: 1 }, { name: 'gallery', maxCount: 8 }]);
+const MAX_MB = 5;
+// Rejecting (instead of silently skipping) unsupported files, e.g. iPhone HEIC,
+// so the admin sees why the photo didn't change.
+const imageFilter = (req, file, cb) => (/^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)
+  ? cb(null, true)
+  : cb(Object.assign(new Error('Unsupported image type'), { code: 'BAD_IMAGE_TYPE' })));
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_MB * 1024 * 1024, files: 1 }, fileFilter: imageFilter });
+const uploadProduct = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_MB * 1024 * 1024, files: 9 }, fileFilter: imageFilter })
+  .fields([{ name: 'image', maxCount: 1 }, { name: 'gallery', maxCount: 8 }]);
 
-// Basic brute-force protection: 8 failed attempts per IP per 15 min.
-const attempts = new Map();
-function tooMany(ip) {
-  const now = Date.now();
-  const a = (attempts.get(ip) || []).filter((t) => now - t < 15 * 60 * 1000);
-  attempts.set(ip, a);
-  return a.length >= 8;
+// Turns upload errors into a friendly notice instead of a generic 500 page.
+function handleUpload(mw, backUrl) {
+  return (req, res, next) => mw(req, res, (err) => {
+    if (!err) return next();
+    if (!(err instanceof multer.MulterError) && err.code !== 'BAD_IMAGE_TYPE') return next(err);
+    const text = err.code === 'LIMIT_FILE_SIZE' ? `Una imagen pesa más de ${MAX_MB} MB. Redúcela e intenta de nuevo.`
+      : err.code === 'BAD_IMAGE_TYPE' ? 'Formato de imagen no soportado. Usa JPG, PNG o WebP (las fotos HEIC del iPhone hay que convertirlas).'
+      : err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE' ? 'Demasiadas imágenes a la vez (máximo 8 en la galería).'
+      : 'No se pudo subir la imagen.';
+    req.session.notice = { text, type: 'err' };
+    res.redirect(backUrl(req));
+  });
 }
 
-// Reject cross-site form posts (extra layer on top of SameSite cookies).
-r.use((req, res, next) => {
-  if (req.method !== 'POST') return next();
-  const origin = req.get('origin');
-  if (origin && new URL(origin).host !== req.get('host')) return res.status(403).send('Origen no permitido');
-  next();
-});
+const loginLimit = limiter({ max: 8, windowMs: 15 * 60 * 1000 });
 
 r.use((req, res, next) => {
   res.locals.STATUS = lib.STATUS_ES;
   res.locals.fmtDate = (d, time = true) => d ? new Date(d).toLocaleString('es-US', { timeZone: 'America/Chicago', dateStyle: 'medium', ...(time ? { timeStyle: 'short' } : {}) }) : '—';
-  res.locals.admin = req.session.admin || null;
   res.locals.notice = req.session.notice || null;
   delete req.session.notice;
   res.set('Cache-Control', 'no-store');
@@ -47,19 +45,18 @@ r.use((req, res, next) => {
 
 r.get('/login', (req, res) => res.render('admin/login', { error: null }));
 
-r.post('/login', async (req, res) => {
-  const ip = req.ip;
-  if (tooMany(ip)) return res.status(429).render('admin/login', { error: 'Demasiados intentos. Espera 15 minutos.' });
-  const email = String(req.body.email || '').trim().toLowerCase();
-  const admin = email && (await one('SELECT * FROM admin_users WHERE email=$1', [email]));
-  const ok = admin && auth.verifyPassword(req.body.password || '', admin.password_hash);
+r.post('/login', async (req, res, next) => {
+  if (loginLimit.blocked(req.ip)) return res.status(429).render('admin/login', { error: 'Demasiados intentos. Espera 15 minutos.' });
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 200);
+  const admin = email ? await one('SELECT * FROM admin_users WHERE email=$1', [email]) : null;
+  const ok = await auth.verifyPassword(req.body.password || '', admin && admin.password_hash);
   if (!ok) {
-    attempts.get(ip).push(Date.now());
+    loginLimit.hit(req.ip);
     return res.status(401).render('admin/login', { error: 'Correo o contraseña incorrectos.' });
   }
   req.session.regenerate((err) => {
-    if (err) throw err;
-    req.session.admin = { id: admin.id, email: admin.email, role: admin.role, perm_orders: admin.perm_orders, perm_store: admin.perm_store };
+    if (err) return next(err);
+    req.session.admin = { id: admin.id };
     res.redirect('/admin');
   });
 });
@@ -69,10 +66,16 @@ r.post('/logout', (req, res) => {
   res.redirect('/admin/login');
 });
 
-r.use((req, res, next) => (req.session.admin ? next() : res.redirect('/admin/login')));
-
+// Re-read the admin on every request so removing an admin (or changing their
+// permissions) takes effect immediately instead of when their cookie expires.
 r.use(async (req, res, next) => {
-  const a = req.session.admin;
+  const id = req.session.admin && lib.int(req.session.admin.id, 0);
+  const a = id ? await one('SELECT id, email, role, perm_orders, perm_store FROM admin_users WHERE id=$1', [id]) : null;
+  if (!a) {
+    delete req.session.admin;
+    return res.redirect('/admin/login');
+  }
+  res.locals.admin = a;
   res.locals.can = {
     orders: a.role === 'owner' || a.perm_orders,
     store: a.role === 'owner' || a.perm_store,
@@ -178,7 +181,7 @@ async function saveGallery(productId, files) {
   }
 }
 
-r.post('/products', uploadProduct, async (req, res) => {
+r.post('/products', handleUpload(uploadProduct, () => '/admin/products/new'), async (req, res) => {
   const p = readProduct(req.body);
   if (!p.name || p.price_cents == null) return res.status(400).render('admin/product_form', { section: 'products', p: { ...p, price_cents: p.price_cents ?? undefined }, gallery: [], error: 'Nombre y precio son obligatorios.' });
   const clash = await one('SELECT id FROM products WHERE slug=$1', [p.slug]);
@@ -193,7 +196,7 @@ r.post('/products', uploadProduct, async (req, res) => {
   res.redirect(`/admin/products/${row.id}`);
 });
 
-r.post('/products/:id', uploadProduct, async (req, res, next) => {
+r.post('/products/:id', handleUpload(uploadProduct, (req) => `/admin/products/${lib.int(req.params.id)}`), async (req, res, next) => {
   const id = lib.int(req.params.id);
   const existing = await one('SELECT * FROM products WHERE id=$1', [id]);
   if (!existing) return next();
@@ -396,7 +399,8 @@ r.post('/coupons', async (req, res) => {
     const list = await all('SELECT * FROM coupons ORDER BY created_at DESC');
     return res.status(400).render('admin/coupons', { section: 'coupons', list, error, form: req.body });
   }
-  await q('INSERT INTO coupons(code,type,value,min_subtotal_cents,max_uses,expires_at) VALUES($1,$2,$3,$4,$5,$6)', [code, type, value, min, maxUses, expires]);
+  await q('INSERT INTO coupons(code,type,value,min_subtotal_cents,max_uses,expires_at,once_per_customer) VALUES($1,$2,$3,$4,$5,$6,$7)',
+    [code, type, value, min, maxUses, expires, req.body.once_per_customer === 'on']);
   notice(req, `Cupón ${code} creado.`);
   res.redirect('/admin/coupons');
 });
@@ -416,7 +420,7 @@ r.post('/coupons/:id/delete', async (req, res) => {
 r.use('/settings', requirePerm('store'));
 const SETTING_FIELDS = ['store_name', 'support_email', 'support_phone', 'pickup_address', 'announcement_en', 'announcement_es'];
 r.get('/settings', (req, res) => res.render('admin/settings', { section: 'settings' }));
-r.post('/settings', upload.single('hero'), async (req, res) => {
+r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings'), async (req, res) => {
   const values = {};
   const oldHero = res.locals.settings.hero_image_id;
   if (req.file) values.hero_image_id = String(await saveImage(req.file));
@@ -437,6 +441,22 @@ r.post('/settings', upload.single('hero'), async (req, res) => {
   res.redirect('/admin/settings');
 });
 
+/* ───────────── My password (any admin) ───────────── */
+r.get('/password', (req, res) => res.render('admin/password', { section: 'password', error: null }));
+
+r.post('/password', async (req, res) => {
+  const row = await one('SELECT password_hash FROM admin_users WHERE id=$1', [res.locals.admin.id]);
+  const next = String(req.body.new_password || '');
+  let error = null;
+  if (!(await auth.verifyPassword(req.body.current_password || '', row.password_hash))) error = 'La contraseña actual no es correcta.';
+  else if (next.length < 8) error = 'La nueva contraseña debe tener al menos 8 caracteres.';
+  else if (next !== String(req.body.confirm_password || '')) error = 'Las contraseñas nuevas no coinciden.';
+  if (error) return res.status(400).render('admin/password', { section: 'password', error });
+  await q('UPDATE admin_users SET password_hash=$1 WHERE id=$2', [await auth.hashPassword(next), res.locals.admin.id]);
+  notice(req, 'Contraseña actualizada.');
+  res.redirect('/admin/password');
+});
+
 /* ───────────── Admin users ───────────── */
 r.use('/users', requirePerm('users'));
 
@@ -446,7 +466,7 @@ r.get('/users', async (req, res) => {
 });
 
 r.post('/users', async (req, res) => {
-  const email = String(req.body.email || '').trim().toLowerCase();
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 200);
   const password = String(req.body.password || '');
   const role = req.body.role === 'owner' ? 'owner' : 'staff';
   const permOrders = role === 'owner' || req.body.perm_orders === 'on';
@@ -461,14 +481,14 @@ r.post('/users', async (req, res) => {
     return res.status(400).render('admin/users', { section: 'users', list, error });
   }
   await q('INSERT INTO admin_users(email, password_hash, role, perm_orders, perm_store) VALUES($1,$2,$3,$4,$5)',
-    [email, auth.hashPassword(password), role, permOrders, permStore]);
+    [email, await auth.hashPassword(password), role, permOrders, permStore]);
   notice(req, `Admin ${email} creado.`);
   res.redirect('/admin/users');
 });
 
 r.post('/users/:id/delete', async (req, res) => {
   const id = lib.int(req.params.id);
-  if (id === req.session.admin.id) {
+  if (id === res.locals.admin.id) {
     notice(req, 'No puedes eliminar tu propia cuenta mientras tienes sesión iniciada.', 'err');
     return res.redirect('/admin/users');
   }

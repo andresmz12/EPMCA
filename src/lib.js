@@ -8,13 +8,14 @@ const money = (cents) =>
 function toCents(input) {
   if (input === undefined || input === null || String(input).trim() === '') return null;
   const n = Number(String(input).replace(/[$,\s]/g, ''));
-  if (!Number.isFinite(n) || n < 0) return null;
+  if (!Number.isFinite(n) || n < 0 || n > 20000000) return null;
   return Math.round(n * 100);
 }
 
+// Values outside Postgres INT range fall back to the default instead of erroring.
 const int = (v, def = 0) => {
   const n = parseInt(v, 10);
-  return Number.isFinite(n) ? n : def;
+  return Number.isFinite(n) && Math.abs(n) <= 2147483647 ? n : def;
 };
 
 const slugify = (s) =>

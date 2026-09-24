@@ -14,6 +14,7 @@
             <div class="field"><label for="email"><%= t('email') %></label><input id="email" type="email" name="email" required autocomplete="email" value="<%= form.email || '' %>"></div>
             <div class="field"><label for="phone"><%= t('phone') %></label><input id="phone" type="tel" name="phone" autocomplete="tel" value="<%= form.phone || '' %>"></div>
           </div>
+          <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
           <div class="field"><label for="message"><%= t('contact_message') %></label><textarea id="message" name="message" rows="6" required><%= form.message || '' %></textarea></div>
           <button class="btn orange block"><%= t('contact_send') %></button>
         </form>

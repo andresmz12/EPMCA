@@ -2,12 +2,13 @@ const { tx, one } = require('./db');
 const lib = require('./lib');
 
 class StockError extends Error {}
+class CouponUsedError extends Error {}
 
 /**
  * Creates an order atomically: locks product rows, re-checks stock, reserves it,
  * counts the coupon use and upserts the customer.
  */
-async function createOrder({ priced, form, paymentMethod }) {
+async function createOrder({ priced, form, paymentMethod, customerId = null }) {
   return tx(async (c) => {
     const ids = priced.lines.map((l) => l.product.id);
     const { rows: locked } = await c.query('SELECT id, stock, active FROM products WHERE id = ANY($1::int[]) FOR UPDATE', [ids]);
@@ -24,10 +25,21 @@ async function createOrder({ priced, form, paymentMethod }) {
         'UPDATE coupons SET uses = uses + 1 WHERE id=$1 AND (max_uses IS NULL OR uses < max_uses)', [priced.coupon.id]);
       if (!rowCount) throw new StockError(); // coupon ran out in a race
     }
-    const { rows: [cust] } = await c.query(
+    // Guest checkouts may only refresh the profile of a guest record; anyone can
+    // type any email, so a registered account's name/phone is never overwritten.
+    const cust = customerId ? { id: customerId } : (await c.query(
       `INSERT INTO customers(email,name,phone) VALUES(lower($1),$2,$3)
-       ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name, phone=COALESCE(NULLIF(EXCLUDED.phone,''), customers.phone)
-       RETURNING id`, [form.email, form.name, form.phone]);
+       ON CONFLICT (email) DO UPDATE SET
+         name  = CASE WHEN customers.password_hash IS NULL THEN EXCLUDED.name ELSE customers.name END,
+         phone = CASE WHEN customers.password_hash IS NULL THEN COALESCE(NULLIF(EXCLUDED.phone,''), customers.phone) ELSE customers.phone END
+       RETURNING id`, [form.email, form.name, form.phone])).rows[0];
+
+    if (priced.coupon && priced.coupon.once_per_customer) {
+      const { rowCount } = await c.query(
+        `SELECT 1 FROM orders WHERE (lower(email)=lower($1) OR customer_id=$2) AND upper(coupon_code)=upper($3) AND status<>'cancelled' LIMIT 1`,
+        [form.email, cust.id, priced.coupon.code]);
+      if (rowCount) throw new CouponUsedError();
+    }
 
     const { rows: [order] } = await c.query(
       `INSERT INTO orders(number, access_token, customer_id, email, name, phone, fulfillment, address1, address2, city, state, zip,
@@ -65,4 +77,4 @@ async function cancelOrder(orderId) {
   });
 }
 
-module.exports = { createOrder, markPaid, cancelOrder, StockError };
+module.exports = { createOrder, markPaid, cancelOrder, StockError, CouponUsedError };

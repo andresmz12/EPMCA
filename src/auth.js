@@ -1,19 +1,25 @@
 // Password hashing (scrypt, no extra dependency). Kept dependency-free so
 // db.js can use it during migrate() without a circular require.
 const crypto = require('crypto');
+const { promisify } = require('util');
 
-function hashPassword(password) {
+const scrypt = promisify(crypto.scrypt);
+const MAX_LEN = 1000;
+
+async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
-  return `${salt}:${hash}`;
+  const hash = await scrypt(String(password).slice(0, MAX_LEN), salt, 64);
+  return `${salt}:${hash.toString('hex')}`;
 }
 
-function verifyPassword(password, stored) {
-  if (!stored || !stored.includes(':')) return false;
-  const [salt, hash] = stored.split(':');
-  const check = crypto.scryptSync(String(password), salt, 64);
+// Always runs scrypt, even for unknown users, so response time doesn't reveal
+// which emails have accounts.
+async function verifyPassword(password, stored) {
+  const valid = typeof stored === 'string' && stored.includes(':');
+  const [salt, hash] = valid ? stored.split(':') : ['0'.repeat(32), '00'.repeat(64)];
+  const check = await scrypt(String(password).slice(0, MAX_LEN), salt, 64);
   const expected = Buffer.from(hash, 'hex');
-  return check.length === expected.length && crypto.timingSafeEqual(check, expected);
+  return valid && check.length === expected.length && crypto.timingSafeEqual(check, expected);
 }
 
 module.exports = { hashPassword, verifyPassword };

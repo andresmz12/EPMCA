@@ -7,10 +7,10 @@ const { pool, migrate, getSettings, one } = require('./db');
 const lib = require('./lib');
 const { makeT, LANGS } = require('./i18n');
 const payments = require('./payments');
+const { isProd } = require('./env');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const isProd = process.env.NODE_ENV === 'production';
 
 if (!process.env.SESSION_SECRET && isProd) {
   console.error('Falta SESSION_SECRET en producción.');
@@ -23,11 +23,45 @@ app.set('views', path.join(__dirname, '..', 'views'));
 app.disable('x-powered-by');
 app.use(compression());
 
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('X-Frame-Options', 'SAMEORIGIN');
+  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (isProd) res.set('Strict-Transport-Security', 'max-age=15552000');
+  next();
+});
+
 // Stripe webhook needs the raw body, so it's mounted before the JSON/urlencoded parsers.
-app.post('/stripe/webhook', express.raw({ type: 'application/json' }), payments.webhook);
+app.post('/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }), payments.webhook);
+
+// CSRF defense in depth (on top of SameSite=Lax cookies): browsers always send
+// Origin on cross-site POSTs, so reject any whose origin isn't this site.
+app.use((req, res, next) => {
+  if (req.method !== 'POST') return next();
+  const origin = req.get('origin');
+  if (!origin) return next();
+  let host = null;
+  try { host = new URL(origin).host; } catch { /* "null" or malformed */ }
+  if (host !== req.get('host')) return res.status(403).send('Origen no permitido / Origin not allowed');
+  next();
+});
 
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
+app.use((req, res, next) => { if (req.body === undefined) req.body = {}; next(); });
 app.use(express.static(path.join(__dirname, '..', 'public'), { maxAge: isProd ? '7d' : 0 }));
+
+// Mounted before sessions so image/health requests don't hit the session store.
+app.get('/healthz', async (req, res) => {
+  await pool.query('SELECT 1');
+  res.json({ ok: true });
+});
+
+app.get('/img/:id', async (req, res) => {
+  const img = await one('SELECT mime, data FROM images WHERE id=$1', [lib.int(req.params.id)]);
+  if (!img) return res.status(404).end();
+  res.set('Content-Type', img.mime).set('Cache-Control', 'public, max-age=31536000, immutable').send(img.data);
+});
 
 app.use(
   session({
@@ -39,13 +73,6 @@ app.use(
     cookie: { httpOnly: true, sameSite: 'lax', secure: isProd, maxAge: 1000 * 60 * 60 * 24 * 30 },
   })
 );
-
-app.use((req, res, next) => {
-  res.set('X-Content-Type-Options', 'nosniff');
-  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.set('X-Frame-Options', 'SAMEORIGIN');
-  next();
-});
 
 // Shared template locals
 app.use(async (req, res, next) => {
@@ -65,17 +92,6 @@ app.use(async (req, res, next) => {
   delete req.session.flash;
   delete req.session.cartAdded;
   next();
-});
-
-app.get('/healthz', async (req, res) => {
-  await pool.query('SELECT 1');
-  res.json({ ok: true });
-});
-
-app.get('/img/:id', async (req, res) => {
-  const img = await one('SELECT mime, data FROM images WHERE id=$1', [lib.int(req.params.id)]);
-  if (!img) return res.status(404).end();
-  res.set('Content-Type', img.mime).set('Cache-Control', 'public, max-age=31536000, immutable').send(img.data);
 });
 
 app.use('/admin', require('./routes/admin'));

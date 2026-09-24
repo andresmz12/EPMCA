@@ -5,10 +5,25 @@ const auth = require('../auth');
 const orders = require('../orders');
 const payments = require('../payments');
 const subscriptions = require('../subscriptions');
+const { limiter } = require('../ratelimit');
 
 const r = express.Router();
 
+const loginLimit = limiter({ max: 10, windowMs: 15 * 60 * 1000 });
+const signupLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
+const contactLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const couponText = (t, msg) => (msg ? t(msg.key, msg.vars) : null);
+
+// Only follow the Referer back if it points at this site (no open redirect).
+function backTo(req) {
+  try {
+    const u = new URL(req.get('referer') || '');
+    if (u.host === req.get('host')) return u.pathname + u.search;
+  } catch { /* missing or malformed */ }
+  return '/';
+}
 
 r.get('/', async (req, res) => {
   const products = await all('SELECT * FROM products WHERE active ORDER BY sort, id');
@@ -34,14 +49,14 @@ r.post('/cart/add', async (req, res) => {
     req.session.cart = cart;
     if (req.body.next !== 'cart') req.session.cartAdded = { name: p.name, name_es: p.name_es, qty, price_cents: p.price_cents, image_id: p.image_id };
   }
-  res.redirect(req.body.next === 'cart' ? '/cart' : req.get('referer') || '/');
+  res.redirect(req.body.next === 'cart' ? '/cart' : backTo(req));
 });
 
 r.post('/cart/update', (req, res) => {
   const cart = req.session.cart || {};
   for (const [k, v] of Object.entries(req.body)) {
     const m = /^qty_(\d+)$/.exec(k);
-    if (!m) continue;
+    if (!m || !Object.hasOwn(cart, m[1])) continue;
     const q = Math.max(0, Math.min(lib.int(v), 999));
     if (q) cart[m[1]] = q; else delete cart[m[1]];
   }
@@ -107,7 +122,7 @@ r.get('/checkout', async (req, res) => {
 });
 
 r.post('/checkout', async (req, res) => {
-  const { settings, t } = res.locals;
+  const { settings, t, customer } = res.locals;
   const form = readForm(req.body);
   req.session.checkoutForm = form;
   const fail = (key) => { req.session.checkoutError = t(key); res.redirect('/checkout'); };
@@ -120,9 +135,10 @@ r.post('/checkout', async (req, res) => {
 
   let order;
   try {
-    order = await orders.createOrder({ priced, form, paymentMethod: payments.enabled ? 'stripe' : 'manual' });
+    order = await orders.createOrder({ priced, form, paymentMethod: payments.enabled ? 'stripe' : 'manual', customerId: customer ? customer.id : null });
   } catch (e) {
     if (e instanceof orders.StockError) return fail('err_stock');
+    if (e instanceof orders.CouponUsedError) return fail('coupon_used');
     throw e;
   }
 
@@ -159,7 +175,12 @@ r.get('/checkout/cancel', async (req, res) => {
 r.get('/order/:number', async (req, res, next) => {
   const { customer } = res.locals;
   let order = await one('SELECT * FROM orders WHERE number=$1 AND access_token=$2', [req.params.number, String(req.query.t || '')]);
-  if (!order && customer) order = await one('SELECT * FROM orders WHERE number=$1 AND customer_id=$2', [req.params.number, customer.id]);
+  if (!order && customer) {
+    order = await one(
+      `SELECT o.* FROM orders o JOIN customers c ON c.id=o.customer_id
+       WHERE o.number=$1 AND o.customer_id=$2 AND o.created_at >= COALESCE(c.account_created_at, c.created_at)`,
+      [req.params.number, customer.id]);
+  }
   if (!order) return next();
   if (req.query.session_id) {
     order = await payments.syncFromSession(order, String(req.query.session_id));
@@ -180,30 +201,33 @@ r.get('/account/register', (req, res) => {
   res.render('store/account_register', { error: null, form: {}, title: res.locals.t('account_create') });
 });
 
-r.post('/account/register', async (req, res) => {
+r.post('/account/register', async (req, res, next) => {
   const { t } = res.locals;
-  const email = String(req.body.email || '').trim().toLowerCase();
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 200);
   const name = String(req.body.name || '').trim().slice(0, 200);
   const password = String(req.body.password || '');
-  const fail = (key) => res.status(400).render('store/account_register', { error: t(key), form: { name, email }, title: t('account_create') });
+  const fail = (key, status = 400) => res.status(status).render('store/account_register', { error: t(key), form: { name, email }, title: t('account_create') });
 
+  if (signupLimit.blocked(req.ip)) return fail('err_too_many', 429);
   if (!name || !email) return fail('err_required');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('err_email');
+  if (!EMAIL_RE.test(email)) return fail('err_email');
   if (password.length < 8) return fail('err_password_len');
+  signupLimit.hit(req.ip);
   const existing = await one('SELECT id, password_hash FROM customers WHERE email=$1', [email]);
   if (existing && existing.password_hash) return fail('err_account_exists');
 
-  const hash = auth.hashPassword(password);
-  const isNew = !existing;
+  const hash = await auth.hashPassword(password);
+  // Claiming a guest record: clear the phone it left behind, and only orders
+  // placed from now on show up in the account (no email verification).
   const customer = existing
-    ? await one('UPDATE customers SET name=$1, password_hash=$2 WHERE id=$3 RETURNING *', [name, hash, existing.id])
-    : await one('INSERT INTO customers(email, name, password_hash) VALUES($1,$2,$3) RETURNING *', [email, name, hash]);
+    ? await one(`UPDATE customers SET name=$1, password_hash=$2, phone='', account_created_at=now() WHERE id=$3 RETURNING *`, [name, hash, existing.id])
+    : await one('INSERT INTO customers(email, name, password_hash, account_created_at) VALUES($1,$2,$3,now()) RETURNING *', [email, name, hash]);
   const cart = req.session.cart, coupon = req.session.coupon;
   req.session.regenerate((err) => {
-    if (err) throw err;
+    if (err) return next(err);
     req.session.customer = customerSession(customer);
     req.session.cart = cart;
-    req.session.coupon = isNew ? (coupon || 'WELCOME10') : coupon;
+    req.session.coupon = existing ? coupon : (coupon || 'WELCOME10');
     res.redirect('/account');
   });
 });
@@ -213,15 +237,19 @@ r.get('/account/login', (req, res) => {
   res.render('store/account_login', { error: null, title: res.locals.t('account_login') });
 });
 
-r.post('/account/login', async (req, res) => {
+r.post('/account/login', async (req, res, next) => {
   const { t } = res.locals;
-  const email = String(req.body.email || '').trim().toLowerCase();
-  const customer = email && (await one('SELECT * FROM customers WHERE email=$1', [email]));
-  const ok = customer && auth.verifyPassword(req.body.password || '', customer.password_hash);
-  if (!ok) return res.status(401).render('store/account_login', { error: t('err_login'), title: t('account_login') });
+  if (loginLimit.blocked(req.ip)) return res.status(429).render('store/account_login', { error: t('err_too_many'), title: t('account_login') });
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 200);
+  const customer = email ? await one('SELECT * FROM customers WHERE email=$1', [email]) : null;
+  const ok = await auth.verifyPassword(req.body.password || '', customer && customer.password_hash);
+  if (!ok) {
+    loginLimit.hit(req.ip);
+    return res.status(401).render('store/account_login', { error: t('err_login'), title: t('account_login') });
+  }
   const cart = req.session.cart, coupon = req.session.coupon;
   req.session.regenerate((err) => {
-    if (err) throw err;
+    if (err) return next(err);
     req.session.customer = customerSession(customer);
     req.session.cart = cart;
     req.session.coupon = coupon;
@@ -237,7 +265,10 @@ r.post('/account/logout', (req, res) => {
 r.get('/account', async (req, res) => {
   if (!res.locals.customer) return res.redirect('/account/login');
   if (req.query.session_id) await subscriptions.syncFromSession(String(req.query.session_id));
-  const list = await all('SELECT * FROM orders WHERE customer_id=$1 ORDER BY created_at DESC', [res.locals.customer.id]);
+  const list = await all(
+    `SELECT o.* FROM orders o JOIN customers c ON c.id=o.customer_id
+     WHERE o.customer_id=$1 AND o.created_at >= COALESCE(c.account_created_at, c.created_at)
+     ORDER BY o.created_at DESC`, [res.locals.customer.id]);
   const subs = await all('SELECT * FROM subscriptions WHERE customer_id=$1 ORDER BY created_at DESC', [res.locals.customer.id]);
   res.render('store/account', { orders: list, subs, subJustCreated: req.query.sub === 'ok', title: res.locals.t('account_title') });
 });
@@ -279,6 +310,11 @@ r.post('/account/address', async (req, res) => {
   const f = {};
   for (const k of ['name', 'phone', 'address1', 'address2', 'city', 'state', 'zip']) f[k] = String(req.body[k] || '').trim().slice(0, 200);
   f.state = f.state.toUpperCase();
+  const bad = (f.state && !lib.US_STATES.includes(f.state)) ? 'err_required' : (f.zip && !/^\d{5}(-\d{4})?$/.test(f.zip)) ? 'err_zip' : null;
+  if (bad) {
+    req.session.flash = { type: 'err', key: bad };
+    return res.redirect('/account');
+  }
   const customer = await one(
     'UPDATE customers SET name=$1, phone=$2, address1=$3, address2=$4, city=$5, state=$6, zip=$7 WHERE id=$8 RETURNING *',
     [f.name, f.phone, f.address1, f.address2, f.city, f.state, f.zip, res.locals.customer.id]);
@@ -302,12 +338,13 @@ r.post('/contact', async (req, res) => {
     phone: String(req.body.phone || '').trim().slice(0, 60),
     message: String(req.body.message || '').trim().slice(0, 3000),
   };
-  if (!form.name || !form.email || !form.message) {
-    return res.status(400).render('store/contact', { error: t('err_required'), sent: false, form, title: t('contact_title') });
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    return res.status(400).render('store/contact', { error: t('err_email'), sent: false, form, title: t('contact_title') });
-  }
+  const fail = (key, status = 400) => res.status(status).render('store/contact', { error: t(key), sent: false, form, title: t('contact_title') });
+  // Bots fill the hidden "website" field; pretend it worked and drop it.
+  if (req.body.website) return res.render('store/contact', { error: null, sent: true, form: {}, title: t('contact_title') });
+  if (contactLimit.blocked(req.ip)) return fail('err_too_many', 429);
+  if (!form.name || !form.email || !form.message) return fail('err_required');
+  if (!EMAIL_RE.test(form.email)) return fail('err_email');
+  contactLimit.hit(req.ip);
   await q('INSERT INTO contact_messages(name, email, phone, message) VALUES($1,$2,$3,$4)', [form.name, form.email, form.phone, form.message]);
   res.render('store/contact', { error: null, sent: true, form: {}, title: t('contact_title') });
 });
