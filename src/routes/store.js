@@ -17,7 +17,9 @@ r.get('/products/:slug', async (req, res, next) => {
   const product = await one('SELECT * FROM products WHERE slug=$1 AND active', [req.params.slug]);
   if (!product) return next();
   const others = await all('SELECT * FROM products WHERE active AND id<>$1 ORDER BY sort, id LIMIT 4', [product.id]);
-  res.render('store/product', { product, others, title: product.name });
+  const extra = await all('SELECT image_id FROM product_images WHERE product_id=$1 ORDER BY sort, id', [product.id]);
+  const images = [...(product.image_id ? [product.image_id] : []), ...extra.map((r) => r.image_id)];
+  res.render('store/product', { product, others, images, title: product.name });
 });
 
 r.post('/cart/add', async (req, res) => {

@@ -112,6 +112,11 @@ input[type=checkbox] { width: auto; accent-color: var(--ink); transform: scale(1
 .dl.totals dd { text-align: right; font-variant-numeric: tabular-nums; }
 .imgprev { width: 160px; height: 160px; background: #F3E6D3; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 12px; margin-bottom: 10px; overflow: hidden; }
 .imgprev img, .imgprev svg { width: 100%; height: 100%; object-fit: contain; }
+.gallerygrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.galitem { position: relative; display: block; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #F3E6D3; cursor: default; }
+.galitem img { width: 100%; height: 100%; object-fit: cover; }
+.galitem .rm { position: absolute; inset: auto 0 0 0; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(17,18,20,.72); padding: 3px 6px; }
+.galitem .rm input { width: auto; padding: 0; }
 @media (max-width: 1000px) {
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cols2 { grid-template-columns: 1fr; }

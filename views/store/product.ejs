@@ -2,7 +2,18 @@
 <div class="wrap">
   <div class="crumbs"><a href="/#shop"><%= t('nav_shop') %></a> / <%= pt(product, 'name') %></div>
   <div class="pdp">
-    <div class="gallery <%= product.image_id ? 'has-img' : '' %>"><%- include('_pic', { p: product, fixed: false }) %></div>
+    <div>
+      <div class="gallery <%= images.length ? 'has-img' : '' %>" id="mainpic">
+        <% if (images.length) { %><img src="/img/<%= images[0] %>" alt="<%= pt(product, 'name') %>" id="mainpic-img"><% } else { %><%- boxSvg(product.dimensions) %><% } %>
+      </div>
+      <% if (images.length > 1) { %>
+      <div class="thumbs">
+        <% images.forEach(function (id, i) { %>
+        <button type="button" class="thumb <%= i === 0 ? 'on' : '' %>" data-src="/img/<%= id %>"><img src="/img/<%= id %>" alt=""></button>
+        <% }) %>
+      </div>
+      <% } %>
+    </div>
     <div>
       <h1><%= pt(product, 'name') %></h1>
       <p class="muted"><%= pt(product, 'short_desc') %></p>
@@ -40,4 +51,18 @@
   </div>
   <% } %>
 </div>
+<% if (images.length > 1) { %>
+<script>
+(function () {
+  var img = document.getElementById('mainpic-img');
+  document.querySelectorAll('.thumbs .thumb').forEach(function (b) {
+    b.addEventListener('click', function () {
+      img.src = b.dataset.src;
+      document.querySelectorAll('.thumbs .thumb').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+    });
+  });
+})();
+</script>
+<% } %>
 <%- include('_foot') %>

@@ -18,6 +18,11 @@ const upload = multer({
   limits: { fileSize: 3 * 1024 * 1024, files: 1 },
   fileFilter: (req, file, cb) => cb(null, /^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)),
 });
+const uploadProduct = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024, files: 9 },
+  fileFilter: (req, file, cb) => cb(null, /^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)),
+}).fields([{ name: 'image', maxCount: 1 }, { name: 'gallery', maxCount: 8 }]);
 
 const safeEqual = (a, b) => {
   const x = crypto.createHash('sha256').update(String(a)).digest();
@@ -121,12 +126,13 @@ r.get('/products', async (req, res) => {
 });
 
 r.get('/products/new', (req, res) =>
-  res.render('admin/product_form', { section: 'products', p: { active: true, pack_size: 1, stock: 0, sort: 0 }, error: null }));
+  res.render('admin/product_form', { section: 'products', p: { active: true, pack_size: 1, stock: 0, sort: 0 }, gallery: [], error: null }));
 
 r.get('/products/:id', async (req, res, next) => {
   const p = await one('SELECT * FROM products WHERE id=$1', [lib.int(req.params.id)]);
   if (!p) return next();
-  res.render('admin/product_form', { section: 'products', p, error: null });
+  const gallery = await all('SELECT id, image_id FROM product_images WHERE product_id=$1 ORDER BY sort, id', [p.id]);
+  res.render('admin/product_form', { section: 'products', p, gallery, error: null });
 });
 
 function readProduct(body) {
@@ -155,36 +161,55 @@ async function saveImage(file) {
   return img.id;
 }
 
-r.post('/products', upload.single('image'), async (req, res) => {
+async function saveGallery(productId, files) {
+  if (!files || !files.length) return;
+  const start = (await one('SELECT COALESCE(MAX(sort), -1) AS n FROM product_images WHERE product_id=$1', [productId])).n + 1;
+  for (let i = 0; i < files.length; i++) {
+    const imageId = await saveImage(files[i]);
+    await q('INSERT INTO product_images(product_id, image_id, sort) VALUES($1,$2,$3)', [productId, imageId, start + i]);
+  }
+}
+
+r.post('/products', uploadProduct, async (req, res) => {
   const p = readProduct(req.body);
-  if (!p.name || p.price_cents == null) return res.status(400).render('admin/product_form', { section: 'products', p: { ...p, price_cents: p.price_cents ?? undefined }, error: 'Nombre y precio son obligatorios.' });
+  if (!p.name || p.price_cents == null) return res.status(400).render('admin/product_form', { section: 'products', p: { ...p, price_cents: p.price_cents ?? undefined }, gallery: [], error: 'Nombre y precio son obligatorios.' });
   const clash = await one('SELECT id FROM products WHERE slug=$1', [p.slug]);
   if (clash) p.slug = `${p.slug}-${Date.now().toString(36).slice(-4)}`;
-  const imageId = await saveImage(req.file);
+  const imageId = await saveImage(req.files?.image?.[0]);
   const row = await one(
     `INSERT INTO products(name,slug,short_desc,description,dimensions,pack_size,price_cents,compare_at_cents,stock,sort,active,featured,image_id,name_es,short_desc_es,description_es)
      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
     [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, p.name_es, p.short_desc_es, p.description_es]);
+  await saveGallery(row.id, req.files?.gallery);
   notice(req, 'Producto creado.');
   res.redirect(`/admin/products/${row.id}`);
 });
 
-r.post('/products/:id', upload.single('image'), async (req, res, next) => {
+r.post('/products/:id', uploadProduct, async (req, res, next) => {
   const id = lib.int(req.params.id);
   const existing = await one('SELECT * FROM products WHERE id=$1', [id]);
   if (!existing) return next();
   const p = readProduct(req.body);
-  if (!p.name || p.price_cents == null) return res.status(400).render('admin/product_form', { section: 'products', p: { ...existing, ...p, price_cents: p.price_cents ?? undefined }, error: 'Nombre y precio son obligatorios.' });
+  if (!p.name || p.price_cents == null) {
+    const gallery = await all('SELECT id, image_id FROM product_images WHERE product_id=$1 ORDER BY sort, id', [id]);
+    return res.status(400).render('admin/product_form', { section: 'products', p: { ...existing, ...p, price_cents: p.price_cents ?? undefined }, gallery, error: 'Nombre y precio son obligatorios.' });
+  }
   const clash = await one('SELECT id FROM products WHERE slug=$1 AND id<>$2', [p.slug, id]);
   if (clash) p.slug = `${p.slug}-${id}`;
   let imageId = existing.image_id;
-  if (req.file) imageId = await saveImage(req.file);
+  if (req.files?.image?.[0]) imageId = await saveImage(req.files.image[0]);
   if (req.body.remove_image === 'on') imageId = null;
   await q(
     `UPDATE products SET name=$1,slug=$2,short_desc=$3,description=$4,dimensions=$5,pack_size=$6,price_cents=$7,compare_at_cents=$8,
        stock=$9,sort=$10,active=$11,featured=$12,image_id=$13,name_es=$15,short_desc_es=$16,description_es=$17,updated_at=now() WHERE id=$14`,
     [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, id, p.name_es, p.short_desc_es, p.description_es]);
   if (existing.image_id && existing.image_id !== imageId) await q('DELETE FROM images WHERE id=$1', [existing.image_id]);
+  const removeIds = [].concat(req.body.remove_gallery || []).map(Number).filter(Boolean);
+  if (removeIds.length) {
+    await q('DELETE FROM images WHERE id IN (SELECT image_id FROM product_images WHERE product_id=$1 AND id = ANY($2::int[]))', [id, removeIds]);
+    await q('DELETE FROM product_images WHERE product_id=$1 AND id = ANY($2::int[])', [id, removeIds]);
+  }
+  await saveGallery(id, req.files?.gallery);
   notice(req, 'Cambios guardados.');
   res.redirect(`/admin/products/${id}`);
 });
@@ -196,8 +221,10 @@ r.post('/products/:id/delete', async (req, res) => {
     await q('UPDATE products SET active=false WHERE id=$1', [id]);
     notice(req, 'Este producto tiene pedidos, así que se ocultó de la tienda en lugar de borrarse.', 'warn');
   } else {
+    const galleryImageIds = (await all('SELECT image_id FROM product_images WHERE product_id=$1', [id])).map((r) => r.image_id);
     const p = await one('DELETE FROM products WHERE id=$1 RETURNING image_id', [id]);
-    if (p && p.image_id) await q('DELETE FROM images WHERE id=$1', [p.image_id]);
+    const ids = [...galleryImageIds, ...(p && p.image_id ? [p.image_id] : [])];
+    if (ids.length) await q('DELETE FROM images WHERE id = ANY($1::int[])', [ids]);
     notice(req, 'Producto eliminado.');
   }
   res.redirect('/admin/products');
