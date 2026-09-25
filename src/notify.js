@@ -61,7 +61,7 @@ async function customerOrderEmail(order, kind, base) {
     const carrier = lib.trackingUrl(order.tracking);
     body += `<p style="font-size:14px"><b>${t('track')}:</b> ${esc(order.tracking)}${carrier ? ` · <a href="${esc(carrier)}">${t('track_link')}</a>` : ''}</p>`;
   }
-  if ((kind === 'pending' || kind === 'reminder') && order.payment_method !== 'stripe' && settings.payment_instructions) {
+  if ((kind === 'pending' || kind === 'reminder') && order.payment_method !== 'clover' && order.payment_method !== 'stripe' && settings.payment_instructions) {
     body += `<div style="background:#FCEFD9;border-radius:4px;padding:12px 14px;font-size:14px;margin:12px 0;white-space:pre-wrap"><b>${t('payment_how')}</b>\n${esc(settings.payment_instructions)}</div>`;
   }
   body += itemsTable(order, items, t) + addressLine(order, settings, t) + button(url, t('email_view_order'));

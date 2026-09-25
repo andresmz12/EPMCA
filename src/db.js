@@ -188,6 +188,7 @@ CREATE TABLE IF NOT EXISTS password_resets (
   used_at TIMESTAMPTZ
 );
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS clover_checkout_id TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS orders_stripe_invoice_uidx ON orders(stripe_invoice_id) WHERE stripe_invoice_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS coupons (
@@ -228,6 +229,7 @@ CREATE TABLE IF NOT EXISTS orders (
     CHECK (status IN ('pending','paid','shipped','delivered','cancelled')),
   payment_method TEXT NOT NULL DEFAULT 'manual',
   stripe_session_id TEXT,
+  clover_checkout_id TEXT,
   tracking TEXT NOT NULL DEFAULT '',
   notes TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

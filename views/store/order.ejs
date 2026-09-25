@@ -33,7 +33,7 @@
     <% } %>
     <div class="statusbox <%= order.status %>">
       <b><%= t('status_msg_' + msgKey) %></b>
-      <% if (order.status === 'pending' && order.payment_method !== 'stripe' && settings.payment_instructions) { %>
+      <% if (order.status === 'pending' && order.payment_method !== 'clover' && order.payment_method !== 'stripe' && settings.payment_instructions) { %>
         <div style="margin-top:8px;white-space:pre-wrap"><%= settings.payment_instructions %></div>
       <% } %>
       <% if (order.status === 'shipped' && pickup && settings.pickup_address) { %><div style="margin-top:6px"><%= settings.pickup_address %></div><% } %>

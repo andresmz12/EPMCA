@@ -48,21 +48,23 @@ Cada vez que hagas `git push`, Railway vuelve a desplegar solo.
 
 ---
 
-## Pagos con tarjeta (Stripe) — opcional
+## Pagos con tarjeta (Clover) — opcional
 
-Sin Stripe la tienda funciona en **modo pago manual**: los pedidos llegan como *Pendiente* y tú los marcas como *Pagado* en el admin cuando recibas el dinero (Zelle, transferencia, etc.).
+Sin Clover la tienda funciona en **modo pago manual**: los pedidos llegan como *Pendiente* y tú los marcas como *Pagado* en el admin cuando recibas el dinero (Zelle, transferencia, etc.).
 
-Para cobrar con tarjeta:
+Para cobrar con tarjeta usando Clover Hosted Checkout:
 
-1. Crea una cuenta en [stripe.com](https://stripe.com) (necesitas una empresa o datos fiscales en EE. UU.).
-2. En Stripe → **Developers → API keys**, copia la **Secret key** y ponla en Railway como `STRIPE_SECRET_KEY`.
-3. En Stripe → **Developers → Webhooks → Add endpoint**:
-   - URL: `https://TU-DOMINIO/stripe/webhook`
-   - Eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `invoice.paid`, `invoice.upcoming`, `customer.subscription.deleted` (los tres últimos son para los pedidos recurrentes)
-   - Copia el **Signing secret** y ponlo en Railway como `STRIPE_WEBHOOK_SECRET`.
-4. Prueba primero con las llaves de **modo prueba** (`sk_test_...`) y la tarjeta `4242 4242 4242 4242`.
+1. Crea una cuenta de developer en [clover.com/developers](https://www.clover.com/developers) y, dentro de ella, un comercio (Merchant Dashboard).
+2. En **Ecommerce Settings** activa **Hosted Checkout** y genera un **API token privado**; copia también el `merchantId`.
+3. En Railway agrega `CLOVER_MERCHANT_ID` y `CLOVER_ECOMM_API_TOKEN` con esos valores.
+4. En la sección de **Webhooks** de Hosted Checkout, agrega:
+   - URL: `https://TU-DOMINIO/clover/webhook`
+   - Genera una clave de firma y ponla en Railway como `CLOVER_WEBHOOK_SECRET`.
+5. Prueba primero en el entorno **sandbox** (agrega `CLOVER_ENV=sandbox` en Railway mientras pruebas, y quítala para producción).
 
 Cuando un pago se confirma, el pedido pasa a *Pagado* solo. Si el cliente abandona el pago, el pedido se cancela y el stock vuelve al inventario.
+
+> Nota: los **pedidos recurrentes** (cobro automático semanal/mensual) siguen usando Stripe por ahora — Clover solo permite cobros recurrentes automáticos guardando la tarjeta del cliente (card-on-file), lo cual requiere una integración adicional (iframe) más allá de Hosted Checkout. Si quieres, esa parte se puede rehacer más adelante como un simple recordatorio por correo con un enlace de "reordenar" (el cliente paga de nuevo con un clic, sin guardar su tarjeta).
 
 ---
 

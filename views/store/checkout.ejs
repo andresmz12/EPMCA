@@ -32,10 +32,10 @@
       </fieldset>
       <div class="field"><label for="notes"><%= t('notes') %></label><textarea id="notes" name="notes" rows="2"><%= form.notes || '' %></textarea></div>
       <button class="btn orange block" id="paybtn"
-        data-label-d="<%= stripeEnabled ? t('pay_now', { amount: money(delivery.total) }) : t('place_order') %>"
-        data-label-p="<%= pickup ? (stripeEnabled ? t('pay_now', { amount: money(pickup.total) }) : t('place_order')) : '' %>">
-        <%= stripeEnabled ? t('pay_now', { amount: money(delivery.total) }) : t('place_order') %></button>
-      <p class="muted small" style="margin:12px 0 0;text-align:center"><%= stripeEnabled ? t('pay_stripe_note') : t('pay_manual_note') %></p>
+        data-label-d="<%= payEnabled ? t('pay_now', { amount: money(delivery.total) }) : t('place_order') %>"
+        data-label-p="<%= pickup ? (payEnabled ? t('pay_now', { amount: money(pickup.total) }) : t('place_order')) : '' %>">
+        <%= payEnabled ? t('pay_now', { amount: money(delivery.total) }) : t('place_order') %></button>
+      <p class="muted small" style="margin:12px 0 0;text-align:center"><%= payEnabled ? t('pay_stripe_note') : t('pay_manual_note') %></p>
       <p class="muted small" style="margin:6px 0 0;text-align:center"><%- t('checkout_legal_note', { terms: `<a class="textlink" href="/terms">${t('footer_terms')}</a>`, privacy: `<a class="textlink" href="/privacy">${t('footer_privacy')}</a>` }) %></p>
     </form>
     <aside class="panel gray">

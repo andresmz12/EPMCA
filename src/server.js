@@ -7,6 +7,7 @@ const { pool, migrate, getSettings, one, all } = require('./db');
 const lib = require('./lib');
 const { makeT, LANGS } = require('./i18n');
 const payments = require('./payments');
+const clover = require('./clover');
 const seo = require('./seo');
 const notify = require('./notify');
 const jobs = require('./jobs');
@@ -48,8 +49,9 @@ app.use((req, res, next) => {
   res.redirect(301, PUBLIC_URL + req.originalUrl);
 });
 
-// Stripe webhook needs the raw body, so it's mounted before the JSON/urlencoded parsers.
+// Payment webhooks need the raw body, so they're mounted before the JSON/urlencoded parsers.
 app.post('/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }), payments.webhook);
+app.post('/clover/webhook', express.raw({ type: 'application/json', limit: '1mb' }), clover.webhook);
 
 // CSRF defense in depth (on top of SameSite=Lax cookies): browsers always send
 // Origin on cross-site POSTs, so reject any whose origin isn't this site.
@@ -136,7 +138,7 @@ app.use(async (req, res, next) => {
     settings, lang, t: makeT(lang), money: lib.money, path: req.path, siteUrl, assetV: ASSET_V,
     altUrl: (l) => `${siteUrl}${req.path}${l === 'es' ? '?lang=es' : ''}`,
     cartCount: Object.values(cart).reduce((s, n) => s + (Number(n) || 0), 0),
-    flash: req.session.flash || null, stripeEnabled: payments.enabled, boxSvg: lib.boxSvg,
+    flash: req.session.flash || null, payEnabled: clover.enabled || payments.enabled, boxSvg: lib.boxSvg,
     customer: req.session.customer || null, US_STATES: lib.US_STATES, trackingUrl: lib.trackingUrl, wholesaleTiers: lib.wholesaleTiers, supplySvg: lib.supplySvg,
     cartAdded: req.session.cartAdded || null,
     // Product text in the visitor's language (falls back to English)

@@ -105,9 +105,9 @@ async function priceCart(cart, couponCode, settings, fulfillment = 'delivery') {
 
 const STATUS_ES = { pending: 'Pendiente', paid: 'Pagado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado' };
 const STATUS_EN = { pending: 'Awaiting payment', paid: 'Paid — preparing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' };
-// stripe/manual come from the website; the rest are for orders entered in the admin.
+// clover/stripe/manual come from the website; the rest are for orders entered in the admin.
 const PAYMENT_ES = {
-  stripe: 'Tarjeta en línea (Stripe)', manual: 'Pago manual (web)', cash: 'Efectivo', zelle: 'Zelle',
+  clover: 'Tarjeta en línea (Clover)', stripe: 'Tarjeta en línea (Stripe)', manual: 'Pago manual (web)', cash: 'Efectivo', zelle: 'Zelle',
   transfer: 'Transferencia', card: 'Tarjeta en persona', check: 'Cheque', other: 'Otro',
 };
 const MANUAL_PAYMENTS = ['cash', 'zelle', 'transfer', 'card', 'check', 'other'];

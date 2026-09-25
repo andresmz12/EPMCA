@@ -156,7 +156,7 @@
   <div class="wrap">
     <div class="info">
       <div><h3><%= t('info_ship_t') %></h3><p><%= t('info_ship_d') %><% if (freeMin) { %> <%= t('info_ship_free', { min: money(freeMin) }) %><% } %></p></div>
-      <div><h3><%= t('info_pay_t') %></h3><p><%= stripeEnabled ? t('info_pay_d_stripe') : t('info_pay_d_manual') %></p></div>
+      <div><h3><%= t('info_pay_t') %></h3><p><%= payEnabled ? t('info_pay_d_stripe') : t('info_pay_d_manual') %></p></div>
       <div><h3><%= t('info_bulk_t') %></h3><p><%= t('info_bulk_d', { email: settings.support_email }) %></p></div>
     </div>
   </div>

@@ -7,9 +7,9 @@ const notify = require('./notify');
 const TZ = 'America/Chicago';
 const DIGEST_HOUR = 8; // local time the daily store summary goes out
 
-// Unpaid Stripe checkouts reserve stock; release it if they were abandoned (backup for the webhook).
+// Unpaid card checkouts (Clover or Stripe) reserve stock; release it if they were abandoned (backup for the webhook).
 async function releaseAbandoned() {
-  const stale = await all(`SELECT id FROM orders WHERE status='pending' AND payment_method='stripe' AND created_at < now() - interval '2 hours'`);
+  const stale = await all(`SELECT id FROM orders WHERE status='pending' AND payment_method IN ('clover','stripe') AND created_at < now() - interval '2 hours'`);
   for (const o of stale) await cancelOrder(o.id);
 }
 
@@ -46,7 +46,7 @@ async function digestData() {
      FROM orders WHERE status='paid' ORDER BY COALESCE(paid_at, created_at)`);
   const unpaid = await all(
     `SELECT id, number, name, total_cents, floor(extract(epoch FROM now() - created_at) / 86400)::int AS days
-     FROM orders WHERE status='pending' AND payment_method <> 'stripe' ORDER BY created_at`);
+     FROM orders WHERE status='pending' AND payment_method NOT IN ('clover','stripe') ORDER BY created_at`);
   const lowStock = await all('SELECT name, stock FROM products WHERE active AND stock <= 20 ORDER BY stock');
   const yesterday = await one(
     `SELECT count(*)::int AS orders, COALESCE(sum(total_cents),0)::int AS revenue FROM orders

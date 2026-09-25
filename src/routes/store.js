@@ -4,6 +4,7 @@ const lib = require('../lib');
 const auth = require('../auth');
 const orders = require('../orders');
 const payments = require('../payments');
+const clover = require('../clover');
 const subscriptions = require('../subscriptions');
 const { limiter } = require('../ratelimit');
 const seo = require('../seo');
@@ -187,25 +188,26 @@ r.post('/checkout', async (req, res) => {
   if (!priced.lines.length) return fail('err_empty');
   if (priced.lines.some((l) => l.overStock)) return fail('err_stock');
 
+  const paymentMethod = clover.enabled ? 'clover' : (payments.enabled ? 'stripe' : 'manual');
   let order;
   try {
-    order = await orders.createOrder({ priced, form, paymentMethod: payments.enabled ? 'stripe' : 'manual', customerId: customer ? customer.id : null });
+    order = await orders.createOrder({ priced, form, paymentMethod, customerId: customer ? customer.id : null });
   } catch (e) {
     if (e instanceof orders.StockError) return fail('err_stock');
     if (e instanceof orders.CouponUsedError) return fail('coupon_used');
     throw e;
   }
 
-  if (payments.enabled) {
+  if (paymentMethod !== 'manual') {
     try {
-      const url = await payments.createCheckout(req, order, priced);
+      const url = paymentMethod === 'clover' ? await clover.createCheckout(req, order, priced) : await payments.createCheckout(req, order, priced);
       req.session.pendingCart = req.session.cart; // restore if the customer cancels
       req.session.cart = {};
       req.session.coupon = null;
       clearCartSnapshot(req);
       return res.redirect(303, url);
     } catch (e) {
-      console.error('Stripe error:', e.message);
+      console.error(`${paymentMethod} error:`, e.message);
       await orders.cancelOrder(order.id);
       return fail('err_payment');
     }
@@ -220,7 +222,7 @@ r.post('/checkout', async (req, res) => {
 
 r.get('/checkout/cancel', async (req, res) => {
   const o = await one('SELECT * FROM orders WHERE number=$1 AND access_token=$2', [String(req.query.o || ''), String(req.query.t || '')]);
-  if (o && o.status === 'pending' && o.payment_method === 'stripe') await orders.cancelOrder(o.id);
+  if (o && o.status === 'pending' && o.payment_method !== 'manual') await orders.cancelOrder(o.id);
   if (req.session.pendingCart) {
     req.session.cart = req.session.pendingCart;
     delete req.session.pendingCart;
@@ -270,7 +272,10 @@ r.get('/order/:number', async (req, res, next) => {
       [req.params.number, customer.id]);
   }
   if (!order) return next();
-  if (req.query.session_id) {
+  if (req.query.clover_checkout_id) {
+    order = await clover.syncFromSession(order, String(req.query.clover_checkout_id), res.locals.siteUrl);
+    delete req.session.pendingCart;
+  } else if (req.query.session_id) {
     order = await payments.syncFromSession(order, String(req.query.session_id), res.locals.siteUrl);
     delete req.session.pendingCart;
   }

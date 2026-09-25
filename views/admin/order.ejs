@@ -37,7 +37,7 @@
     <h2>Gestionar</h2>
     <div class="field"><label>Estado</label>
       <select name="status" <%= order.status === 'cancelled' ? 'disabled' : '' %>><% Object.keys(STATUS).forEach(function (s) { %><option value="<%= s %>" <%= order.status === s ? 'selected' : '' %>><%= STATUS[s] %></option><% }) %></select>
-      <div class="hint">Cancelar devuelve las cajas al inventario. Si el cliente pagó con Stripe, haz el reembolso desde Stripe.</div>
+      <div class="hint">Cancelar devuelve las cajas al inventario. Si el cliente pagó con tarjeta, haz el reembolso desde el dashboard de Clover.</div>
     </div>
     <div class="field"><label>Número de rastreo / info de entrega</label><input name="tracking" value="<%= order.tracking %>" placeholder="Ej: UPS 1Z999... o 'Listo para recoger'"><div class="hint">El cliente lo ve en la página de su pedido.</div></div>
     <div class="field"><label>Notas</label><textarea name="notes" rows="4"><%= order.notes %></textarea></div>
