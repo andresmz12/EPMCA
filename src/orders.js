@@ -40,8 +40,10 @@ async function createManualOrder({ lines, form, amounts, paymentMethod, status, 
     const paid = ['paid', 'shipped', 'delivered'].includes(status);
     const { rows: [order] } = await c.query(
       `INSERT INTO orders(number, access_token, customer_id, email, name, phone, fulfillment, address1, address2, city, state, zip,
-         subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, status, payment_method, notes, source, created_by, lang, paid_at)
-       VALUES($1,$2,$3,lower($4),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,'admin',$21,$22, ${paid ? 'now()' : 'NULL'}) RETURNING *`,
+         subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, status, payment_method, notes, source, created_by, lang,
+         paid_at, shipped_at, delivered_at)
+       VALUES($1,$2,$3,lower($4),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,'admin',$21,$22,
+         ${paid ? 'now()' : 'NULL'}, ${['shipped', 'delivered'].includes(status) ? 'now()' : 'NULL'}, ${status === 'delivered' ? 'now()' : 'NULL'}) RETURNING *`,
       [lib.orderNumber(), lib.token(), cust ? cust.id : null, form.email, form.name, form.phone, form.fulfillment,
        form.address1, form.address2, form.city, form.state, form.zip,
        subtotal, discount, amounts.shipping, amounts.tax, total, status, paymentMethod, form.notes, adminEmail, form.lang === 'en' ? 'en' : 'es']);

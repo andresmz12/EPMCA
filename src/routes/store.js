@@ -17,6 +17,7 @@ const loginLimit = limiter({ max: 10, windowMs: 15 * 60 * 1000 });
 const signupLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
 const contactLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
 const forgotLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
+const trackLimit = limiter({ max: 10, windowMs: 15 * 60 * 1000 });
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const couponText = (t, msg) => (msg ? t(msg.key, msg.vars) : null);
@@ -207,6 +208,33 @@ r.get('/order/:number', async (req, res, next) => {
   }
   const items = await all('SELECT oi.*, p.name_es FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=$1 ORDER BY oi.id', [order.id]);
   res.render('store/order', { order, items, title: order.number });
+});
+
+/* ───────────── Track an order without an account ───────────── */
+// Order number alone isn't enough (numbers are short and partly time-based):
+// the visitor must also give the order's email or phone.
+r.get('/track', (req, res) => {
+  const { t } = res.locals;
+  res.render('store/track', { error: null, form: { number: String(req.query.n || '').slice(0, 40) }, title: t('track_title'), description: t('track_sub') });
+});
+
+r.post('/track', async (req, res) => {
+  const { t } = res.locals;
+  let number = String(req.body.number || '').trim().toUpperCase().replace(/\s+/g, '').slice(0, 40);
+  if (number && !number.startsWith('BX-')) number = `BX-${number.replace(/^BX/, '')}`;
+  const contact = String(req.body.contact || '').trim().toLowerCase().slice(0, 200);
+  const fail = (key, status = 400) => res.status(status).render('store/track', { error: t(key), form: { number, contact }, title: t('track_title'), description: t('track_sub') });
+  if (trackLimit.blocked(req.ip)) return fail('err_too_many', 429);
+  if (!number || !contact) return fail('err_required');
+  const order = await one('SELECT number, access_token, email, phone FROM orders WHERE upper(number)=$1', [number]);
+  const digits = (s) => String(s || '').replace(/\D/g, '');
+  const c = digits(contact), p = digits(order && order.phone), n = Math.min(10, c.length, p.length);
+  const ok = order && ((order.email && order.email.toLowerCase() === contact) || (n >= 7 && c.slice(-n) === p.slice(-n)));
+  if (!ok) {
+    trackLimit.hit(req.ip);
+    return fail('track_not_found', 404);
+  }
+  res.redirect(`/order/${order.number}?t=${order.access_token}`);
 });
 
 /* ───────────── Customer accounts ───────────── */

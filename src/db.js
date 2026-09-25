@@ -142,6 +142,9 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS subscription_id INT REFERENCES subsc
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_invoice_id TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'web';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS lang TEXT NOT NULL DEFAULT 'en';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_reminder_at TIMESTAMPTZ;
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS lang TEXT NOT NULL DEFAULT 'en';
 
 -- Only a hash of the emailed token is stored.
@@ -245,6 +248,10 @@ const DEFAULT_SETTINGS = {
   support_phone: '',
   whatsapp_number: '',
   notify_email: '',
+  reminder_payment_enabled: 'true',
+  digest_enabled: 'true',
+  digest_last_date: '',
+  payment_instructions: '',
   announcement_en: 'We ship anywhere in the USA · Free shipping on orders over $150',
   announcement_es: 'Enviamos a todo Estados Unidos · Envío gratis en pedidos desde $150',
 };

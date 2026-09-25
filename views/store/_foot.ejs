@@ -11,9 +11,11 @@
         <p><a href="/#shop"><%= t('nav_shop') %></a></p>
         <p><a href="/#sizes"><%= t('nav_sizes') %></a></p>
         <p><a href="/#faq"><%= t('nav_faq') %></a></p>
+        <p><a href="/#shipping"><%= t('nav_shipping') %></a></p>
       </div>
       <div>
         <h4><%= t('footer_contact') %></h4>
+        <p><a href="/track"><%= t('nav_track') %></a></p>
         <p><a href="/contact"><%= t('nav_contact') %></a></p>
         <% if (settings.support_email) { %><p><a href="mailto:<%= settings.support_email %>"><%= settings.support_email %></a></p><% } %>
         <% if (settings.support_phone) { %><p><a href="tel:<%= settings.support_phone.replace(/[^\d+]/g,'') %>"><%= settings.support_phone %></a></p><% } %>

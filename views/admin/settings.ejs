@@ -39,6 +39,15 @@
     <div class="card">
       <h2>Pagos</h2>
       <p class="small" style="margin:0"><%= stripeEnabled ? '✅ Stripe está conectado. Los clientes pagan con tarjeta.' : 'Stripe no está conectado: los pedidos quedan "Pendientes" y tú confirmas el pago manualmente. Para activarlo agrega STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET en Railway (ver README).' %></p>
+      <div class="field" style="margin-top:12px"><label>Instrucciones de pago (pedidos sin tarjeta)</label>
+        <textarea name="payment_instructions" rows="3" placeholder="Ej: Zelle a pagos@empacalo.us (EMPACALO LLC). Escribe tu número de pedido en la nota."><%= settings.payment_instructions %></textarea>
+        <div class="hint">Se muestran al cliente en su pedido y en los correos mientras el pago está pendiente.</div></div>
+    </div>
+    <div class="card">
+      <h2>Correos automáticos</h2>
+      <label class="check"><input type="checkbox" name="reminder_payment_enabled" <%= settings.reminder_payment_enabled === 'true' ? 'checked' : '' %>> Recordar al cliente si su pedido sigue sin pagar a las 24 horas</label>
+      <label class="check"><input type="checkbox" name="digest_enabled" <%= settings.digest_enabled === 'true' ? 'checked' : '' %>> Enviarme un resumen diario (8 a.m.): por despachar, sin pagar e inventario bajo</label>
+      <div class="hint">Requieren SendGrid configurado (ver README).</div>
     </div>
     <button class="btn orange" style="justify-content:center;padding:13px">Guardar configuración</button>
   </div>

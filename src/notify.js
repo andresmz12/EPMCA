@@ -6,7 +6,11 @@ const lib = require('./lib');
 const mail = require('./mail');
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const siteUrl = (fallback) => (process.env.PUBLIC_URL || fallback || '').trim().replace(/\/$/, '');
+// Background jobs have no request to take the domain from, so remember the last
+// one seen (PUBLIC_URL, when set, always wins).
+let lastSeenBase = '';
+const rememberBase = (url) => { if (url) lastSeenBase = url; };
+const siteUrl = (fallback) => (process.env.PUBLIC_URL || fallback || lastSeenBase || '').trim().replace(/\/$/, '');
 
 function layout(settings, title, bodyHtml, footer) {
   return `<!doctype html><html><body style="margin:0;background:#F5F3EF;font-family:Arial,Helvetica,sans-serif;color:#111214">
@@ -53,7 +57,13 @@ async function customerOrderEmail(order, kind, base) {
   const k = kind === 'shipped' && order.fulfillment === 'pickup' ? 'ready' : kind;
   const subject = t(`email_subj_${k}`, { number: order.number });
   let body = `<p>${t('email_hi', { name: esc(order.name.split(' ')[0]) })}</p><p>${t(`email_intro_${k}`)}</p>`;
-  if (kind === 'shipped' && order.tracking) body += `<p style="font-size:14px"><b>${t('track')}:</b> ${esc(order.tracking)}</p>`;
+  if (kind === 'shipped' && order.tracking) {
+    const carrier = lib.trackingUrl(order.tracking);
+    body += `<p style="font-size:14px"><b>${t('track')}:</b> ${esc(order.tracking)}${carrier ? ` · <a href="${esc(carrier)}">${t('track_link')}</a>` : ''}</p>`;
+  }
+  if ((kind === 'pending' || kind === 'reminder') && order.payment_method !== 'stripe' && settings.payment_instructions) {
+    body += `<div style="background:#FCEFD9;border-radius:4px;padding:12px 14px;font-size:14px;margin:12px 0;white-space:pre-wrap"><b>${t('payment_how')}</b>\n${esc(settings.payment_instructions)}</div>`;
+  }
   body += itemsTable(order, items, t) + addressLine(order, settings, t) + button(url, t('email_view_order'));
   const footer = t('email_footer', { email: esc(settings.support_email) });
   await mail.send({ to: order.email, subject, html: layout(settings, subject, body, footer), replyTo: settings.support_email || undefined });
@@ -74,13 +84,45 @@ ${itemsTable({ ...order, lang: 'es' }, items, t)}${addressLine(order, settings, 
 
 const safe = (fn) => (...args) => fn(...args).catch((e) => console.error('Email error:', e.message));
 
+async function storeDigest(d) {
+  const settings = await getSettings();
+  const to = settings.notify_email || settings.support_email;
+  if (!to) return false;
+  const base = siteUrl();
+  const list = (rows, fn) => (rows.length ? `<ul style="padding-left:18px;font-size:14px">${rows.map((r) => `<li style="margin:4px 0">${fn(r)}</li>`).join('')}</ul>` : '<p style="font-size:14px;color:#6A6E75">Nada pendiente.</p>');
+  const link = (o) => `<a href="${esc(base)}/admin/orders/${o.id}">${esc(o.number)}</a>`;
+  const body = `<p style="font-size:14px">Ayer: <b>${d.yesterday.orders}</b> pedido(s) pagado(s) · <b>${lib.money(d.yesterday.revenue)}</b></p>
+<h3 style="font-size:16px;margin:18px 0 4px">📦 Por despachar (${d.toShip.length})</h3>
+${list(d.toShip, (o) => `${link(o)} · ${esc(o.name)} · ${o.fulfillment === 'pickup' ? 'recoge' : `${esc(o.city)}, ${esc(o.state)}`} · pagado hace <b>${o.days} día(s)</b>${o.days >= 2 ? ' ⚠️' : ''}`)}
+<h3 style="font-size:16px;margin:18px 0 4px">💳 Esperando pago (${d.unpaid.length})</h3>
+${list(d.unpaid, (o) => `${link(o)} · ${esc(o.name)} · ${lib.money(o.total_cents)} · hace ${o.days} día(s)`)}
+<h3 style="font-size:16px;margin:18px 0 4px">📉 Inventario bajo (${d.lowStock.length})</h3>
+${list(d.lowStock, (p) => `${esc(p.name)}: ${p.stock === 0 ? '<b>AGOTADO</b>' : `${p.stock} unidades`}`)}
+${button(`${base}/admin/orders?status=paid`, 'Abrir pedidos')}`;
+  return mail.send({ to, subject: `Resumen del día · ${d.toShip.length} por despachar · ${d.unpaid.length} sin pagar`, html: layout(settings, 'Resumen del día', body, 'Resumen automático diario. Se puede apagar en Admin → Configuración.') });
+}
+
 module.exports = {
+  rememberBase,
   // Web order with manual payment: confirm to the customer, alert the store.
   orderPlaced: safe(async (order, base) => { await customerOrderEmail(order, 'pending', base); await storeOrderAlert(order, base); }),
   // Card payment confirmed (Stripe checkout or recurring cycle).
   orderPaid: safe(async (order, base) => { await customerOrderEmail(order, 'paid', base); await storeOrderAlert(order, base); }),
   orderStatus: safe(async (order, base) => {
     if (['paid', 'shipped', 'delivered', 'cancelled', 'pending'].includes(order.status)) await customerOrderEmail(order, order.status, base);
+  }),
+  // Unpaid manual order after 24h (sent once, from the background jobs).
+  paymentReminder: safe(async (order) => customerOrderEmail(order, 'reminder')),
+  storeDigest: safe(storeDigest),
+  // Stripe's invoice.upcoming, a few days before a recurring charge.
+  upcomingRecurring: safe(async (sub, whenUnix, amountCents) => {
+    const settings = await getSettings();
+    const t = makeT(sub.lang);
+    const date = new Date(whenUnix * 1000).toLocaleDateString(sub.lang === 'es' ? 'es-US' : 'en-US', { timeZone: 'America/Chicago', dateStyle: 'long' });
+    const items = sub.items.map((it) => `${it.qty} × ${esc(it.name)}`).join(', ');
+    const subject = t('email_subj_upcoming', { date });
+    const body = `<p>${t('email_hi', { name: esc(sub.name.split(' ')[0]) })}</p><p>${t('email_upcoming_body', { amount: lib.money(amountCents), date, items })}</p>${button(`${siteUrl()}/account`, t('email_upcoming_cta'))}`;
+    await mail.send({ to: sub.email, subject, html: layout(settings, subject, body, t('email_footer', { email: esc(settings.support_email) })) });
   }),
   contactMessage: safe(async (msg) => {
     const settings = await getSettings();

@@ -397,7 +397,9 @@ r.post('/orders/:id', async (req, res, next) => {
   if (status === 'cancelled' && order.status !== 'cancelled') await orders.cancelOrder(id);
   await q(
     `UPDATE orders SET status=$1, tracking=$2, notes=$3, updated_at=now(),
-       paid_at = CASE WHEN $1 IN ('paid','shipped','delivered') AND paid_at IS NULL THEN now() ELSE paid_at END
+       paid_at = CASE WHEN $1 IN ('paid','shipped','delivered') AND paid_at IS NULL THEN now() ELSE paid_at END,
+       shipped_at = CASE WHEN $1 IN ('shipped','delivered') AND shipped_at IS NULL THEN now() ELSE shipped_at END,
+       delivered_at = CASE WHEN $1 = 'delivered' AND delivered_at IS NULL THEN now() ELSE delivered_at END
      WHERE id=$4`, [status, tracking, notes, id]);
   if (status !== order.status && req.body.notify_customer === 'on') {
     notify.orderStatus(await one('SELECT * FROM orders WHERE id=$1', [id]), res.locals.siteUrl);
@@ -505,6 +507,9 @@ r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings')
   const tax = Number(String(req.body.tax_rate_percent || '0').replace(',', '.'));
   values.tax_rate_percent = String(Number.isFinite(tax) && tax >= 0 && tax < 50 ? tax : 0);
   values.pickup_enabled = req.body.pickup_enabled === 'on' ? 'true' : 'false';
+  values.reminder_payment_enabled = req.body.reminder_payment_enabled === 'on' ? 'true' : 'false';
+  values.digest_enabled = req.body.digest_enabled === 'on' ? 'true' : 'false';
+  values.payment_instructions = String(req.body.payment_instructions || '').trim().slice(0, 1000);
   // wa.me needs digits with country code; a 10-digit number is assumed to be US.
   let wa = String(req.body.whatsapp_number || '').replace(/\D/g, '').slice(0, 15);
   if (wa.length === 10) wa = `1${wa}`;

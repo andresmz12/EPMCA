@@ -83,6 +83,10 @@ async function webhook(req, res) {
     await subscriptions.handleInvoicePaid(s);
     return res.json({ received: true });
   }
+  if (event.type === 'invoice.upcoming') {
+    await subscriptions.handleUpcoming(s);
+    return res.json({ received: true });
+  }
   if (event.type === 'customer.subscription.deleted') {
     await subscriptions.handleSubscriptionDeleted(s);
     return res.json({ received: true });

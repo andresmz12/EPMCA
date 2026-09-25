@@ -58,7 +58,7 @@ Para cobrar con tarjeta:
 2. En Stripe → **Developers → API keys**, copia la **Secret key** y ponla en Railway como `STRIPE_SECRET_KEY`.
 3. En Stripe → **Developers → Webhooks → Add endpoint**:
    - URL: `https://TU-DOMINIO/stripe/webhook`
-   - Eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `invoice.paid`, `customer.subscription.deleted` (los dos últimos son para los pedidos recurrentes)
+   - Eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `invoice.paid`, `invoice.upcoming`, `customer.subscription.deleted` (los tres últimos son para los pedidos recurrentes)
    - Copia el **Signing secret** y ponlo en Railway como `STRIPE_WEBHOOK_SECRET`.
 4. Prueba primero con las llaves de **modo prueba** (`sk_test_...`) y la tarjeta `4242 4242 4242 4242`.
 
@@ -98,6 +98,22 @@ Pasos:
    | `SENDGRID_API_KEY` | la llave `SG....` |
    | `EMAIL_FROM` | un correo de tu dominio autenticado, ej. `pedidos@empacalo.us` |
    | `EMAIL_FROM_NAME` | `EMPACALO` (opcional) |
+
+**Cuándo sale cada correo**
+
+| Momento | A quién | Correo |
+|---|---|---|
+| Pedido web con pago manual | Cliente + tienda | "Recibimos tu pedido" (con las *instrucciones de pago* de Configuración) / aviso de pedido nuevo |
+| Pago con tarjeta confirmado | Cliente + tienda | "Pedido confirmado — pago recibido" / aviso de pedido nuevo |
+| Pedido sin pagar a las 24 h | Cliente | Recordatorio de pago (una sola vez; se apaga en Configuración) |
+| Admin lo marca *Enviado* | Cliente | "Va en camino" con rastreo y enlace a UPS/FedEx/USPS (o "Listo para recoger") |
+| Admin lo marca *Entregado* / *Cancelado* | Cliente | Entregado / Cancelado |
+| Todos los días a las 8 a.m. (Chicago) | Tienda | Resumen: por despachar, sin pagar, inventario bajo y ventas de ayer (se apaga en Configuración) |
+| Unos días antes de un cobro recurrente | Cliente | Aviso con fecha y monto (evento `invoice.upcoming` de Stripe) |
+| Cada cobro recurrente | Cliente + tienda | Pago recibido / aviso de pedido nuevo |
+| Registro / olvidó contraseña / formulario de contacto | Cliente / cliente / tienda | Bienvenida con `WELCOME10` / enlace de 1 hora / mensaje con "responder" al cliente |
+
+Los clientes sin cuenta rastrean su pedido en `/track` con el número de pedido y su correo o teléfono.
 
 Al cambiar el estado de un pedido en el admin, la casilla *Enviar correo al cliente* decide si se le avisa. En los pedidos registrados a mano también puedes elegir si mandar la confirmación y en qué idioma.
 

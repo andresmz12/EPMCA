@@ -89,7 +89,16 @@ const PAYMENT_ES = {
 };
 const MANUAL_PAYMENTS = ['cash', 'zelle', 'transfer', 'card', 'check', 'other'];
 
-module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN, PAYMENT_ES, MANUAL_PAYMENTS };
+// Best-effort carrier link from the tracking number's shape; null if unknown.
+function trackingUrl(tracking) {
+  const s = String(tracking || '').replace(/\s+/g, '').toUpperCase();
+  if (/^1Z[0-9A-Z]{16}$/.test(s)) return `https://www.ups.com/track?tracknum=${s}`;
+  if (/^(94|93|92|95)\d{18,20}$/.test(s) || /^[A-Z]{2}\d{9}US$/.test(s)) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${s}`;
+  if (/^\d{12}$|^\d{15}$/.test(s)) return `https://www.fedex.com/fedextrack/?trknbr=${s}`;
+  return null;
+}
+
+module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN, PAYMENT_ES, MANUAL_PAYMENTS, trackingUrl };
 
 /**
  * Draws an isometric cardboard box to scale from a "24 × 30 × 36" style string.

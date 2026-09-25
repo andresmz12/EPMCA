@@ -1,9 +1,22 @@
 <%- include('_head') %>
 <div class="wrap">
+<%
+  const pickup = order.fulfillment === 'pickup';
+  const fmt = (d) => d ? new Date(d).toLocaleDateString(lang === 'es' ? 'es-US' : 'en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric' }) : '';
+  const steps = [
+    { key: 'pending', label: t('ts_received'), at: order.created_at },
+    { key: 'paid', label: t('ts_paid'), at: order.paid_at },
+    { key: 'shipped', label: pickup ? t('ts_ready') : t('ts_shipped'), at: order.shipped_at },
+    { key: 'delivered', label: pickup ? t('ts_picked') : t('ts_delivered'), at: order.delivered_at },
+  ];
+  const stepIdx = steps.findIndex((s) => s.key === order.status);
+  const msgKey = order.status === 'shipped' && pickup ? 'ready' : order.status;
+  const carrier = trackingUrl(order.tracking);
+  const fresh = ['pending', 'paid'].includes(order.status) && Date.now() - new Date(order.created_at) < 60 * 60 * 1000;
+%>
   <div class="thanks">
-    <h1 style="font-size:clamp(30px,4vw,44px)"><%= t('thanks_title', { name: order.name.split(' ')[0] }) %></h1>
-    <p class="lead" style="font-size:18px"><%= t('thanks_sub', { number: order.number }) %></p>
-    <% const steps = ['pending', 'paid', 'shipped', 'delivered']; const stepIdx = steps.indexOf(order.status); %>
+    <h1 style="font-size:clamp(28px,4vw,40px)"><%= fresh ? t('thanks_title', { name: order.name.split(' ')[0] }) : t('track_order_title', { number: order.number }) %></h1>
+    <p class="muted"><%= t('placed_on', { number: order.number, date: fmt(order.created_at) }) %></p>
     <% if (order.status === 'cancelled') { %>
       <p><span class="status-pill cancelled"><%= t('st_cancelled') %></span></p>
     <% } else { %>
@@ -11,16 +24,23 @@
         <% steps.forEach(function (s, i) { %>
         <div class="tstep <%= i <= stepIdx ? 'done' : '' %> <%= i === stepIdx ? 'current' : '' %>">
           <span class="tdot"><%= i < stepIdx ? '✓' : i + 1 %></span>
-          <span class="tlabel"><%= t('st_' + s) %></span>
+          <span class="tlabel"><%= s.label %></span>
+          <% if (i <= stepIdx && s.at) { %><span class="tdate"><%= fmt(s.at) %></span><% } %>
         </div>
         <% if (i < steps.length - 1) { %><span class="tline <%= i < stepIdx ? 'done' : '' %>"></span><% } %>
         <% }) %>
       </div>
     <% } %>
-    <p class="muted">
-      <% if (order.status === 'paid') { %><%= t('thanks_paid') %><% } else if (order.status === 'pending') { %><%= t('thanks_pending', { email: order.email }) %><% } %>
-      <% if (order.fulfillment === 'pickup' && order.status !== 'cancelled') { %><br><%= t('thanks_pickup') %><% } %>
-    </p>
+    <div class="statusbox <%= order.status %>">
+      <b><%= t('status_msg_' + msgKey) %></b>
+      <% if (order.status === 'pending' && order.payment_method !== 'stripe' && settings.payment_instructions) { %>
+        <div style="margin-top:8px;white-space:pre-wrap"><%= settings.payment_instructions %></div>
+      <% } %>
+      <% if (order.status === 'shipped' && pickup && settings.pickup_address) { %><div style="margin-top:6px"><%= settings.pickup_address %></div><% } %>
+      <% if (order.tracking && order.status !== 'cancelled') { %>
+        <div style="margin-top:8px"><%= t('track') %>: <b><%= order.tracking %></b><% if (carrier) { %> · <a class="textlink" href="<%= carrier %>" target="_blank" rel="noopener"><%= t('track_link') %></a><% } %></div>
+      <% } %>
+    </div>
   </div>
   <div class="panel gray" style="max-width:640px;margin:0 auto 80px">
     <% items.forEach(function (it) { %>
@@ -38,7 +58,6 @@
       <% } else { %>
         <b><%= t('ship_to') %>:</b> <%= order.address1 %><%= order.address2 ? ', ' + order.address2 : '' %>, <%= order.city %>, <%= order.state %> <%= order.zip %>
       <% } %>
-      <% if (order.tracking) { %><br><b><%= t('track') %>:</b> <%= order.tracking %><% } %>
     </div>
     <p style="margin:24px 0 0;text-align:center"><a class="btn ghost sm" href="/"><%= t('back_home') %></a></p>
   </div>

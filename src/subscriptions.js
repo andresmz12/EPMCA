@@ -102,11 +102,24 @@ async function handleCheckoutCompleted(session) {
 }
 
 /** Called from the webhook on every later billing cycle. */
-async function handleInvoicePaid(invoice) {
-  // API versions from 2025-03-31 on moved this under invoice.parent.
-  const subId = invoice.subscription || (invoice.parent && invoice.parent.subscription_details && invoice.parent.subscription_details.subscription);
+// API versions from 2025-03-31 on moved this under invoice.parent.
+function invoiceSubId(invoice) {
+  const id = invoice.subscription || (invoice.parent && invoice.parent.subscription_details && invoice.parent.subscription_details.subscription);
+  return id && (typeof id === 'string' ? id : id.id);
+}
+
+/** invoice.upcoming: heads-up email a few days before a recurring charge. */
+async function handleUpcoming(invoice) {
+  const subId = invoiceSubId(invoice);
   if (!subId) return;
-  const sub = await one('SELECT * FROM subscriptions WHERE stripe_subscription_id=$1', [typeof subId === 'string' ? subId : subId.id]);
+  const sub = await one("SELECT * FROM subscriptions WHERE stripe_subscription_id=$1 AND status='active'", [subId]);
+  if (sub) notify.upcomingRecurring(sub, invoice.next_payment_attempt || invoice.period_end, invoice.amount_due);
+}
+
+async function handleInvoicePaid(invoice) {
+  const subId = invoiceSubId(invoice);
+  if (!subId) return;
+  const sub = await one('SELECT * FROM subscriptions WHERE stripe_subscription_id=$1', [subId]);
   if (!sub) return; // first invoice: checkout.session.completed will create it
   await recurringOrderAndNotify(sub, invoice.id);
 }
@@ -122,4 +135,4 @@ async function cancel(sub) {
   await q("UPDATE subscriptions SET status='cancelled', cancelled_at=now() WHERE id=$1", [sub.id]);
 }
 
-module.exports = { createCheckout, syncFromSession, handleCheckoutCompleted, handleInvoicePaid, handleSubscriptionDeleted, cancel };
+module.exports = { createCheckout, syncFromSession, handleCheckoutCompleted, handleInvoicePaid, handleUpcoming, handleSubscriptionDeleted, cancel };

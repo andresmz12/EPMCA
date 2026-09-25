@@ -8,6 +8,8 @@ const lib = require('./lib');
 const { makeT, LANGS } = require('./i18n');
 const payments = require('./payments');
 const seo = require('./seo');
+const notify = require('./notify');
+const jobs = require('./jobs');
 const { isProd } = require('./env');
 
 const app = express();
@@ -95,6 +97,7 @@ app.get('/sitemap.xml', async (req, res) => {
   const pages = [
     { path: '/', lastmod: products.length ? newest : null },
     ...products.map((p) => ({ path: `/products/${p.slug}`, lastmod: p.updated_at })),
+    { path: '/track' },
     { path: '/contact' },
   ];
   res.type('application/xml').set('Cache-Control', 'public, max-age=3600').send(seo.sitemap(siteUrlOf(req), pages));
@@ -126,12 +129,13 @@ app.use(async (req, res, next) => {
   }
   const cart = req.session.cart || {};
   const siteUrl = siteUrlOf(req);
+  notify.rememberBase(siteUrl);
   Object.assign(res.locals, {
     settings, lang, t: makeT(lang), money: lib.money, path: req.path, siteUrl, assetV: ASSET_V,
     altUrl: (l) => `${siteUrl}${req.path}${l === 'es' ? '?lang=es' : ''}`,
     cartCount: Object.values(cart).reduce((s, n) => s + (Number(n) || 0), 0),
     flash: req.session.flash || null, stripeEnabled: payments.enabled, boxSvg: lib.boxSvg,
-    customer: req.session.customer || null, US_STATES: lib.US_STATES,
+    customer: req.session.customer || null, US_STATES: lib.US_STATES, trackingUrl: lib.trackingUrl,
     cartAdded: req.session.cartAdded || null,
     // Product text in the visitor's language (falls back to English)
     pt: (p, f) => (lang === 'es' && p[f + '_es']) || p[f],
@@ -152,17 +156,9 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).send(isProd ? 'Something went wrong. / Algo salió mal.' : `<pre>${String(err.stack).replace(/</g, '&lt;')}</pre>`);
 });
 
-// Unpaid Stripe checkouts reserve stock; release it if they were abandoned (backup for the webhook).
-async function releaseAbandoned() {
-  const { all } = require('./db');
-  const { cancelOrder } = require('./orders');
-  const stale = await all(`SELECT id FROM orders WHERE status='pending' AND payment_method='stripe' AND created_at < now() - interval '2 hours'`);
-  for (const o of stale) await cancelOrder(o.id);
-}
-
 migrate()
   .then(() => {
-    setInterval(() => releaseAbandoned().catch((e) => console.error(e)), 10 * 60 * 1000).unref();
+    jobs.start();
     app.listen(PORT, (err) => {
       if (err) throw err;
       console.log(`Tienda lista en http://localhost:${PORT}  ·  Admin: /admin`);

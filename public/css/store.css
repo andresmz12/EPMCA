@@ -302,3 +302,11 @@ footer.site .legal { border-top: 1px solid #2B2D32; margin-top: 32px; padding-to
 .wa-float { position: fixed; right: 18px; bottom: 18px; z-index: 90; display: flex; align-items: center; gap: 8px; background: #25D366; color: #fff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 12px 16px; border-radius: 999px; box-shadow: 0 8px 24px -8px rgba(0,0,0,.35); }
 .wa-float:hover { background: #1EBE5A; }
 @media (max-width: 640px) { .wa-float span { display: none; } .wa-float { padding: 13px; } }
+
+/* Order status page */
+.tdate { font-size: 11.5px; color: var(--muted); }
+.statusbox { max-width: 640px; margin: 0 auto 24px; padding: 14px 16px; border-radius: var(--r); background: var(--bg-2); border-left: 4px solid var(--orange); text-align: left; font-size: 15px; }
+.statusbox.paid, .statusbox.shipped, .statusbox.delivered { background: #EAF5EF; border-color: var(--ok); }
+.statusbox.cancelled { background: #FCEDEB; border-color: var(--err); }
+.nav .links a, .nav .right a, .nav .right .lang { white-space: nowrap; }
+@media (max-width: 1100px) { .nav .links { gap: 18px; } .nav { gap: 20px; } }
