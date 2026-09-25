@@ -38,7 +38,7 @@
     </div>
     <div class="card">
       <h2>Pagos</h2>
-      <p class="small" style="margin:0"><%= stripeEnabled ? '✅ Stripe está conectado. Los clientes pagan con tarjeta.' : 'Stripe no está conectado: los pedidos quedan "Pendientes" y tú confirmas el pago manualmente. Para activarlo agrega STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET en Railway (ver README).' %></p>
+      <p class="small" style="margin:0"><%= stripeEnabled ? 'Stripe está conectado. Los clientes pagan con tarjeta.' : 'Stripe no está conectado: los pedidos quedan "Pendientes" y tú confirmas el pago manualmente. Para activarlo agrega STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET en Railway (ver README).' %></p>
       <div class="field" style="margin-top:12px"><label>Instrucciones de pago (pedidos sin tarjeta)</label>
         <textarea name="payment_instructions" rows="3" placeholder="Ej: Zelle a pagos@empacalo.us (EMPACALO LLC). Escribe tu número de pedido en la nota."><%= settings.payment_instructions %></textarea>
         <div class="hint">Se muestran al cliente en su pedido y en los correos mientras el pago está pendiente.</div></div>

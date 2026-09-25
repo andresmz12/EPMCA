@@ -99,6 +99,8 @@ app.get('/sitemap.xml', async (req, res) => {
     ...products.map((p) => ({ path: `/products/${p.slug}`, lastmod: p.updated_at })),
     { path: '/track' },
     { path: '/contact' },
+    { path: '/terms' },
+    { path: '/privacy' },
   ];
   res.type('application/xml').set('Cache-Control', 'public, max-age=3600').send(seo.sitemap(siteUrlOf(req), pages));
 });

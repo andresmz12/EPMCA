@@ -371,6 +371,17 @@ r.post('/account/address', async (req, res) => {
   res.redirect('/account');
 });
 
+/* ───────────── Legal ───────────── */
+r.get('/terms', (req, res) => {
+  const { t } = res.locals;
+  res.render('store/terms', { title: t('terms_title'), description: t('terms_title') });
+});
+
+r.get('/privacy', (req, res) => {
+  const { t } = res.locals;
+  res.render('store/privacy', { title: t('privacy_title'), description: t('privacy_title') });
+});
+
 /* ───────────── Contact ───────────── */
 r.get('/contact', (req, res) => {
   const { customer, t } = res.locals;

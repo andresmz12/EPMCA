@@ -1,0 +1,78 @@
+<%- include('_head') %>
+<div class="wrap page">
+  <div class="legaldoc">
+    <h1 style="font-size:30px"><%= t('privacy_title') %></h1>
+    <% if (lang === 'es') { %>
+    <p class="muted small">Última actualización: <%= new Date().toLocaleDateString('es-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+
+    <h3>1. Qué información recopilamos</h3>
+    <p>Cuando haces un pedido o creas una cuenta guardamos: nombre, correo, teléfono, dirección de envío y el historial de tus pedidos. Si nos escribes por el formulario de contacto, guardamos tu mensaje para poder responderte.</p>
+
+    <h3>2. Para qué usamos tu información</h3>
+    <p>Usamos tus datos para procesar y entregar tus pedidos, enviarte confirmaciones y avisos de envío por correo, responder tus mensajes, y (solo si lo activas) enviarte pedidos recurrentes y recordatorios relacionados con tu cuenta.</p>
+
+    <h3>3. Pagos</h3>
+    <p>Los pagos con tarjeta los procesa Stripe. Nosotros nunca vemos ni almacenamos el número completo de tu tarjeta; esa información queda directamente con Stripe bajo sus propias políticas de seguridad.</p>
+
+    <h3>4. Correos</h3>
+    <p>Enviamos correos operativos (confirmación de pedido, envío, recordatorios de pago) a través de SendGrid. No vendemos ni compartimos tu correo con terceros para publicidad.</p>
+
+    <h3>5. Cookies y almacenamiento local</h3>
+    <p>Usamos una cookie técnica para mantener tu sesión (carrito, inicio de sesión) y otra para recordar el idioma que prefieres. Tu navegador también guarda localmente si ya viste el aviso de descuento por crear cuenta, para no mostrártelo de nuevo. No usamos cookies de rastreo publicitario.</p>
+
+    <h3>6. Con quién compartimos datos</h3>
+    <p>Solo compartimos la información necesaria con los proveedores que nos ayudan a operar la tienda: Stripe (pagos) y SendGrid (correos). No vendemos tus datos a nadie.</p>
+
+    <h3>7. Cuánto tiempo guardamos tus datos</h3>
+    <p>Guardamos el historial de pedidos y los datos de tu cuenta mientras la cuenta exista. Puedes pedirnos que eliminemos tu cuenta y tus datos personales escribiéndonos, salvo la información que debamos conservar por motivos contables o legales.</p>
+
+    <h3>8. Tus derechos</h3>
+    <p>Puedes pedirnos en cualquier momento: ver qué datos tenemos sobre ti, corregirlos, o eliminarlos. Escríbenos a <%= settings.support_email %> y lo resolvemos.</p>
+
+    <h3>9. Menores de edad</h3>
+    <p>Este sitio no está dirigido a menores de 13 años y no recopilamos intencionalmente información de menores.</p>
+
+    <h3>10. Cambios a esta política</h3>
+    <p>Podemos actualizar esta política ocasionalmente. La fecha de la última actualización aparece arriba.</p>
+
+    <h3>11. Contacto</h3>
+    <p>¿Preguntas sobre tu privacidad? Escríbenos a <a href="mailto:<%= settings.support_email %>"><%= settings.support_email %></a>.</p>
+    <% } else { %>
+    <p class="muted small">Last updated: <%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+
+    <h3>1. What information we collect</h3>
+    <p>When you place an order or create an account, we store: name, email, phone, shipping address, and your order history. If you write to us through the contact form, we keep your message so we can reply.</p>
+
+    <h3>2. How we use your information</h3>
+    <p>We use your data to process and deliver your orders, send order confirmations and shipping notices by email, reply to your messages, and — only if you turn it on — send recurring orders and account-related reminders.</p>
+
+    <h3>3. Payments</h3>
+    <p>Card payments are processed by Stripe. We never see or store your full card number; that information stays directly with Stripe under its own security policies.</p>
+
+    <h3>4. Emails</h3>
+    <p>We send operational emails (order confirmation, shipping, payment reminders) through SendGrid. We do not sell or share your email with third parties for advertising.</p>
+
+    <h3>5. Cookies and local storage</h3>
+    <p>We use a technical cookie to keep your session (cart, login) and another to remember your preferred language. Your browser also stores locally whether you've already seen the account-discount popup, so it isn't shown again. We don't use advertising tracking cookies.</p>
+
+    <h3>6. Who we share data with</h3>
+    <p>We only share the information necessary with the providers that help us run the store: Stripe (payments) and SendGrid (emails). We do not sell your data to anyone.</p>
+
+    <h3>7. How long we keep your data</h3>
+    <p>We keep order history and account data for as long as your account exists. You can ask us to delete your account and personal data by contacting us, except information we must keep for accounting or legal reasons.</p>
+
+    <h3>8. Your rights</h3>
+    <p>You can ask us at any time to: see what data we have about you, correct it, or delete it. Email us at <%= settings.support_email %> and we'll take care of it.</p>
+
+    <h3>9. Children's privacy</h3>
+    <p>This site is not directed at children under 13, and we do not knowingly collect information from children.</p>
+
+    <h3>10. Changes to this policy</h3>
+    <p>We may update this policy from time to time. The last-updated date is shown above.</p>
+
+    <h3>11. Contact</h3>
+    <p>Questions about your privacy? Email us at <a href="mailto:<%= settings.support_email %>"><%= settings.support_email %></a>.</p>
+    <% } %>
+  </div>
+</div>
+<%- include('_foot') %>

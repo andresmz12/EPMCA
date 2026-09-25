@@ -92,11 +92,11 @@ async function storeDigest(d) {
   const list = (rows, fn) => (rows.length ? `<ul style="padding-left:18px;font-size:14px">${rows.map((r) => `<li style="margin:4px 0">${fn(r)}</li>`).join('')}</ul>` : '<p style="font-size:14px;color:#6A6E75">Nada pendiente.</p>');
   const link = (o) => `<a href="${esc(base)}/admin/orders/${o.id}">${esc(o.number)}</a>`;
   const body = `<p style="font-size:14px">Ayer: <b>${d.yesterday.orders}</b> pedido(s) pagado(s) · <b>${lib.money(d.yesterday.revenue)}</b></p>
-<h3 style="font-size:16px;margin:18px 0 4px">📦 Por despachar (${d.toShip.length})</h3>
-${list(d.toShip, (o) => `${link(o)} · ${esc(o.name)} · ${o.fulfillment === 'pickup' ? 'recoge' : `${esc(o.city)}, ${esc(o.state)}`} · pagado hace <b>${o.days} día(s)</b>${o.days >= 2 ? ' ⚠️' : ''}`)}
-<h3 style="font-size:16px;margin:18px 0 4px">💳 Esperando pago (${d.unpaid.length})</h3>
+<h3 style="font-size:16px;margin:18px 0 4px">Por despachar (${d.toShip.length})</h3>
+${list(d.toShip, (o) => `${link(o)} · ${esc(o.name)} · ${o.fulfillment === 'pickup' ? 'recoge' : `${esc(o.city)}, ${esc(o.state)}`} · pagado hace <b>${o.days} día(s)</b>${o.days >= 2 ? ' <span style="color:#B23">(atrasado)</span>' : ''}`)}
+<h3 style="font-size:16px;margin:18px 0 4px">Esperando pago (${d.unpaid.length})</h3>
 ${list(d.unpaid, (o) => `${link(o)} · ${esc(o.name)} · ${lib.money(o.total_cents)} · hace ${o.days} día(s)`)}
-<h3 style="font-size:16px;margin:18px 0 4px">📉 Inventario bajo (${d.lowStock.length})</h3>
+<h3 style="font-size:16px;margin:18px 0 4px">Inventario bajo (${d.lowStock.length})</h3>
 ${list(d.lowStock, (p) => `${esc(p.name)}: ${p.stock === 0 ? '<b>AGOTADO</b>' : `${p.stock} unidades`}`)}
 ${button(`${base}/admin/orders?status=paid`, 'Abrir pedidos')}`;
   return mail.send({ to, subject: `Resumen del día · ${d.toShip.length} por despachar · ${d.unpaid.length} sin pagar`, html: layout(settings, 'Resumen del día', body, 'Resumen automático diario. Se puede apagar en Admin → Configuración.') });

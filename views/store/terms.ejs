@@ -1,0 +1,72 @@
+<%- include('_head') %>
+<div class="wrap page">
+  <div class="legaldoc">
+    <h1 style="font-size:30px"><%= t('terms_title') %></h1>
+    <% if (lang === 'es') { %>
+    <p class="muted small">Última actualización: <%= new Date().toLocaleDateString('es-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+
+    <h3>1. Aceptación de los términos</h3>
+    <p>Al usar este sitio o realizar un pedido en <%= settings.store_name %> aceptas estos términos y condiciones. Si no estás de acuerdo, por favor no uses el sitio.</p>
+
+    <h3>2. Productos y precios</h3>
+    <p>Vendemos cajas de cartón y suministros de empaque. Los precios se muestran en dólares estadounidenses (USD) y pueden cambiar sin previo aviso. El precio y la disponibilidad que aplican son los que aparecen al momento de confirmar tu pedido.</p>
+
+    <h3>3. Pedidos y pago</h3>
+    <p>Al pagar con tarjeta, el cobro lo procesa Stripe de forma segura; nosotros no vemos ni guardamos el número de tu tarjeta. Si tu pedido queda con un método de pago manual (por ejemplo Zelle o transferencia), el pedido se marca como "Pendiente" hasta que confirmemos el pago.</p>
+
+    <h3>4. Pedidos recurrentes</h3>
+    <p>Si activas un pedido recurrente, se te cobrará automáticamente cada ciclo (semanal o mensual) al método de pago guardado, usando la dirección y cantidad que configuraste. Puedes cancelarlo en cualquier momento desde tu cuenta; la cancelación aplica a partir del próximo ciclo.</p>
+
+    <h3>5. Envíos</h3>
+    <p>Enviamos a cualquier dirección dentro de Estados Unidos. Los tiempos de entrega son estimados y pueden variar según el transportista. Te avisamos por correo cuando tu pedido se despacha, con el número de guía cuando esté disponible.</p>
+
+    <h3>6. Devoluciones y daños</h3>
+    <p>Si tu pedido llega dañado o incompleto, escríbenos dentro de los 7 días siguientes a la entrega a <%= settings.support_email %> con fotos del daño y tu número de pedido, y lo resolvemos (reemplazo o reembolso según el caso).</p>
+
+    <h3>7. Cuentas de usuario</h3>
+    <p>Eres responsable de mantener la confidencialidad de tu contraseña y de toda actividad realizada desde tu cuenta. Avísanos de inmediato si sospechas un uso no autorizado.</p>
+
+    <h3>8. Limitación de responsabilidad</h3>
+    <p>En la medida permitida por la ley, <%= settings.store_name %> no será responsable por daños indirectos o consecuentes derivados del uso de nuestros productos o del sitio.</p>
+
+    <h3>9. Cambios a estos términos</h3>
+    <p>Podemos actualizar estos términos ocasionalmente. La fecha de la última actualización aparece arriba. El uso continuado del sitio después de un cambio implica tu aceptación.</p>
+
+    <h3>10. Contacto</h3>
+    <p>¿Preguntas sobre estos términos? Escríbenos a <a href="mailto:<%= settings.support_email %>"><%= settings.support_email %></a>.</p>
+    <% } else { %>
+    <p class="muted small">Last updated: <%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+
+    <h3>1. Acceptance of terms</h3>
+    <p>By using this site or placing an order with <%= settings.store_name %>, you agree to these terms and conditions. If you do not agree, please do not use the site.</p>
+
+    <h3>2. Products and pricing</h3>
+    <p>We sell cardboard boxes and packing supplies. Prices are shown in US dollars (USD) and may change without notice. The price and availability that apply are the ones shown when you confirm your order.</p>
+
+    <h3>3. Orders and payment</h3>
+    <p>Card payments are processed securely by Stripe; we never see or store your card number. If your order uses a manual payment method (e.g. Zelle or bank transfer), it stays "Pending" until we confirm payment.</p>
+
+    <h3>4. Recurring orders</h3>
+    <p>If you set up a recurring order, you will be charged automatically each cycle (weekly or monthly) to your saved payment method, using the address and quantity you configured. You can cancel anytime from your account; cancellation takes effect starting the next cycle.</p>
+
+    <h3>5. Shipping</h3>
+    <p>We ship to any address within the United States. Delivery times are estimates and may vary by carrier. We'll email you when your order ships, with tracking when available.</p>
+
+    <h3>6. Returns and damages</h3>
+    <p>If your order arrives damaged or incomplete, contact us within 7 days of delivery at <%= settings.support_email %> with photos and your order number, and we'll resolve it (replacement or refund as applicable).</p>
+
+    <h3>7. User accounts</h3>
+    <p>You're responsible for keeping your password confidential and for all activity under your account. Let us know right away if you suspect unauthorized use.</p>
+
+    <h3>8. Limitation of liability</h3>
+    <p>To the extent permitted by law, <%= settings.store_name %> is not liable for indirect or consequential damages arising from the use of our products or site.</p>
+
+    <h3>9. Changes to these terms</h3>
+    <p>We may update these terms from time to time. The last-updated date is shown above. Continued use of the site after a change means you accept it.</p>
+
+    <h3>10. Contact</h3>
+    <p>Questions about these terms? Email us at <a href="mailto:<%= settings.support_email %>"><%= settings.support_email %></a>.</p>
+    <% } %>
+  </div>
+</div>
+<%- include('_foot') %>

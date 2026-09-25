@@ -36,6 +36,7 @@
         data-label-p="<%= pickup ? (stripeEnabled ? t('pay_now', { amount: money(pickup.total) }) : t('place_order')) : '' %>">
         <%= stripeEnabled ? t('pay_now', { amount: money(delivery.total) }) : t('place_order') %></button>
       <p class="muted small" style="margin:12px 0 0;text-align:center"><%= stripeEnabled ? t('pay_stripe_note') : t('pay_manual_note') %></p>
+      <p class="muted small" style="margin:6px 0 0;text-align:center"><%- t('checkout_legal_note', { terms: `<a class="textlink" href="/terms">${t('footer_terms')}</a>`, privacy: `<a class="textlink" href="/privacy">${t('footer_privacy')}</a>` }) %></p>
     </form>
     <aside class="panel gray">
       <h3><%= t('order_summary') %></h3>
