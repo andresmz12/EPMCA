@@ -10,27 +10,34 @@
 <body>
 <div class="layout">
 <aside class="side">
-  <a class="brand" href="/admin"><img src="/logo-mark.png" alt=""><span>EMPA<b>CALO</b><small>ADMIN</small></span></a>
-  <a class="nav <%= section==='dash'?'on':'' %>" href="/admin">Resumen</a>
-  <% if (can.orders) { %>
-  <a class="nav <%= section==='orders'?'on':'' %>" href="/admin/orders">Pedidos</a>
-  <a class="nav <%= section==='customers'?'on':'' %>" href="/admin/customers">Clientes</a>
-  <a class="nav <%= section==='messages'?'on':'' %>" href="/admin/messages">Mensajes<% if (unreadMessages) { %> <span class="pill pending"><%= unreadMessages %></span><% } %></a>
-  <% } %>
-  <% if (can.products) { %>
-  <a class="nav <%= section==='products'?'on':'' %>" href="/admin/products">Productos</a>
-  <a class="nav <%= section==='coupons'?'on':'' %>" href="/admin/coupons">Cupones</a>
-  <% } %>
-  <% if (can.settings) { %>
-  <a class="nav <%= section==='settings'?'on':'' %>" href="/admin/settings">Configuración</a>
-  <% } %>
-  <% if (can.users) { %>
-  <a class="nav <%= section==='users'?'on':'' %>" href="/admin/users">Usuarios admin</a>
-  <% } %>
-  <div class="spacer"></div>
-  <a class="nav <%= section==='password'?'on':'' %>" href="/admin/password">Mi contraseña</a>
-  <a class="nav" href="/" target="_blank" rel="noopener">Ver tienda ↗</a>
-  <form method="post" action="/admin/logout"><button>Cerrar sesión</button></form>
+  <div class="side-top">
+    <a class="brand" href="/admin"><img src="/logo-mark.png" alt=""><span>EMPA<b>CALO</b><small>ADMIN</small></span></a>
+    <button type="button" class="side-toggle" id="navToggle" aria-label="Menú" aria-expanded="false" aria-controls="sideNav">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </div>
+  <nav class="side-nav" id="sideNav">
+    <a class="nav <%= section==='dash'?'on':'' %>" href="/admin">Resumen</a>
+    <% if (can.orders) { %>
+    <a class="nav <%= section==='orders'?'on':'' %>" href="/admin/orders">Pedidos</a>
+    <a class="nav <%= section==='customers'?'on':'' %>" href="/admin/customers">Clientes</a>
+    <a class="nav <%= section==='messages'?'on':'' %>" href="/admin/messages">Mensajes<% if (unreadMessages) { %> <span class="pill pending"><%= unreadMessages %></span><% } %></a>
+    <% } %>
+    <% if (can.products) { %>
+    <a class="nav <%= section==='products'?'on':'' %>" href="/admin/products">Productos</a>
+    <a class="nav <%= section==='coupons'?'on':'' %>" href="/admin/coupons">Cupones</a>
+    <% } %>
+    <% if (can.settings) { %>
+    <a class="nav <%= section==='settings'?'on':'' %>" href="/admin/settings">Configuración</a>
+    <% } %>
+    <% if (can.users) { %>
+    <a class="nav <%= section==='users'?'on':'' %>" href="/admin/users">Usuarios admin</a>
+    <% } %>
+    <div class="spacer"></div>
+    <a class="nav <%= section==='password'?'on':'' %>" href="/admin/password">Mi contraseña</a>
+    <a class="nav" href="/" target="_blank" rel="noopener">Ver tienda ↗</a>
+    <form method="post" action="/admin/logout"><button>Cerrar sesión</button></form>
+  </nav>
 </aside>
 <main>
 <% if (notice) { %><div class="notice <%= notice.type %>"><%= notice.text %></div><% } %>
