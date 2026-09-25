@@ -71,6 +71,16 @@ DO $$ BEGIN
     ALTER TABLE products ADD CONSTRAINT products_wall_type_check CHECK (wall_type IN ('single','double'));
   END IF;
 END $$;
+-- Wholesale/bulk price breaks (NULL = no break at that quantity, use the
+-- retail price_cents). Fixed quantity steps match how EMPACALO's own price
+-- sheet is laid out; a box's per-unit price steps down as the order quantity
+-- crosses each one.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_50_cents INT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_100_cents INT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_200_cents INT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_300_cents INT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_400_cents INT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_500_cents INT;
 
 CREATE TABLE IF NOT EXISTS product_images (
   id SERIAL PRIMARY KEY,
@@ -289,6 +299,7 @@ const DEFAULT_SETTINGS = {
   digest_enabled: 'true',
   digest_last_date: '',
   catalog_2026_loaded: 'false',
+  wholesale_2026_loaded: 'false',
   lowstock_alert_enabled: 'true',
   cart_reminder_enabled: 'true',
   payment_instructions: '',
@@ -343,6 +354,29 @@ const PRICE_SHEET_2026 = RAW_SHEET_2026.map((p, i) => {
     sort: 100 + i,
   };
 });
+
+// Wholesale/agency tier pricing (EMPACALO KIT 2026, "AGENCIA" sheet) by
+// quantity break: 50/100/200/300/400/500+ units. Keyed to the same slugs
+// PRICE_SHEET_2026 already created — only the sizes EMPACALO actually
+// wholesales get a table; everything else keeps single-unit retail pricing.
+const WHOLESALE_2026 = {
+  'box-12x12x12-single': [311, 291, 281, 271, 261, 251],
+  'box-14x14x14-single': [429, 364, 349, 334, 319, 299],
+  'box-16x16x16-single': [442, 427, 412, 397, 382, 367],
+  'box-18x18x18-single': [450, 430, 420, 400, 380, 360],
+  'box-18x18x24-single': [475, 455, 435, 415, 395, 375],
+  'box-20x20x20-single': [524, 499, 474, 449, 424, 394],
+  'box-22x22x22-single': [600, 545, 515, 485, 455, 425],
+  'box-24x24x24': [1000, 925, 865, 785, 685, 675],
+  'box-24x24x30': [1300, 1220, 1140, 1060, 980, 900],
+  'box-24x24x36': [1400, 1350, 1230, 1145, 1065, 980],
+  'box-26x26x28': [1400, 1500, 1400, 1300, 1200, 1150],
+  'box-28x28x34': [1680, 1505, 1405, 1305, 1205, 1155],
+  'box-30x30x30': [1675, 1480, 1380, 1280, 1180, 1080],
+  'box-24x30x36': [1675, 1480, 1380, 1280, 1180, 1080],
+  'box-42x29x26': [1775, 1690, 1590, 1490, 1390, 1290],
+};
+
 const SEED_PRODUCTS = [
   { slug: 'box-12x12x12', dims: '12" × 12" × 12"', price: 399, stock: 500, featured: false, sort: 1,
     short: 'Books, tools, parts and small heavy items.', short_es: 'Libros, herramientas, repuestos y cosas pesadas pequeñas.' },
@@ -411,6 +445,21 @@ async function migrate() {
     }
     await pool.query("INSERT INTO settings(key,value) VALUES('catalog_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
     console.log(`Catálogo 2026 cargado: ${PRICE_SHEET_2026.length} cajas.`);
+  }
+
+  // One-time: load wholesale/agency tier pricing onto the sizes EMPACALO
+  // actually wholesales. Safe to re-run: only touches the 6 wholesale_*
+  // columns on the matching slug.
+  const wholesaleLoaded = (await pool.query("SELECT value FROM settings WHERE key='wholesale_2026_loaded'")).rows[0];
+  if (!wholesaleLoaded || wholesaleLoaded.value !== 'true') {
+    for (const [slug, tiers] of Object.entries(WHOLESALE_2026)) {
+      await pool.query(
+        `UPDATE products SET wholesale_50_cents=$1, wholesale_100_cents=$2, wholesale_200_cents=$3,
+           wholesale_300_cents=$4, wholesale_400_cents=$5, wholesale_500_cents=$6, updated_at=now() WHERE slug=$7`,
+        [...tiers, slug]);
+    }
+    await pool.query("INSERT INTO settings(key,value) VALUES('wholesale_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
+    console.log(`Precios mayoristas cargados para ${Object.keys(WHOLESALE_2026).length} cajas.`);
   }
 
   const noAdmins = (await pool.query('SELECT count(*)::int AS n FROM admin_users')).rows[0].n === 0;

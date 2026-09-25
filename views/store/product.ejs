@@ -40,6 +40,18 @@
         </form>
       </div>
       <div class="prose"><p><%= pt(product, 'description') %></p></div>
+      <% const tiers = wholesaleTiers(product); if (tiers.length) { %>
+      <div class="panel" style="margin-top:18px">
+        <h3 style="font-size:15px;margin-bottom:2px"><%= t('wholesale_title') %></h3>
+        <p class="muted small" style="margin-bottom:12px"><%= t('wholesale_sub') %></p>
+        <table class="specs">
+          <tr><th><%= t('wholesale_col_qty') %></th><th class="num"><%= t('wholesale_col_price') %></th></tr>
+          <% tiers.forEach(function (tier) { %>
+          <tr><td><%= tier.qty %>+</td><td class="num"><%= money(tier.cents) %></td></tr>
+          <% }) %>
+        </table>
+      </div>
+      <% } %>
     </div>
   </div>
   <% if (others.length) { %>

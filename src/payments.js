@@ -25,7 +25,7 @@ async function createCheckout(req, order, priced) {
     quantity: l.qty,
     price_data: {
       currency: 'usd',
-      unit_amount: l.product.price_cents,
+      unit_amount: l.unitCents,
       product_data: { name: l.product.name },
     },
   }));

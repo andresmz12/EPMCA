@@ -107,7 +107,7 @@ async function createOrder({ priced, form, paymentMethod, customerId = null }) {
 
     for (const l of priced.lines) {
       await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty) VALUES($1,$2,$3,$4,$5)',
-        [order.id, l.product.id, l.product.name, l.product.price_cents, l.qty]);
+        [order.id, l.product.id, l.product.name, l.unitCents, l.qty]);
     }
     return order;
   });

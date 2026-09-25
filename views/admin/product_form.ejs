@@ -34,6 +34,18 @@
       </select>
       <div class="hint">Controla el texto de "Resistencia" que ve el cliente en la ficha del producto.</div>
     </div>
+    <h2 style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">Precios por volumen (mayoreo)</h2>
+    <p class="hint" style="margin-top:-8px;margin-bottom:14px">Precio por caja al alcanzar cada cantidad. Se aplica solo al pagar. Deja vacío el que no aplique.</p>
+    <div class="f3">
+      <div class="field"><label>Desde 50 cajas</label><input name="wholesale_50" inputmode="decimal" value="<%= cents(p.wholesale_50_cents) %>" placeholder="Opcional"></div>
+      <div class="field"><label>Desde 100 cajas</label><input name="wholesale_100" inputmode="decimal" value="<%= cents(p.wholesale_100_cents) %>" placeholder="Opcional"></div>
+      <div class="field"><label>Desde 200 cajas</label><input name="wholesale_200" inputmode="decimal" value="<%= cents(p.wholesale_200_cents) %>" placeholder="Opcional"></div>
+    </div>
+    <div class="f3">
+      <div class="field"><label>Desde 300 cajas</label><input name="wholesale_300" inputmode="decimal" value="<%= cents(p.wholesale_300_cents) %>" placeholder="Opcional"></div>
+      <div class="field"><label>Desde 400 cajas</label><input name="wholesale_400" inputmode="decimal" value="<%= cents(p.wholesale_400_cents) %>" placeholder="Opcional"></div>
+      <div class="field"><label>Desde 500 cajas</label><input name="wholesale_500" inputmode="decimal" value="<%= cents(p.wholesale_500_cents) %>" placeholder="Opcional"></div>
+    </div>
     <h2 style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">Texto en español</h2>
     <p class="hint" style="margin-top:-8px;margin-bottom:14px">Lo que ven los clientes con la tienda en español. Si lo dejas vacío, se muestra el texto en inglés.</p>
     <div class="field"><label>Nombre (español)</label><input name="name_es" value="<%= p.name_es || '' %>" placeholder='Caja doble pared 16 × 16 × 16"'></div>

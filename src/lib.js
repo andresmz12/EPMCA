@@ -18,6 +18,28 @@ const int = (v, def = 0) => {
   return Number.isFinite(n) && Math.abs(n) <= 2147483647 ? n : def;
 };
 
+// Wholesale/bulk quantity breaks, smallest to largest. A box only has a
+// break if its column is set (most don't wholesale at all).
+const WHOLESALE_BREAKS = [
+  [50, 'wholesale_50_cents'], [100, 'wholesale_100_cents'], [200, 'wholesale_200_cents'],
+  [300, 'wholesale_300_cents'], [400, 'wholesale_400_cents'], [500, 'wholesale_500_cents'],
+];
+
+/** The per-unit price for this quantity: the best wholesale break the qty
+ * qualifies for, or the regular retail price_cents if none applies. */
+function unitPriceCents(p, qty) {
+  let price = p.price_cents;
+  for (const [minQty, col] of WHOLESALE_BREAKS) {
+    if (qty >= minQty && p[col] != null) price = p[col];
+  }
+  return price;
+}
+
+/** [{ qty, cents }] for the breaks this product actually has, for display. */
+function wholesaleTiers(p) {
+  return WHOLESALE_BREAKS.filter(([, col]) => p[col] != null).map(([qty, col]) => ({ qty, cents: p[col] }));
+}
+
 const slugify = (s) =>
   String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'product';
@@ -54,7 +76,8 @@ async function priceCart(cart, couponCode, settings, fulfillment = 'delivery') {
   for (const p of products) {
     const qty = Math.max(0, Math.min(int(cart[p.id]), 999));
     if (!qty) continue;
-    lines.push({ product: p, qty, lineCents: p.price_cents * qty, overStock: qty > p.stock });
+    const unitCents = unitPriceCents(p, qty);
+    lines.push({ product: p, qty, unitCents, lineCents: unitCents * qty, overStock: qty > p.stock });
   }
   lines.sort((a, b) => a.product.sort - b.product.sort);
 
@@ -99,7 +122,7 @@ function trackingUrl(tracking) {
   return null;
 }
 
-module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN, PAYMENT_ES, MANUAL_PAYMENTS, LOW_STOCK_THRESHOLD, trackingUrl };
+module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN, PAYMENT_ES, MANUAL_PAYMENTS, LOW_STOCK_THRESHOLD, trackingUrl, unitPriceCents, wholesaleTiers };
 
 /**
  * Draws an isometric cardboard box to scale from a "24 × 30 × 36" style string.

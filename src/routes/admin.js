@@ -178,6 +178,12 @@ function readProduct(body) {
     description: String(body.description || '').trim().slice(0, 5000),
     dimensions: String(body.dimensions || '').trim().slice(0, 60),
     wall_type: body.wall_type === 'single' ? 'single' : 'double',
+    wholesale_50_cents: lib.toCents(body.wholesale_50),
+    wholesale_100_cents: lib.toCents(body.wholesale_100),
+    wholesale_200_cents: lib.toCents(body.wholesale_200),
+    wholesale_300_cents: lib.toCents(body.wholesale_300),
+    wholesale_400_cents: lib.toCents(body.wholesale_400),
+    wholesale_500_cents: lib.toCents(body.wholesale_500),
     pack_size: Math.max(1, lib.int(body.pack_size, 1)),
     price_cents: lib.toCents(body.price),
     compare_at_cents: lib.toCents(body.compare_at),
@@ -226,9 +232,11 @@ r.post('/products', requirePerm('settings'), handleUpload(uploadProduct, () => '
   if (clash) p.slug = `${p.slug}-${Date.now().toString(36).slice(-4)}`;
   const imageId = await saveImage(req.files?.image?.[0]);
   const row = await one(
-    `INSERT INTO products(name,slug,short_desc,description,dimensions,pack_size,price_cents,compare_at_cents,stock,sort,active,featured,image_id,name_es,short_desc_es,description_es,wall_type)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
-    [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, p.name_es, p.short_desc_es, p.description_es, p.wall_type]);
+    `INSERT INTO products(name,slug,short_desc,description,dimensions,pack_size,price_cents,compare_at_cents,stock,sort,active,featured,image_id,name_es,short_desc_es,description_es,wall_type,
+       wholesale_50_cents,wholesale_100_cents,wholesale_200_cents,wholesale_300_cents,wholesale_400_cents,wholesale_500_cents)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23) RETURNING id`,
+    [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, p.name_es, p.short_desc_es, p.description_es, p.wall_type,
+     p.wholesale_50_cents, p.wholesale_100_cents, p.wholesale_200_cents, p.wholesale_300_cents, p.wholesale_400_cents, p.wholesale_500_cents]);
   await saveGallery(row.id, req.files?.gallery);
   notice(req, 'Producto creado.');
   res.redirect(`/admin/products/${row.id}`);
@@ -247,6 +255,9 @@ r.post('/products/:id', handleUpload(uploadProduct, (req) => `/admin/products/${
     name: existing.name, name_es: existing.name_es, short_desc: existing.short_desc, short_desc_es: existing.short_desc_es,
     description: existing.description, description_es: existing.description_es, dimensions: existing.dimensions, slug: existing.slug,
     wall_type: existing.wall_type,
+    wholesale_50_cents: existing.wholesale_50_cents, wholesale_100_cents: existing.wholesale_100_cents,
+    wholesale_200_cents: existing.wholesale_200_cents, wholesale_300_cents: existing.wholesale_300_cents,
+    wholesale_400_cents: existing.wholesale_400_cents, wholesale_500_cents: existing.wholesale_500_cents,
   };
   if (!p.name || p.price_cents == null) {
     const gallery = await all('SELECT id, image_id FROM product_images WHERE product_id=$1 ORDER BY sort, id', [id]);
@@ -263,8 +274,11 @@ r.post('/products/:id', handleUpload(uploadProduct, (req) => `/admin/products/${
   }
   await q(
     `UPDATE products SET name=$1,slug=$2,short_desc=$3,description=$4,dimensions=$5,pack_size=$6,price_cents=$7,compare_at_cents=$8,
-       stock=$9,sort=$10,active=$11,featured=$12,image_id=$13,name_es=$15,short_desc_es=$16,description_es=$17,wall_type=$18,updated_at=now() WHERE id=$14`,
-    [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, id, p.name_es, p.short_desc_es, p.description_es, p.wall_type]);
+       stock=$9,sort=$10,active=$11,featured=$12,image_id=$13,name_es=$15,short_desc_es=$16,description_es=$17,wall_type=$18,
+       wholesale_50_cents=$19,wholesale_100_cents=$20,wholesale_200_cents=$21,wholesale_300_cents=$22,wholesale_400_cents=$23,wholesale_500_cents=$24,
+       updated_at=now() WHERE id=$14`,
+    [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, id, p.name_es, p.short_desc_es, p.description_es, p.wall_type,
+     p.wholesale_50_cents, p.wholesale_100_cents, p.wholesale_200_cents, p.wholesale_300_cents, p.wholesale_400_cents, p.wholesale_500_cents]);
   if (fullEdit) {
     if (existing.image_id && existing.image_id !== imageId) await q('DELETE FROM images WHERE id=$1', [existing.image_id]);
     const removeIds = [].concat(req.body.remove_gallery || []).map(Number).filter(Boolean);
