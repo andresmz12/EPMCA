@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const sharp = require('sharp');
 const { q, one, all, tx, clearSettingsCache } = require('../db');
 const lib = require('../lib');
 const auth = require('../auth');
@@ -186,9 +187,25 @@ function readProduct(body) {
   };
 }
 
-async function saveImage(file) {
+// Resize + re-encode as WebP so a phone photo (often 3-8 MB) doesn't ship
+// to visitors at full size. Falls back to the original file if sharp can't
+// read it (corrupt upload, unusual format) rather than losing the upload.
+async function saveImage(file, { maxWidth = 1600 } = {}) {
   if (!file) return null;
-  const img = await one('INSERT INTO images(mime, data) VALUES($1,$2) RETURNING id', [file.mimetype, file.buffer]);
+  let mime = file.mimetype, data = file.buffer;
+  if (mime !== 'image/gif') {
+    try {
+      data = await sharp(file.buffer, { failOn: 'none' })
+        .rotate()
+        .resize({ width: maxWidth, withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toBuffer();
+      mime = 'image/webp';
+    } catch (e) {
+      console.error('Image optimize error:', e.message);
+    }
+  }
+  const img = await one('INSERT INTO images(mime, data) VALUES($1,$2) RETURNING id', [mime, data]);
   return img.id;
 }
 
@@ -339,6 +356,16 @@ r.get('/orders/export.csv', async (req, res) => {
 
 r.get('/orders/export.xlsx', (req, res) => reports.ordersXlsx(res, orderFilter(req.query)));
 
+r.get('/orders/customer-search', async (req, res) => {
+  const search = String(req.query.q || '').trim().toLowerCase();
+  if (search.length < 2) return res.json([]);
+  const rows = await all(
+    `SELECT id, name, email, phone, address1, address2, city, state, zip
+     FROM customers WHERE lower(email) LIKE $1 OR lower(name) LIKE $1 OR phone LIKE $1
+     ORDER BY name LIMIT 8`, [`%${search}%`]);
+  res.json(rows);
+});
+
 /* Orders entered by staff (phone, walk-in, WhatsApp...) */
 const manualForm = async (res, form, error, status = 200) => {
   const products = await all('SELECT id, name, dimensions, price_cents, stock, active FROM products ORDER BY active DESC, sort, id');
@@ -400,6 +427,13 @@ r.get('/orders/:id', async (req, res, next) => {
   const items = await all('SELECT * FROM order_items WHERE order_id=$1 ORDER BY id', [order.id]);
   const history = await one(`SELECT count(*)::int AS n, COALESCE(sum(total_cents) FILTER (WHERE ${PAID}),0)::int AS spent FROM orders WHERE lower(email)=lower($1)`, [order.email]);
   res.render('admin/order', { section: 'orders', order, items, history });
+});
+
+r.get('/orders/:id/packing-slip.pdf', async (req, res, next) => {
+  const order = await one('SELECT * FROM orders WHERE id=$1', [lib.int(req.params.id)]);
+  if (!order) return next();
+  const items = await all('SELECT * FROM order_items WHERE order_id=$1 ORDER BY id', [order.id]);
+  reports.packingSlipPdf(res, order, items, res.locals.settings);
 });
 
 r.post('/orders/:id', async (req, res, next) => {
@@ -519,7 +553,7 @@ r.get('/settings', (req, res) => res.render('admin/settings', { section: 'settin
 r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings'), async (req, res) => {
   const values = {};
   const oldHero = res.locals.settings.hero_image_id;
-  if (req.file) values.hero_image_id = String(await saveImage(req.file));
+  if (req.file) values.hero_image_id = String(await saveImage(req.file, { maxWidth: 2000 }));
   else if (req.body.remove_hero === 'on') values.hero_image_id = '';
   for (const k of SETTING_FIELDS) values[k] = String(req.body[k] || '').trim().slice(0, 300);
   values.shipping_flat_cents = String(lib.toCents(req.body.shipping_flat) ?? 0);
@@ -529,6 +563,8 @@ r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings')
   values.pickup_enabled = req.body.pickup_enabled === 'on' ? 'true' : 'false';
   values.reminder_payment_enabled = req.body.reminder_payment_enabled === 'on' ? 'true' : 'false';
   values.digest_enabled = req.body.digest_enabled === 'on' ? 'true' : 'false';
+  values.lowstock_alert_enabled = req.body.lowstock_alert_enabled === 'on' ? 'true' : 'false';
+  values.cart_reminder_enabled = req.body.cart_reminder_enabled === 'on' ? 'true' : 'false';
   values.payment_instructions = String(req.body.payment_instructions || '').trim().slice(0, 1000);
   // wa.me needs digits with country code; a 10-digit number is assumed to be US.
   let wa = String(req.body.whatsapp_number || '').replace(/\D/g, '').slice(0, 15);

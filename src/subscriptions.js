@@ -46,7 +46,8 @@ async function createCheckout(req, customer, priced, form, interval, lang) {
 
 /** Inserts a new paid order from a subscription's locked-in items. Idempotent per Stripe invoice. */
 async function createRecurringOrder(sub, invoiceId) {
-  return tx(async (c) => {
+  const crossed = [];
+  const result = await tx(async (c) => {
     if (invoiceId) {
       const { rows } = await c.query('SELECT * FROM orders WHERE stripe_invoice_id=$1', [invoiceId]);
       if (rows[0]) return { order: rows[0], created: false };
@@ -61,10 +62,13 @@ async function createRecurringOrder(sub, invoiceId) {
     for (const it of sub.items) {
       await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty) VALUES($1,$2,$3,$4,$5)',
         [order.id, it.product_id, it.name, it.unit_price_cents, it.qty]);
-      await c.query('UPDATE products SET stock = GREATEST(stock - $1, 0), updated_at=now() WHERE id=$2', [it.qty, it.product_id]);
+      const { rows: [p] } = await c.query('UPDATE products SET stock = GREATEST(stock - $1, 0), updated_at=now() WHERE id=$2 RETURNING stock', [it.qty, it.product_id]);
+      if (p && p.stock + it.qty > lib.LOW_STOCK_THRESHOLD && p.stock <= lib.LOW_STOCK_THRESHOLD) crossed.push({ name: it.name, stock: p.stock });
     }
     return { order, created: true };
   });
+  notify.lowStockAlert(crossed);
+  return result;
 }
 
 async function recurringOrderAndNotify(sub, invoiceId) {

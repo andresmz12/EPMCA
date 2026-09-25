@@ -88,6 +88,7 @@ const PAYMENT_ES = {
   transfer: 'Transferencia', card: 'Tarjeta en persona', check: 'Cheque', other: 'Otro',
 };
 const MANUAL_PAYMENTS = ['cash', 'zelle', 'transfer', 'card', 'check', 'other'];
+const LOW_STOCK_THRESHOLD = 20;
 
 // Best-effort carrier link from the tracking number's shape; null if unknown.
 function trackingUrl(tracking) {
@@ -98,7 +99,7 @@ function trackingUrl(tracking) {
   return null;
 }
 
-module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN, PAYMENT_ES, MANUAL_PAYMENTS, trackingUrl };
+module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN, PAYMENT_ES, MANUAL_PAYMENTS, LOW_STOCK_THRESHOLD, trackingUrl };
 
 /**
  * Draws an isometric cardboard box to scale from a "24 × 30 × 36" style string.

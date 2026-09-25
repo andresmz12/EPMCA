@@ -102,8 +102,26 @@ ${button(`${base}/admin/orders?status=paid`, 'Abrir pedidos')}`;
   return mail.send({ to, subject: `Resumen del día · ${d.toShip.length} por despachar · ${d.unpaid.length} sin pagar`, html: layout(settings, 'Resumen del día', body, 'Resumen automático diario. Se puede apagar en Admin → Configuración.') });
 }
 
+// Fires the moment an order pushes a product at or below the low-stock line,
+// instead of waiting for the next daily digest.
+async function lowStockAlert(crossed) {
+  if (!crossed.length) return;
+  const settings = await getSettings();
+  if (settings.lowstock_alert_enabled !== 'true') return;
+  const to = settings.notify_email || settings.support_email;
+  if (!to) return;
+  const base = siteUrl();
+  const list = crossed.map((p) => `<li style="margin:4px 0">${esc(p.name)}: ${p.stock === 0 ? '<b>AGOTADO</b>' : `${p.stock} unidades`}</li>`).join('');
+  const body = `<p style="font-size:14px">Este pedido dejó estos productos en o por debajo de ${lib.LOW_STOCK_THRESHOLD} unidades:</p>
+<ul style="padding-left:18px;font-size:14px">${list}</ul>
+${button(`${base}/admin/products`, 'Abrir productos')}`;
+  const subject = `Inventario bajo · ${crossed.map((p) => p.name).join(', ')}`;
+  return mail.send({ to, subject, html: layout(settings, 'Inventario bajo', body, 'Aviso automático al momento del pedido. Se puede apagar en Admin → Configuración.') });
+}
+
 module.exports = {
   rememberBase,
+  lowStockAlert: safe(lowStockAlert),
   // Web order with manual payment: confirm to the customer, alert the store.
   orderPlaced: safe(async (order, base) => { await customerOrderEmail(order, 'pending', base); await storeOrderAlert(order, base); }),
   // Card payment confirmed (Stripe checkout or recurring cycle).

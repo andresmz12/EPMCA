@@ -260,6 +260,8 @@ const DEFAULT_SETTINGS = {
   reminder_payment_enabled: 'true',
   digest_enabled: 'true',
   digest_last_date: '',
+  lowstock_alert_enabled: 'true',
+  cart_reminder_enabled: 'true',
   payment_instructions: '',
   announcement_en: 'We ship anywhere in the USA · Free shipping on orders over $150',
   announcement_es: 'Enviamos a todo Estados Unidos · Envío gratis en pedidos desde $150',

@@ -337,4 +337,60 @@ async function salesPdf(res, range) {
   doc.end();
 }
 
-module.exports = { parseRange, inventoryXlsx, inventoryPdf, salesXlsx, salesPdf, ordersXlsx };
+// A printable shipping label: a big "ship to" block sized to read from across
+// a room, meant to be printed and taped straight onto the box. The item list
+// underneath is secondary — for whoever packs it to double check quantities.
+function packingSlipPdf(res, order, items, settings) {
+  const doc = new PDFDocument({ size: 'LETTER', margin: 30, info: { Title: `Etiqueta de envío ${order.number}`, Author: 'EMPACALO' } });
+  res.set('Content-Type', 'application/pdf');
+  res.set('Content-Disposition', `attachment; filename="etiqueta-${order.number}.pdf"`);
+  doc.pipe(res);
+  const pageW = doc.page.width - 60;
+
+  // Sender, small, top-left.
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#6A6E75').text('REMITENTE', 30, 30);
+  doc.font('Helvetica').fontSize(10).fillColor('#111214')
+    .text(settings.store_name, 30, doc.y + 2)
+    .text(settings.pickup_address || settings.support_email || '', { width: 300 });
+
+  doc.moveTo(30, doc.y + 12).lineTo(30 + pageW, doc.y + 12).strokeColor('#E4E1DA').lineWidth(1).stroke();
+
+  // The big label box.
+  const boxY = doc.y + 26;
+  const boxH = 240;
+  doc.roundedRect(30, boxY, pageW, boxH, 8).lineWidth(1.5).strokeColor('#111214').stroke();
+  doc.font('Helvetica-Bold').fontSize(11).fillColor('#6A6E75').text(
+    order.fulfillment === 'pickup' ? 'RECOGE EN TIENDA' : 'ENVIAR A', 50, boxY + 20);
+
+  if (order.fulfillment === 'pickup') {
+    doc.font('Helvetica-Bold').fontSize(26).fillColor('#111214').text(order.name, 50, boxY + 44, { width: pageW - 40 });
+    doc.font('Helvetica').fontSize(14).fillColor('#111214').text(settings.pickup_address || '—', 50, doc.y + 10, { width: pageW - 40 });
+  } else {
+    doc.font('Helvetica-Bold').fontSize(26).fillColor('#111214').text(order.name, 50, boxY + 44, { width: pageW - 40 });
+    doc.font('Helvetica-Bold').fontSize(22).fillColor('#111214').text(order.address1, 50, doc.y + 8, { width: pageW - 40 });
+    if (order.address2) doc.text(order.address2, { width: pageW - 40 });
+    doc.text(`${order.city}, ${order.state} ${order.zip}`, { width: pageW - 40 });
+  }
+  if (order.phone) doc.font('Helvetica').fontSize(12).fillColor('#6A6E75').text(order.phone, 50, boxY + boxH - 26);
+
+  doc.y = boxY + boxH + 20;
+  doc.font('Helvetica-Bold').fontSize(13).fillColor('#111214').text(`Pedido ${order.number}`, 30, doc.y, { continued: true })
+    .font('Helvetica').fontSize(11).fillColor('#6A6E75').text(`   ·   ${fmtDateTime(order.created_at)}`);
+  if (order.notes) {
+    doc.moveDown(0.4);
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#111214').text('Notas: ', 30, doc.y, { continued: true })
+      .font('Helvetica').fillColor('#111214').text(order.notes, { width: pageW });
+  }
+
+  heading(doc, 'Contenido (referencia interna, no incluye precios)');
+  table(doc, [
+    { label: 'Producto', width: 456 }, { label: 'Cant.', width: 76, align: 'right' },
+  ], items.map((it) => [it.name, it.qty]));
+
+  const totalUnits = items.reduce((s, it) => s + it.qty, 0);
+  doc.moveDown(1);
+  doc.font('Helvetica-Bold').fontSize(11).fillColor('#111214').text(`Total de cajas: ${totalUnits}`, 30);
+  doc.end();
+}
+
+module.exports = { parseRange, inventoryXlsx, inventoryPdf, salesXlsx, salesPdf, ordersXlsx, packingSlipPdf };

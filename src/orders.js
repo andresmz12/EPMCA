@@ -1,5 +1,6 @@
 const { tx, one } = require('./db');
 const lib = require('./lib');
+const notify = require('./notify');
 
 class StockError extends Error {}
 class CouponUsedError extends Error {}
@@ -21,7 +22,8 @@ async function upsertGuestCustomer(c, form) {
  * the catalog; stock is reserved like a web order unless allowOversell is set.
  */
 async function createManualOrder({ lines, form, amounts, paymentMethod, status, adminEmail, allowOversell }) {
-  return tx(async (c) => {
+  const crossed = [];
+  const order = await tx(async (c) => {
     const ids = lines.map((l) => l.product_id);
     const { rows: locked } = await c.query('SELECT id, name, stock FROM products WHERE id = ANY($1::int[]) FOR UPDATE', [ids]);
     const byId = Object.fromEntries(locked.map((r) => [r.id, r]));
@@ -31,6 +33,9 @@ async function createManualOrder({ lines, form, amounts, paymentMethod, status, 
       if (!allowOversell && p.stock < l.qty) throw new StockError(`${p.name} (hay ${p.stock})`);
     }
     for (const l of lines) {
+      const p = byId[l.product_id];
+      const after = Math.max(p.stock - l.qty, 0);
+      if (p.stock > lib.LOW_STOCK_THRESHOLD && after <= lib.LOW_STOCK_THRESHOLD) crossed.push({ name: p.name, stock: after });
       await c.query('UPDATE products SET stock = GREATEST(stock - $1, 0), updated_at = now() WHERE id=$2', [l.qty, l.product_id]);
     }
     const cust = form.email ? await upsertGuestCustomer(c, form) : null;
@@ -53,6 +58,8 @@ async function createManualOrder({ lines, form, amounts, paymentMethod, status, 
     }
     return order;
   });
+  notify.lowStockAlert(crossed);
+  return order;
 }
 
 /**
@@ -60,7 +67,8 @@ async function createManualOrder({ lines, form, amounts, paymentMethod, status, 
  * counts the coupon use and upserts the customer.
  */
 async function createOrder({ priced, form, paymentMethod, customerId = null }) {
-  return tx(async (c) => {
+  const crossed = [];
+  const order = await tx(async (c) => {
     const ids = priced.lines.map((l) => l.product.id);
     const { rows: locked } = await c.query('SELECT id, stock, active FROM products WHERE id = ANY($1::int[]) FOR UPDATE', [ids]);
     const byId = Object.fromEntries(locked.map((r) => [r.id, r]));
@@ -69,6 +77,9 @@ async function createOrder({ priced, form, paymentMethod, customerId = null }) {
       if (!p || !p.active || p.stock < l.qty) throw new StockError();
     }
     for (const l of priced.lines) {
+      const p = byId[l.product.id];
+      const after = Math.max(p.stock - l.qty, 0);
+      if (p.stock > lib.LOW_STOCK_THRESHOLD && after <= lib.LOW_STOCK_THRESHOLD) crossed.push({ name: l.product.name, stock: after });
       await c.query('UPDATE products SET stock = stock - $1, updated_at = now() WHERE id=$2', [l.qty, l.product.id]);
     }
     if (priced.coupon) {
@@ -100,6 +111,8 @@ async function createOrder({ priced, form, paymentMethod, customerId = null }) {
     }
     return order;
   });
+  notify.lowStockAlert(crossed);
+  return order;
 }
 
 async function markPaid(orderId) {

@@ -9,7 +9,7 @@
       <% if (images.length > 1) { %>
       <div class="thumbs">
         <% images.forEach(function (id, i) { %>
-        <button type="button" class="thumb <%= i === 0 ? 'on' : '' %>" data-src="/img/<%= id %>"><img src="/img/<%= id %>" alt=""></button>
+        <button type="button" class="thumb <%= i === 0 ? 'on' : '' %>" data-src="/img/<%= id %>"><img src="/img/<%= id %>" alt="" loading="lazy"></button>
         <% }) %>
       </div>
       <% } %>

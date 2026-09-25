@@ -44,10 +44,15 @@
   <div class="grid" style="gap:16px">
     <div class="card">
       <h2>Cliente</h2>
-      <div class="field"><label>Nombre *</label><input name="name" required value="<%= form.name || '' %>"></div>
+      <div class="field" style="position:relative">
+        <label>Buscar cliente existente</label>
+        <input id="custSearch" autocomplete="off" placeholder="Nombre, correo o teléfono...">
+        <div id="custResults" class="card" style="display:none;position:absolute;z-index:5;top:100%;left:0;right:0;padding:6px;margin-top:4px;max-height:220px;overflow:auto"></div>
+      </div>
+      <div class="field"><label>Nombre *</label><input name="name" id="f_name" required value="<%= form.name || '' %>"></div>
       <div class="f2">
-        <div class="field"><label>Correo</label><input name="email" type="email" value="<%= form.email || '' %>" placeholder="Opcional"></div>
-        <div class="field"><label>Teléfono</label><input name="phone" value="<%= form.phone || '' %>"></div>
+        <div class="field"><label>Correo</label><input name="email" id="f_email" type="email" value="<%= form.email || '' %>" placeholder="Opcional"></div>
+        <div class="field"><label>Teléfono</label><input name="phone" id="f_phone" value="<%= form.phone || '' %>"></div>
       </div>
       <div class="hint">Con correo, el pedido queda en el historial del cliente.</div>
       <div class="f2" style="margin-top:10px;align-items:center">
@@ -57,15 +62,15 @@
     </div>
     <div class="card">
       <h2>Entrega</h2>
-      <label class="check"><input type="radio" name="fulfillment" value="pickup" <%= form.fulfillment !== 'delivery' ? 'checked' : '' %>> Recoge / entregado en persona</label>
-      <label class="check"><input type="radio" name="fulfillment" value="delivery" <%= form.fulfillment === 'delivery' ? 'checked' : '' %>> Envío a dirección</label>
+      <label class="check"><input type="radio" name="fulfillment" value="pickup" id="f_pickup" <%= form.fulfillment !== 'delivery' ? 'checked' : '' %>> Recoge / entregado en persona</label>
+      <label class="check"><input type="radio" name="fulfillment" value="delivery" id="f_delivery" <%= form.fulfillment === 'delivery' ? 'checked' : '' %>> Envío a dirección</label>
       <div id="addr" style="margin-top:10px">
-        <div class="field"><label>Dirección</label><input name="address1" value="<%= form.address1 || '' %>"></div>
-        <div class="field"><label>Apto / suite</label><input name="address2" value="<%= form.address2 || '' %>"></div>
+        <div class="field"><label>Dirección</label><input name="address1" id="f_address1" value="<%= form.address1 || '' %>"></div>
+        <div class="field"><label>Apto / suite</label><input name="address2" id="f_address2" value="<%= form.address2 || '' %>"></div>
         <div class="f3">
-          <div class="field"><label>Ciudad</label><input name="city" value="<%= form.city || '' %>"></div>
-          <div class="field"><label>Estado</label><input name="state" maxlength="2" value="<%= form.state || '' %>" placeholder="TX" style="text-transform:uppercase"></div>
-          <div class="field"><label>ZIP</label><input name="zip" value="<%= form.zip || '' %>"></div>
+          <div class="field"><label>Ciudad</label><input name="city" id="f_city" value="<%= form.city || '' %>"></div>
+          <div class="field"><label>Estado</label><input name="state" id="f_state" maxlength="2" value="<%= form.state || '' %>" placeholder="TX" style="text-transform:uppercase"></div>
+          <div class="field"><label>ZIP</label><input name="zip" id="f_zip" value="<%= form.zip || '' %>"></div>
         </div>
       </div>
     </div>
@@ -90,6 +95,49 @@
     document.getElementById('addr').hidden = f.querySelector('input[name=fulfillment]:checked').value !== 'delivery';
   }
   f.addEventListener('input', sync); f.addEventListener('change', sync); sync();
+})();
+(function () {
+  var input = document.getElementById('custSearch'), box = document.getElementById('custResults');
+  var timer = null;
+  function esc(s) { return String(s || '').replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function hide() { box.style.display = 'none'; box.innerHTML = ''; }
+  function pick(c) {
+    document.getElementById('f_name').value = c.name || '';
+    document.getElementById('f_email').value = c.email || '';
+    document.getElementById('f_phone').value = c.phone || '';
+    if (c.address1) {
+      document.getElementById('f_delivery').checked = true;
+      document.getElementById('f_address1').value = c.address1 || '';
+      document.getElementById('f_address2').value = c.address2 || '';
+      document.getElementById('f_city').value = c.city || '';
+      document.getElementById('f_state').value = c.state || '';
+      document.getElementById('f_zip').value = c.zip || '';
+    }
+    input.value = c.name + ' — ' + c.email;
+    hide();
+    f.dispatchEvent(new Event('change'));
+  }
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    var q = input.value.trim();
+    if (q.length < 2) return hide();
+    timer = setTimeout(function () {
+      fetch('/admin/orders/customer-search?q=' + encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (rows) {
+        if (!rows.length) return hide();
+        box.innerHTML = rows.map(function (c, i) {
+          var addr = c.city ? [c.city, c.state].filter(Boolean).join(', ') : '';
+          return '<div class="custrow" data-i="' + i + '" style="padding:8px;border-radius:6px;cursor:pointer"><b>' + esc(c.name) + '</b><br><span class="muted small">' + esc(c.email) + (c.phone ? ' · ' + esc(c.phone) : '') + (addr ? ' · ' + esc(addr) : '') + '</span></div>';
+        }).join('');
+        box.style.display = 'block';
+        box.querySelectorAll('.custrow').forEach(function (row) {
+          row.addEventListener('mouseenter', function () { row.style.background = '#F5F3EF'; });
+          row.addEventListener('mouseleave', function () { row.style.background = ''; });
+          row.addEventListener('click', function () { pick(rows[Number(row.dataset.i)]); });
+        });
+      }).catch(function () { hide(); });
+    }, 250);
+  });
+  document.addEventListener('click', function (e) { if (e.target !== input) hide(); });
 })();
 </script>
 <%- include('_foot') %>

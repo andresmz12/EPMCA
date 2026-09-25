@@ -46,7 +46,9 @@
     <div class="card">
       <h2>Correos automáticos</h2>
       <label class="check"><input type="checkbox" name="reminder_payment_enabled" <%= settings.reminder_payment_enabled === 'true' ? 'checked' : '' %>> Recordar al cliente si su pedido sigue sin pagar a las 24 horas</label>
+      <label class="check"><input type="checkbox" name="cart_reminder_enabled" <%= settings.cart_reminder_enabled === 'true' ? 'checked' : '' %>> Recordar al cliente su carrito si lo deja abandonado (a las 2-3 horas)</label>
       <label class="check"><input type="checkbox" name="digest_enabled" <%= settings.digest_enabled === 'true' ? 'checked' : '' %>> Enviarme un resumen diario (8 a.m.): por despachar, sin pagar e inventario bajo</label>
+      <label class="check"><input type="checkbox" name="lowstock_alert_enabled" <%= settings.lowstock_alert_enabled === 'true' ? 'checked' : '' %>> Avisarme al instante cuando un pedido deje un producto en 20 unidades o menos</label>
       <div class="hint">Requieren SendGrid configurado (ver README).</div>
     </div>
     <button class="btn orange" style="justify-content:center;padding:13px">Guardar configuración</button>
