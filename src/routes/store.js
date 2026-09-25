@@ -389,7 +389,6 @@ r.post('/account/logout', (req, res) => {
 
 r.get('/account', async (req, res) => {
   if (!res.locals.customer) return res.redirect('/account/login');
-  if (req.query.session_id) await subscriptions.syncFromSession(String(req.query.session_id));
   const list = await all(
     `SELECT o.* FROM orders o JOIN customers c ON c.id=o.customer_id
      WHERE o.customer_id=$1 AND o.created_at >= COALESCE(c.account_created_at, c.created_at)
@@ -399,9 +398,9 @@ r.get('/account', async (req, res) => {
 });
 
 r.post('/account/subscribe', async (req, res) => {
-  const { customer, settings, t } = res.locals;
+  const { customer, settings } = res.locals;
   if (!customer) return res.redirect('/account/login');
-  if (!payments.enabled) return res.redirect('/cart');
+  if (!clover.enabled) return res.redirect('/cart');
   const full = await one('SELECT * FROM customers WHERE id=$1', [customer.id]);
   if (!full.address1 || !full.city || !full.state || !full.zip) {
     req.session.flash = { type: 'warn', key: 'sub_need_address' };
@@ -413,10 +412,13 @@ r.post('/account/subscribe', async (req, res) => {
   const priced = await lib.priceCart(req.session.cart, null, settings, 'delivery');
   if (!priced.lines.length) return res.redirect('/cart');
   try {
-    const url = await subscriptions.createCheckout(req, full, priced, form, interval, res.locals.lang);
+    // First cycle is paid live, right now, just like a normal checkout; later
+    // cycles are unattended and email the customer a link instead (see subscriptions.js).
+    const { url } = await subscriptions.createPlan(full, priced, form, interval, res.locals.lang);
+    req.session.cart = {};
     res.redirect(303, url);
   } catch (e) {
-    console.error('Subscription checkout error:', e.message);
+    console.error('Subscription setup error:', e.message);
     req.session.flash = { type: 'err', key: 'err_payment' };
     res.redirect('/cart');
   }

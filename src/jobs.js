@@ -3,14 +3,22 @@
 const { all, one, clearSettingsCache } = require('./db');
 const { cancelOrder } = require('./orders');
 const notify = require('./notify');
+const subscriptions = require('./subscriptions');
 
 const TZ = 'America/Chicago';
 const DIGEST_HOUR = 8; // local time the daily store summary goes out
 
 // Unpaid card checkouts (Clover or Stripe) reserve stock; release it if they were abandoned (backup for the webhook).
+// Recurring-order cycles get a much longer window: they're a "confirm when you
+// can" email, not a live checkout session, so 2h would cancel them too eagerly.
 async function releaseAbandoned() {
-  const stale = await all(`SELECT id FROM orders WHERE status='pending' AND payment_method IN ('clover','stripe') AND created_at < now() - interval '2 hours'`);
+  const stale = await all(
+    `SELECT id FROM orders WHERE status='pending' AND payment_method IN ('clover','stripe')
+       AND subscription_id IS NULL AND created_at < now() - interval '2 hours'`);
   for (const o of stale) await cancelOrder(o.id);
+  const staleRecurring = await all(
+    `SELECT id FROM orders WHERE status='pending' AND subscription_id IS NOT NULL AND created_at < now() - interval '5 days'`);
+  for (const o of staleRecurring) await cancelOrder(o.id);
 }
 
 // Web orders with manual payment still unpaid after 24h get one reminder.
@@ -70,7 +78,7 @@ async function dailyDigest(settings) {
 async function runAll() {
   const { getSettings } = require('./db');
   const settings = await getSettings();
-  for (const job of [releaseAbandoned, () => paymentReminders(settings), () => cartReminders(settings), () => dailyDigest(settings)]) {
+  for (const job of [releaseAbandoned, () => paymentReminders(settings), () => cartReminders(settings), () => dailyDigest(settings), subscriptions.runDueCycles]) {
     try { await job(); } catch (e) { console.error('Job error:', e.message); }
   }
 }

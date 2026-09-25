@@ -138,7 +138,7 @@ app.use(async (req, res, next) => {
     settings, lang, t: makeT(lang), money: lib.money, path: req.path, siteUrl, assetV: ASSET_V,
     altUrl: (l) => `${siteUrl}${req.path}${l === 'es' ? '?lang=es' : ''}`,
     cartCount: Object.values(cart).reduce((s, n) => s + (Number(n) || 0), 0),
-    flash: req.session.flash || null, payEnabled: clover.enabled || payments.enabled, boxSvg: lib.boxSvg,
+    flash: req.session.flash || null, payEnabled: clover.enabled || payments.enabled, recurringEnabled: clover.enabled, boxSvg: lib.boxSvg,
     customer: req.session.customer || null, US_STATES: lib.US_STATES, trackingUrl: lib.trackingUrl, wholesaleTiers: lib.wholesaleTiers, supplySvg: lib.supplySvg,
     cartAdded: req.session.cartAdded || null,
     // Product text in the visitor's language (falls back to English)

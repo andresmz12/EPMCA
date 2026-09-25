@@ -170,6 +170,12 @@ ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS total_cents INT NOT NULL DEFA
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT '';
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
+-- Recurring orders no longer auto-charge a saved card (Clover has no Stripe-style
+-- subscriptions API without storing a card on file): each cycle instead emails the
+-- customer a fresh checkout link that they must click and pay themselves.
+ALTER TABLE subscriptions ALTER COLUMN stripe_subscription_id DROP NOT NULL;
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS next_order_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS subscriptions_next_order_idx ON subscriptions(next_order_at) WHERE status='active';
 
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS subscription_id INT REFERENCES subscriptions(id) ON DELETE SET NULL;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_invoice_id TEXT;

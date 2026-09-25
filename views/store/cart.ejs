@@ -39,7 +39,7 @@
       <a class="btn orange block <%= priced.lines.some(l => l.overStock) ? 'disabled' : '' %>" href="/checkout" <%= priced.lines.some(l => l.overStock) ? 'aria-disabled=true style=pointer-events:none;opacity:.45' : '' %>><%= t('checkout') %></a>
     </aside>
   </div>
-  <% if (payEnabled && !priced.lines.some(l => l.overStock)) { %>
+  <% if (recurringEnabled && !priced.lines.some(l => l.overStock)) { %>
   <div class="panel" style="margin-top:20px">
     <h3><%= t('sub_title') %></h3>
     <p class="muted small" style="margin-bottom:14px"><%= t('sub_sub') %></p>

@@ -134,4 +134,30 @@ async function cancelOrder(orderId) {
   });
 }
 
-module.exports = { createOrder, createManualOrder, markPaid, cancelOrder, StockError, CouponUsedError };
+/**
+ * Creates this cycle's order for a recurring plan. Always 'pending': nothing is
+ * charged until the customer clicks the checkout link we email them.
+ */
+async function createRecurringOrder(sub) {
+  const crossed = [];
+  const order = await tx(async (c) => {
+    const { rows: [order] } = await c.query(
+      `INSERT INTO orders(number, access_token, customer_id, email, name, phone, fulfillment, address1, address2, city, state, zip,
+         subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, status, payment_method, subscription_id, lang)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,0,$14,$15,$16,'pending','clover',$17,$18) RETURNING *`,
+      [lib.orderNumber(), lib.token(), sub.customer_id, sub.email, sub.name, sub.phone, sub.fulfillment,
+       sub.address1, sub.address2, sub.city, sub.state, sub.zip,
+       sub.subtotal_cents, sub.shipping_cents, sub.tax_cents, sub.total_cents, sub.id, sub.lang || 'en']);
+    for (const it of sub.items) {
+      await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty) VALUES($1,$2,$3,$4,$5)',
+        [order.id, it.product_id, it.name, it.unit_price_cents, it.qty]);
+      const { rows: [p] } = await c.query('UPDATE products SET stock = GREATEST(stock - $1, 0), updated_at=now() WHERE id=$2 RETURNING stock', [it.qty, it.product_id]);
+      if (p && p.stock + it.qty > lib.LOW_STOCK_THRESHOLD && p.stock <= lib.LOW_STOCK_THRESHOLD) crossed.push({ name: it.name, stock: p.stock });
+    }
+    return order;
+  });
+  notify.lowStockAlert(crossed);
+  return order;
+}
+
+module.exports = { createOrder, createManualOrder, createRecurringOrder, markPaid, cancelOrder, StockError, CouponUsedError };

@@ -30,8 +30,12 @@ async function markPaidAndNotify(orderId, base) {
   return paid;
 }
 
+// req is null when called from a background job (recurring orders); PUBLIC_URL
+// must be set in that case, same as it already is for every other background email.
 function baseUrl(req) {
-  return (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+  const url = process.env.PUBLIC_URL || (req && `${req.protocol}://${req.get('host')}`);
+  if (!url) throw new Error('PUBLIC_URL is not set (required outside a request context)');
+  return url.replace(/\/$/, '');
 }
 
 async function cloverFetch(path, options) {

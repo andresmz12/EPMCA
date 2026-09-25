@@ -156,14 +156,14 @@ module.exports = {
   // Unpaid manual order after 24h (sent once, from the background jobs).
   paymentReminder: safe(async (order) => customerOrderEmail(order, 'reminder')),
   storeDigest: safe(storeDigest),
-  // Stripe's invoice.upcoming, a few days before a recurring charge.
-  upcomingRecurring: safe(async (sub, whenUnix, amountCents) => {
+  // A recurring plan's cycle is due: emails the customer a checkout link they
+  // must click and pay themselves — nothing is charged automatically.
+  recurringConfirm: safe(async (sub, order, checkoutUrl) => {
     const settings = await getSettings();
     const t = makeT(sub.lang);
-    const date = new Date(whenUnix * 1000).toLocaleDateString(sub.lang === 'es' ? 'es-US' : 'en-US', { timeZone: 'America/Chicago', dateStyle: 'long' });
     const items = sub.items.map((it) => `${it.qty} × ${esc(it.name)}`).join(', ');
-    const subject = t('email_subj_upcoming', { date });
-    const body = `<p>${t('email_hi', { name: esc(sub.name.split(' ')[0]) })}</p><p>${t('email_upcoming_body', { amount: lib.money(amountCents), date, items })}</p>${button(`${siteUrl()}/account`, t('email_upcoming_cta'))}`;
+    const subject = t('email_subj_upcoming');
+    const body = `<p>${t('email_hi', { name: esc(sub.name.split(' ')[0]) })}</p><p>${t('email_upcoming_body', { amount: lib.money(order.total_cents), items })}</p>${button(checkoutUrl, t('email_upcoming_cta'))}`;
     await mail.send({ to: sub.email, subject, html: layout(settings, subject, body, t('email_footer', { email: esc(settings.support_email) })) });
   }),
   contactMessage: safe(async (msg) => {
