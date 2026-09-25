@@ -212,6 +212,8 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 CREATE INDEX IF NOT EXISTS orders_created_idx ON orders(created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_email_idx ON orders(lower(email));
+CREATE INDEX IF NOT EXISTS orders_customer_idx ON orders(customer_id);
+CREATE INDEX IF NOT EXISTS orders_status_idx ON orders(status);
 
 CREATE TABLE IF NOT EXISTS order_items (
   id SERIAL PRIMARY KEY,
@@ -221,6 +223,11 @@ CREATE TABLE IF NOT EXISTS order_items (
   unit_price_cents INT NOT NULL,
   qty INT NOT NULL CHECK (qty > 0)
 );
+-- Postgres doesn't index foreign keys automatically; every order page,
+-- report and digest query joins on these, so without an index they'd
+-- degrade to a sequential scan as the orders table grows.
+CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS order_items_product_idx ON order_items(product_id);
 
 CREATE TABLE IF NOT EXISTS contact_messages (
   id SERIAL PRIMARY KEY,
@@ -267,6 +274,7 @@ const DEFAULT_SETTINGS = {
   tax_rate_percent: '0',
   pickup_enabled: 'false',
   pickup_address: '',
+  business_address: '',
   support_email: 'info@empacalo.net',
   support_phone: '',
   whatsapp_number: '',

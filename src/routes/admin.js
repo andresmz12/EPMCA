@@ -548,7 +548,7 @@ r.post('/coupons/:id/delete', async (req, res) => {
 
 /* ───────────── Settings ───────────── */
 r.use('/settings', requirePerm('settings'));
-const SETTING_FIELDS = ['store_name', 'support_email', 'support_phone', 'pickup_address', 'announcement_en', 'announcement_es', 'notify_email'];
+const SETTING_FIELDS = ['store_name', 'support_email', 'support_phone', 'pickup_address', 'business_address', 'announcement_en', 'announcement_es', 'notify_email'];
 r.get('/settings', (req, res) => res.render('admin/settings', { section: 'settings' }));
 r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings'), async (req, res) => {
   const values = {};

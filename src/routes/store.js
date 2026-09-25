@@ -18,6 +18,8 @@ const signupLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
 const contactLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
 const forgotLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
 const trackLimit = limiter({ max: 10, windowMs: 15 * 60 * 1000 });
+const cartLimit = limiter({ max: 60, windowMs: 10 * 60 * 1000 });
+const checkoutLimit = limiter({ max: 20, windowMs: 60 * 60 * 1000 });
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const couponText = (t, msg) => (msg ? t(msg.key, msg.vars) : null);
@@ -85,6 +87,8 @@ function clearCartSnapshot(req) {
 }
 
 r.post('/cart/add', async (req, res) => {
+  if (cartLimit.blocked(req.ip)) return res.redirect(303, backTo(req));
+  cartLimit.hit(req.ip);
   const id = lib.int(req.body.product_id);
   const qty = Math.max(1, Math.min(lib.int(req.body.qty, 1), 999));
   const p = await one('SELECT id, name, name_es, price_cents, image_id, stock FROM products WHERE id=$1 AND active', [id]);
@@ -175,6 +179,8 @@ r.post('/checkout', async (req, res) => {
   req.session.checkoutForm = form;
   const fail = (key) => { req.session.checkoutError = t(key); res.redirect('/checkout'); };
 
+  if (checkoutLimit.blocked(req.ip)) return fail('err_too_many');
+  checkoutLimit.hit(req.ip);
   const err = validate(form, settings);
   if (err) return fail(err);
   const priced = await lib.priceCart(req.session.cart, req.session.coupon, settings, form.fulfillment);
@@ -228,6 +234,8 @@ r.get('/checkout/cancel', async (req, res) => {
 // checkout: captures the email as soon as they type it, tied to their
 // existing cart snapshot (a no-op if the cart is already empty by then).
 r.post('/checkout/save-email', (req, res) => {
+  if (cartLimit.blocked(req.ip)) return res.status(429).end();
+  cartLimit.hit(req.ip);
   const email = String(req.body.email || '').trim().toLowerCase().slice(0, 200);
   if (EMAIL_RE.test(email) && req.sessionID) {
     q('UPDATE cart_snapshots SET email=$1 WHERE session_id=$2', [email, req.sessionID]).catch(() => {});

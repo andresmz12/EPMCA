@@ -17,6 +17,11 @@
       <div class="field"><label>Anuncio superior (inglés)</label><input name="announcement_en" value="<%= settings.announcement_en %>"></div>
       <div class="field"><label>Anuncio superior (español)</label><input name="announcement_es" value="<%= settings.announcement_es %>"><div class="hint">Déjalos vacíos para ocultar la barra.</div></div>
     </div>
+    <div class="card">
+      <h2>Dirección legal</h2>
+      <div class="field"><label>Dirección postal del negocio</label><input name="business_address" value="<%= settings.business_address %>" placeholder="Calle, ciudad, estado, ZIP"></div>
+      <div class="hint">Obligatoria por ley (CAN-SPAM Act) en los correos que enviamos a clientes en EE. UU. Aparece en el pie de los correos automáticos.</div>
+    </div>
   </div>
   <div class="grid" style="gap:16px">
     <div class="card">

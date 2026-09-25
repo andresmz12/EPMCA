@@ -21,7 +21,7 @@ function layout(settings, title, bodyHtml, footer) {
 <h1 style="font-size:20px;margin:0 0 14px">${esc(title)}</h1>
 ${bodyHtml}
 </td></tr>
-<tr><td style="padding:16px 24px;background:#FBFAF8;font-size:12px;color:#6A6E75">${footer}</td></tr>
+<tr><td style="padding:16px 24px;background:#FBFAF8;font-size:12px;color:#6A6E75">${footer}${settings.business_address ? `<br>${esc(settings.store_name)} · ${esc(settings.business_address)}` : ''}</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
