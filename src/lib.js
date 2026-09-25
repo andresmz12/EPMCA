@@ -162,3 +162,22 @@ function boxSvg(dims, { label = true, fixed = false } = {}) {
 }
 
 module.exports.boxSvg = boxSvg;
+
+// Generic fallback icon for non-box supplies (tape, stretch film, scale)
+// that don't have a photo yet — boxSvg only makes sense for actual boxes.
+function supplySvg(kind, color) {
+  const c = color || '#D08A1E';
+  if (kind === 'scale') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Digital scale" class="boxsvg">
+<rect x="8" y="34" width="48" height="20" rx="4" fill="#E0B57A" stroke="#6b4a24" stroke-width="1.4"/>
+<rect x="20" y="24" width="24" height="12" rx="2" fill="#F5F3EF" stroke="#6b4a24" stroke-width="1.4"/>
+<rect x="24" y="27" width="16" height="6" rx="1" fill="#111214"/>
+</svg>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Roll" class="boxsvg">
+<circle cx="32" cy="32" r="26" fill="${c}" stroke="#6b4a24" stroke-width="1.4"/>
+<circle cx="32" cy="32" r="10" fill="#F5F3EF" stroke="#6b4a24" stroke-width="1.2"/>
+<circle cx="32" cy="32" r="4" fill="#6b4a24"/>
+</svg>`;
+}
+module.exports.supplySvg = supplySvg;

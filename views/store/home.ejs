@@ -1,9 +1,11 @@
 <%- include('_head') %>
 <%
-  const minPrice = products.length ? Math.min(...products.map(p => p.price_cents)) : 0;
+  const boxes = products.filter(p => p.category !== 'supply');
+  const supplies = products.filter(p => p.category === 'supply');
+  const minPrice = boxes.length ? Math.min(...boxes.map(p => p.price_cents)) : 0;
   const flat = Number(settings.shipping_flat_cents || 0), freeMin = Number(settings.free_shipping_min_cents || 0);
   const dimsOf = (p) => (String(p.dimensions).match(/\d+(\.\d+)?/g) || []).map(Number);
-  const heroBoxes = products.filter(p => dimsOf(p).length >= 3).slice().sort((a, b) => dimsOf(a).reduce((x, y) => x * y, 1) - dimsOf(b).reduce((x, y) => x * y, 1));
+  const heroBoxes = boxes.filter(p => dimsOf(p).length >= 3).slice().sort((a, b) => dimsOf(a).reduce((x, y) => x * y, 1) - dimsOf(b).reduce((x, y) => x * y, 1));
 %>
 <section class="hero">
   <div class="wrap">
@@ -41,7 +43,7 @@
   <div class="wrap">
     <div class="section-head"><h2><%= t('shop_title') %></h2><p><%= t('shop_sub') %></p></div>
     <div class="grid">
-      <% products.forEach(function (p) { %>
+      <% boxes.forEach(function (p) { %>
       <article class="card">
         <a class="pic <%= p.image_id ? 'has-img' : '' %>" href="/products/<%= p.slug %>"><%- include('_pic', { p, fixed: true }) %></a>
         <% if (p.featured) { %><span class="tagline"><%= t('popular') %></span><% } %>
@@ -69,7 +71,7 @@
       <table class="sizes">
         <thead><tr><th><%= t('col_size') %></th><th class="num"><%= t('col_volume') %></th><th><%= t('col_strength') %></th><th class="num"><%= t('col_price') %></th><th><%= t('col_stock') %></th></tr></thead>
         <tbody>
-        <% products.forEach(function (p) { const d = dimsOf(p); const vol = d.length >= 3 ? (d[0] * d[1] * d[2] / 1728) : null; %>
+        <% boxes.forEach(function (p) { const d = dimsOf(p); const vol = d.length >= 3 ? (d[0] * d[1] * d[2] / 1728) : null; %>
           <tr>
             <td><a href="/products/<%= p.slug %>"><%= p.dimensions || pt(p, 'name') %></a></td>
             <td class="num"><%= vol ? vol.toFixed(vol < 10 ? 1 : 0) + ' ' + t('cuft') : '—' %></td>
@@ -84,6 +86,31 @@
   </div>
 </section>
 
+<% if (supplies.length) { %>
+<section class="block alt" id="supplies">
+  <div class="wrap">
+    <div class="section-head"><h2><%= t('supplies_title') %></h2><p><%= t('supplies_sub') %></p></div>
+    <div class="grid">
+      <% supplies.forEach(function (p) { %>
+      <article class="card">
+        <a class="pic <%= p.image_id ? 'has-img' : '' %>" href="/products/<%= p.slug %>"><%- include('_pic', { p, fixed: true }) %></a>
+        <div class="body">
+          <a class="name" href="/products/<%= p.slug %>"><%= pt(p, 'name') %></a>
+          <p class="desc"><%= pt(p, 'short_desc') %></p>
+          <div class="price"><%= money(p.price_cents) %> <span class="per"><%= p.pack_size > 1 ? '' : t('per_unit') %></span></div>
+          <%- include('_stock', { p }) %>
+          <form method="post" action="/cart/add">
+            <input type="hidden" name="product_id" value="<%= p.id %>">
+            <input type="number" name="qty" value="1" min="1" max="<%= Math.max(1, p.stock) %>" aria-label="<%= t('qty') %>" <%= p.stock <= 0 ? 'disabled' : '' %>>
+            <button class="btn" <%= p.stock <= 0 ? 'disabled' : '' %>><%= t('add_to_cart') %></button>
+          </form>
+        </div>
+      </article>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
 
 <section class="block" id="shipping">
   <div class="wrap">

@@ -45,7 +45,7 @@ r.get('/', async (req, res) => {
 r.get('/products/:slug', async (req, res, next) => {
   const product = await one('SELECT * FROM products WHERE slug=$1 AND active', [req.params.slug]);
   if (!product) return next();
-  const others = await all('SELECT * FROM products WHERE active AND id<>$1 ORDER BY sort, id LIMIT 4', [product.id]);
+  const others = await all('SELECT * FROM products WHERE active AND id<>$1 AND category=$2 ORDER BY sort, id LIMIT 4', [product.id, product.category]);
   const extra = await all('SELECT image_id FROM product_images WHERE product_id=$1 ORDER BY sort, id', [product.id]);
   const images = [...(product.image_id ? [product.image_id] : []), ...extra.map((r) => r.image_id)];
   const { siteUrl, settings, pt, t, money, altUrl, lang } = res.locals;

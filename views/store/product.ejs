@@ -4,7 +4,9 @@
   <div class="pdp">
     <div>
       <div class="gallery <%= images.length ? 'has-img' : '' %>" id="mainpic">
-        <% if (images.length) { %><img src="/img/<%= images[0] %>" alt="<%= pt(product, 'name') %>" id="mainpic-img"><% } else { %><%- boxSvg(product.dimensions) %><% } %>
+        <% if (images.length) { %><img src="/img/<%= images[0] %>" alt="<%= pt(product, 'name') %>" id="mainpic-img">
+        <% } else if (product.category === 'supply') { %><%- supplySvg(/scale/i.test(product.slug) ? 'scale' : 'roll') %>
+        <% } else { %><%- boxSvg(product.dimensions) %><% } %>
       </div>
       <% if (images.length > 1) { %>
       <div class="thumbs">
@@ -21,13 +23,15 @@
       <div class="buybox">
         <div class="price" id="unitprice">
           <span id="unitprice-val"><%= money(product.price_cents) %></span><% if (product.compare_at_cents > product.price_cents) { %><s><%= money(product.compare_at_cents) %></s><span class="badge-off">-<%= Math.round((1 - product.price_cents / product.compare_at_cents) * 100) %>%</span><% } %>
-          <span class="per"><%= product.pack_size > 1 ? '' : t('per_box') %></span>
+          <span class="per"><%= product.pack_size > 1 ? '' : (product.category === 'supply' ? t('per_unit') : t('per_box')) %></span>
         </div>
         <% if (tiers.length) { %><div class="muted small" id="unitprice-hint" style="margin:-8px 0 10px"></div><% } %>
         <%- include('_stock', { p: product }) %>
         <table class="specs">
+          <% if (product.category !== 'supply') { %>
           <tr><th><%= t('dimensions') %></th><td><%= product.dimensions || '—' %></td></tr>
           <tr><th><%= t('strength') %></th><td><%= product.wall_type === 'single' ? t('strength_val_single') : t('strength_val') %></td></tr>
+          <% } %>
           <tr><th><%= t('nav_shipping') %></th><td><%= t('info_ship_d') %></td></tr>
         </table>
         <form method="post" action="/cart/add" class="buy" id="buyform" data-price="<%= product.price_cents %>" data-tiers='<%- JSON.stringify(tiers) %>'>
@@ -35,7 +39,7 @@
           <input type="hidden" name="next" value="cart">
           <div class="qty">
             <button type="button" data-step="-1" aria-label="-">−</button>
-            <input type="number" name="qty" id="qtyinput" value="<%= product.pack_size > 1 ? 1 : 10 %>" min="1" max="<%= Math.max(1, product.stock) %>" aria-label="<%= t('qty') %>">
+            <input type="number" name="qty" id="qtyinput" value="<%= product.pack_size > 1 || product.category === 'supply' ? 1 : 10 %>" min="1" max="<%= Math.max(1, product.stock) %>" aria-label="<%= t('qty') %>">
             <button type="button" data-step="1" aria-label="+">+</button>
           </div>
           <button class="btn orange" <%= product.stock <= 0 ? 'disabled' : '' %>><%= product.stock <= 0 ? t('out_of_stock') : t('add_to_cart') %></button>

@@ -22,8 +22,15 @@
       <div class="field"><label>Stock</label><input name="stock" type="number" min="0" value="<%= p.stock ?? 0 %>"></div>
     </div>
     <% if (fullEdit) { %>
+    <div class="field"><label>Categoría</label>
+      <select name="category">
+        <option value="box" <%= p.category !== 'supply' ? 'selected' : '' %>>Caja</option>
+        <option value="supply" <%= p.category === 'supply' ? 'selected' : '' %>>Suministro (cinta, plástico, báscula, etc.)</option>
+      </select>
+      <div class="hint">Una caja muestra medidas y resistencia; un suministro no.</div>
+    </div>
     <div class="f3">
-      <div class="field"><label>Medidas</label><input name="dimensions" value="<%= p.dimensions || '' %>" placeholder='16" × 16" × 16"'><div class="hint">Se usa para dibujar la caja si no hay foto.</div></div>
+      <div class="field"><label>Medidas</label><input name="dimensions" value="<%= p.dimensions || '' %>" placeholder='16" × 16" × 16"'><div class="hint">Se usa para dibujar la caja si no hay foto. No aplica a suministros.</div></div>
       <div class="field"><label>Unidades por paquete</label><input name="pack_size" type="number" min="1" value="<%= p.pack_size || 1 %>"></div>
       <div class="field"><label>Orden</label><input name="sort" type="number" value="<%= p.sort || 0 %>"><div class="hint">Menor = aparece primero.</div></div>
     </div>
@@ -32,7 +39,7 @@
         <option value="double" <%= p.wall_type !== 'single' ? 'selected' : '' %>>Doble pared (275 lb)</option>
         <option value="single" <%= p.wall_type === 'single' ? 'selected' : '' %>>Pared sencilla</option>
       </select>
-      <div class="hint">Controla el texto de "Resistencia" que ve el cliente en la ficha del producto.</div>
+      <div class="hint">Controla el texto de "Resistencia" que ve el cliente en la ficha del producto. No aplica a suministros.</div>
     </div>
     <h2 style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">Precios por volumen (mayoreo)</h2>
     <p class="hint" style="margin-top:-8px;margin-bottom:14px">Precio por caja al alcanzar cada cantidad. Se aplica solo al pagar. Deja vacío el que no aplique.</p>

@@ -137,7 +137,7 @@ app.use(async (req, res, next) => {
     altUrl: (l) => `${siteUrl}${req.path}${l === 'es' ? '?lang=es' : ''}`,
     cartCount: Object.values(cart).reduce((s, n) => s + (Number(n) || 0), 0),
     flash: req.session.flash || null, stripeEnabled: payments.enabled, boxSvg: lib.boxSvg,
-    customer: req.session.customer || null, US_STATES: lib.US_STATES, trackingUrl: lib.trackingUrl, wholesaleTiers: lib.wholesaleTiers,
+    customer: req.session.customer || null, US_STATES: lib.US_STATES, trackingUrl: lib.trackingUrl, wholesaleTiers: lib.wholesaleTiers, supplySvg: lib.supplySvg,
     cartAdded: req.session.cartAdded || null,
     // Product text in the visitor's language (falls back to English)
     pt: (p, f) => (lang === 'es' && p[f + '_es']) || p[f],

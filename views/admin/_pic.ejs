@@ -1,1 +1,3 @@
-<% if (p.image_id) { %><img src="/img/<%= p.image_id %>" alt="" loading="lazy"><% } else { %><%- boxSvg(p.dimensions, { label: false }) %><% } %>
+<% if (p.image_id) { %><img src="/img/<%= p.image_id %>" alt="" loading="lazy">
+<% } else if (p.category === 'supply') { %><%- supplySvg(/scale/i.test(p.slug) ? 'scale' : 'roll') %>
+<% } else { %><%- boxSvg(p.dimensions, { label: false }) %><% } %>

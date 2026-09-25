@@ -81,6 +81,14 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_200_cents INT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_300_cents INT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_400_cents INT;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS wholesale_500_cents INT;
+-- 'box' drives the box-only UI (size chart volume/strength, "Elige el
+-- tamaño"); 'supply' is everything else EMPACALO sells (tape, film, scale).
+ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'box';
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'products_category_check') THEN
+    ALTER TABLE products ADD CONSTRAINT products_category_check CHECK (category IN ('box','supply'));
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS product_images (
   id SERIAL PRIMARY KEY,
@@ -300,6 +308,7 @@ const DEFAULT_SETTINGS = {
   digest_last_date: '',
   catalog_2026_loaded: 'false',
   wholesale_2026_loaded: 'false',
+  supplies_2026_loaded: 'false',
   lowstock_alert_enabled: 'true',
   cart_reminder_enabled: 'true',
   payment_instructions: '',
@@ -376,6 +385,38 @@ const WHOLESALE_2026 = {
   'box-24x30x36': [1675, 1480, 1380, 1280, 1180, 1080],
   'box-42x29x26': [1775, 1690, 1590, 1490, 1390, 1290],
 };
+
+// Packing supplies (EMPACALO KIT 2026): stretch film, tape and a digital
+// scale. Sold as "each" and, where the sheet gives a case price, a separate
+// "case of N" SKU — simpler than bolting a second tier system with
+// different break points onto the box wholesale columns above.
+const SUPPLIES_2026 = [
+  { slug: 'supply-film-clear', name: 'Stretch Film 18"x1500\' — Clear', name_es: 'Plástico stretch film 18"x1500\' — Transparente', price: 2800, sort: 200 },
+  { slug: 'supply-film-black', name: 'Stretch Film 18"x1500\' — Black', name_es: 'Plástico stretch film 18"x1500\' — Negro', price: 2813, sort: 201 },
+  { slug: 'supply-film-orange', name: 'Stretch Film 18"x1500\' — Orange', name_es: 'Plástico stretch film 18"x1500\' — Naranja', price: 2700, sort: 202 },
+  { slug: 'supply-film-lightblue', name: 'Stretch Film 18"x1500\' — Light Blue', name_es: 'Plástico stretch film 18"x1500\' — Azul claro', price: 2700, sort: 203 },
+  { slug: 'supply-film-castbanding', name: 'Cast Banding Film 18"x1500\'', name_es: 'Cast banding film 18"x1500\'', price: 800, sort: 204 },
+  { slug: 'supply-film-clear-case4', name: 'Stretch Film 18"x1500\' — Clear (case of 4)', name_es: 'Plástico stretch film 18"x1500\' — Transparente (caja de 4)', price: 6700, pack: 4, sort: 205 },
+  { slug: 'supply-film-black-case4', name: 'Stretch Film 18"x1500\' — Black (case of 4)', name_es: 'Plástico stretch film 18"x1500\' — Negro (caja de 4)', price: 8154, pack: 4, sort: 206 },
+  { slug: 'supply-film-orange-case4', name: 'Stretch Film 18"x1500\' — Orange (case of 4)', name_es: 'Plástico stretch film 18"x1500\' — Naranja (caja de 4)', price: 7500, pack: 4, sort: 207 },
+  { slug: 'supply-film-lightblue-case4', name: 'Stretch Film 18"x1500\' — Light Blue (case of 4)', name_es: 'Plástico stretch film 18"x1500\' — Azul claro (caja de 4)', price: 7500, pack: 4, sort: 208 },
+  { slug: 'supply-tape-2in-clear', name: 'Packing Tape 2"x110yd — Clear', name_es: 'Cinta de embalaje 2"x110yd — Transparente', price: 376, sort: 210 },
+  { slug: 'supply-tape-2in-tan', name: 'Packing Tape 2"x110yd — Tan', name_es: 'Cinta de embalaje 2"x110yd — Tan', price: 385, sort: 211 },
+  { slug: 'supply-tape-2in-blue', name: 'Packing Tape 2"x110yd — Blue', name_es: 'Cinta de embalaje 2"x110yd — Azul', price: 295, sort: 212 },
+  { slug: 'supply-tape-3in-clear', name: 'Packing Tape 3"x110yd — Clear', name_es: 'Cinta de embalaje 3"x110yd — Transparente', price: 376, sort: 213 },
+  { slug: 'supply-tape-3in-tan', name: 'Packing Tape 3"x110yd — Tan', name_es: 'Cinta de embalaje 3"x110yd — Tan', price: 430, sort: 214 },
+  { slug: 'supply-tape-2in-clear-case36', name: 'Packing Tape 2"x110yd — Clear (case of 36)', name_es: 'Cinta de embalaje 2"x110yd — Transparente (caja de 36)', price: 5100, pack: 36, sort: 215 },
+  { slug: 'supply-tape-2in-tan-case36', name: 'Packing Tape 2"x110yd — Tan (case of 36)', name_es: 'Cinta de embalaje 2"x110yd — Tan (caja de 36)', price: 6000, pack: 36, sort: 216 },
+  { slug: 'supply-tape-2in-blue-case36', name: 'Packing Tape 2"x110yd — Blue (case of 36)', name_es: 'Cinta de embalaje 2"x110yd — Azul (caja de 36)', price: 7200, pack: 36, sort: 217 },
+  { slug: 'supply-tape-3in-clear-case24', name: 'Packing Tape 3"x110yd — Clear (case of 24)', name_es: 'Cinta de embalaje 3"x110yd — Transparente (caja de 24)', price: 5480, pack: 24, sort: 218 },
+  { slug: 'supply-tape-3in-tan-case24', name: 'Packing Tape 3"x110yd — Tan (case of 24)', name_es: 'Cinta de embalaje 3"x110yd — Tan (caja de 24)', price: 5400, pack: 24, sort: 219 },
+  { slug: 'supply-scale-660', name: 'Digital Shipping Scale (660 lb)', name_es: 'Báscula digital de envíos (660 lb)', price: 15000, sort: 220 },
+].map((s) => ({
+  ...s, pack: s.pack || 1, stock: 50, compare: null, wall_type: 'double',
+  short: 'Packing supply.', short_es: 'Suministro de empaque.',
+  desc: 'Packing supply — sold as shown; contact us for other sizes or colors.',
+  desc_es: 'Suministro de empaque — se vende como se indica; escríbenos si necesitas otra medida o color.',
+}));
 
 const SEED_PRODUCTS = [
   { slug: 'box-12x12x12', dims: '12" × 12" × 12"', price: 399, stock: 500, featured: false, sort: 1,
@@ -460,6 +501,25 @@ async function migrate() {
     }
     await pool.query("INSERT INTO settings(key,value) VALUES('wholesale_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
     console.log(`Precios mayoristas cargados para ${Object.keys(WHOLESALE_2026).length} cajas.`);
+  }
+
+  // One-time: load packing supplies (tape, stretch film, scale).
+  const suppliesLoaded = (await pool.query("SELECT value FROM settings WHERE key='supplies_2026_loaded'")).rows[0];
+  if (!suppliesLoaded || suppliesLoaded.value !== 'true') {
+    for (const s of SUPPLIES_2026) {
+      await pool.query(
+        `INSERT INTO products(slug,name,short_desc,description,dimensions,pack_size,price_cents,compare_at_cents,stock,featured,sort,name_es,short_desc_es,description_es,wall_type,category)
+         VALUES($1,$2,$3,$4,'',$5,$6,$7,$8,false,$9,$10,$11,$12,$13,'supply')
+         ON CONFLICT (slug) DO UPDATE SET
+           name=EXCLUDED.name, short_desc=EXCLUDED.short_desc, description=EXCLUDED.description,
+           pack_size=EXCLUDED.pack_size, price_cents=EXCLUDED.price_cents,
+           name_es=EXCLUDED.name_es, short_desc_es=EXCLUDED.short_desc_es, description_es=EXCLUDED.description_es,
+           category='supply', updated_at=now()`,
+        [s.slug, s.name, s.short, s.desc, s.pack, s.price, s.compare, s.stock, s.sort, s.name_es, s.short_es, s.desc_es, s.wall_type]
+      );
+    }
+    await pool.query("INSERT INTO settings(key,value) VALUES('supplies_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
+    console.log(`Suministros cargados: ${SUPPLIES_2026.length}.`);
   }
 
   const noAdmins = (await pool.query('SELECT count(*)::int AS n FROM admin_users')).rows[0].n === 0;
