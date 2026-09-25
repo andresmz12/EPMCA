@@ -1,7 +1,7 @@
 // Textos de la tienda en inglés y español. Para cambiar un texto, edítalo aquí.
 const dict = {
   en: {
-    nav_shop: 'Boxes', nav_sizes: 'Size chart', nav_shipping: 'Shipping', nav_faq: 'FAQ', nav_cart: 'Cart',
+    nav_shop: 'Boxes', nav_sizes: 'Size chart', nav_wholesale: 'Wholesale', nav_shipping: 'Shipping', nav_faq: 'FAQ', nav_cart: 'Cart',
     hero_eyebrow: 'Corrugated double wall · 275 lb test',
     hero_title: 'Double wall cardboard boxes, shipped anywhere in the USA.',
     hero_sub: 'Order one box or a few hundred. They arrive flat and ready to fold, at any address in the country.',
@@ -11,6 +11,11 @@ const dict = {
     shop_title: 'Pick a size', shop_sub: 'Price per box. Mix sizes in the same order.',
     chart_title: 'Size chart', chart_sub: 'Outside dimensions in inches (length × width × height).',
     retail_title: 'Retail pricing', retail_sub: 'Price per box, any quantity.',
+    hero_wholesale_link: 'Buying in bulk? See wholesale pricing →',
+    wholesale_section_title: 'Wholesale pricing', wholesale_section_sub: "Buying for a business, a warehouse, or to resell? The more you order, the less you pay per box — applied automatically at checkout, no code needed.",
+    wholesale_min_order: 'Minimum order: {n} boxes per size', wholesale_col_size: 'Size', wholesale_col_type: 'Type',
+    wholesale_cta: 'Talk to us about a wholesale account', wholesale_cta_note: "For custom sizes, pallet orders, or an even better rate on larger volumes.",
+    wa_wholesale: "Hi! I'd like information about wholesale / bulk pricing.",
     col_size: 'Size (in)', col_volume: 'Volume', col_strength: 'Strength', col_price: 'Price', col_stock: 'Availability', cuft: 'cu ft',
     info_ship_t: 'Shipping to the whole USA', info_ship_d: 'We ship to any address in the country.', info_ship_free: 'Free shipping on orders over {min}.',
     info_pay_t: 'Secure payment', info_pay_d_stripe: 'You pay by card on Stripe\'s secure page. We never see or store your card number.', info_pay_d_manual: 'We confirm every order by email before it ships.',
@@ -115,7 +120,7 @@ const dict = {
     promo_popup_cta: 'Create my account', promo_popup_dismiss: 'No thanks',
   },
   es: {
-    nav_shop: 'Cajas', nav_sizes: 'Medidas', nav_shipping: 'Envíos', nav_faq: 'Preguntas', nav_cart: 'Carrito',
+    nav_shop: 'Cajas', nav_sizes: 'Medidas', nav_wholesale: 'Mayorista', nav_shipping: 'Envíos', nav_faq: 'Preguntas', nav_cart: 'Carrito',
     hero_eyebrow: 'Cartón corrugado doble pared · prueba de 275 lb',
     hero_title: 'Cajas de cartón doble pared, con envío a todo Estados Unidos.',
     hero_sub: 'Pide una caja o varios cientos. Te llegan planas, listas para armar, a cualquier dirección del país.',
@@ -125,6 +130,11 @@ const dict = {
     shop_title: 'Elige el tamaño', shop_sub: 'Precio por caja. Puedes combinar tamaños en el mismo pedido.',
     chart_title: 'Tabla de medidas', chart_sub: 'Medidas exteriores en pulgadas (largo × ancho × alto).',
     retail_title: 'Precios al detal', retail_sub: 'Precio por caja, cualquier cantidad.',
+    hero_wholesale_link: '¿Compras al por mayor? Mira los precios mayoristas →',
+    wholesale_section_title: 'Precios mayoristas', wholesale_section_sub: '¿Compras para tu negocio, bodega o para revender? Mientras más pidas, menos pagas por caja — se aplica solo al pagar, sin código.',
+    wholesale_min_order: 'Pedido mínimo: {n} cajas por tamaño', wholesale_col_size: 'Tamaño', wholesale_col_type: 'Tipo',
+    wholesale_cta: 'Escríbenos por una cuenta mayorista', wholesale_cta_note: 'Para tamaños especiales, pedidos por pallet, o un mejor precio en volúmenes más grandes.',
+    wa_wholesale: '¡Hola! Quisiera información sobre precios de mayoreo.',
     col_size: 'Medidas (pulg.)', col_volume: 'Volumen', col_strength: 'Resistencia', col_price: 'Precio', col_stock: 'Disponibilidad', cuft: 'pies³',
     info_ship_t: 'Envío a todo Estados Unidos', info_ship_d: 'Enviamos a cualquier dirección del país.', info_ship_free: 'Envío gratis en pedidos desde {min}.',
     info_pay_t: 'Pago seguro', info_pay_d_stripe: 'Pagas con tarjeta en la página segura de Stripe. Nunca vemos ni guardamos el número de tu tarjeta.', info_pay_d_manual: 'Confirmamos cada pedido por correo antes de enviarlo.',
