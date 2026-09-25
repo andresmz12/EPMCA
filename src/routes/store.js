@@ -62,7 +62,7 @@ r.get('/products/:slug', async (req, res, next) => {
 // Remembers a session's cart so an abandoned-cart email can go out later, once
 // we know an address to send it to (account email, or one typed at checkout).
 // Never blocks the response: a hiccup here shouldn't break adding to cart.
-function saveCartSnapshot(req) {
+function saveCartSnapshot(req, lang) {
   const cart = req.session.cart || {};
   const sessionId = req.sessionID;
   if (!sessionId) return;
@@ -78,7 +78,7 @@ function saveCartSnapshot(req) {
        customer_id = EXCLUDED.customer_id,
        email = COALESCE(EXCLUDED.email, cart_snapshots.email),
        lang = EXCLUDED.lang, items = EXCLUDED.items, updated_at = now(), reminded_at = NULL`,
-    [sessionId, customer ? customer.id : null, customer ? customer.email : null, req.session.lang || 'es', JSON.stringify(cart)],
+    [sessionId, customer ? customer.id : null, customer ? customer.email : null, lang === 'en' ? 'en' : 'es', JSON.stringify(cart)],
   ).catch((e) => console.error('Cart snapshot error:', e.message));
 }
 
@@ -98,7 +98,7 @@ r.post('/cart/add', async (req, res) => {
     req.session.cart = cart;
     if (req.body.next !== 'cart') req.session.cartAdded = { name: p.name, name_es: p.name_es, qty, price_cents: p.price_cents, image_id: p.image_id };
   }
-  saveCartSnapshot(req);
+  saveCartSnapshot(req, res.locals.lang);
   res.redirect(req.body.next === 'cart' ? '/cart' : backTo(req));
 });
 
@@ -112,7 +112,7 @@ r.post('/cart/update', (req, res) => {
   }
   if (req.body.remove) delete cart[lib.int(req.body.remove)];
   req.session.cart = cart;
-  saveCartSnapshot(req);
+  saveCartSnapshot(req, res.locals.lang);
   res.redirect('/cart');
 });
 
@@ -224,7 +224,7 @@ r.get('/checkout/cancel', async (req, res) => {
   if (req.session.pendingCart) {
     req.session.cart = req.session.pendingCart;
     delete req.session.pendingCart;
-    saveCartSnapshot(req);
+    saveCartSnapshot(req, res.locals.lang);
   }
   req.session.flash = { type: 'warn', key: 'cancelled_payment' };
   res.redirect('/cart');
@@ -252,7 +252,7 @@ r.get('/cart/restore', async (req, res) => {
     const products = await all('SELECT id, stock FROM products WHERE id = ANY($1::int[]) AND active', [ids]);
     const cart = req.session.cart || {};
     for (const p of products) {
-      const qty = Math.max(1, Math.min(lib.int(qtyById[p.id]) || 1, p.stock, 999));
+      const qty = Math.max(0, Math.min(lib.int(qtyById[p.id]) || 1, p.stock, 999));
       if (qty) cart[p.id] = qty;
     }
     req.session.cart = cart;
@@ -338,12 +338,14 @@ r.post('/account/register', async (req, res, next) => {
     ? await one(`UPDATE customers SET name=$1, password_hash=$2, phone='', account_created_at=now() WHERE id=$3 RETURNING *`, [name, hash, existing.id])
     : await one('INSERT INTO customers(email, name, password_hash, account_created_at) VALUES($1,$2,$3,now()) RETURNING *', [email, name, hash]);
   if (!existing) notify.welcome(customer, res.locals.lang, res.locals.siteUrl);
-  const cart = req.session.cart, coupon = req.session.coupon;
+  const cart = req.session.cart, coupon = req.session.coupon, oldSessionId = req.sessionID;
   req.session.regenerate((err) => {
     if (err) return next(err);
+    clearCartSnapshot({ sessionID: oldSessionId });
     req.session.customer = customerSession(customer);
     req.session.cart = cart;
     req.session.coupon = existing ? coupon : (coupon || 'WELCOME10');
+    saveCartSnapshot(req, res.locals.lang);
     res.redirect('/account');
   });
 });
@@ -363,12 +365,14 @@ r.post('/account/login', async (req, res, next) => {
     loginLimit.hit(req.ip);
     return res.status(401).render('store/account_login', { error: t('err_login'), title: t('account_login') });
   }
-  const cart = req.session.cart, coupon = req.session.coupon;
+  const cart = req.session.cart, coupon = req.session.coupon, oldSessionId = req.sessionID;
   req.session.regenerate((err) => {
     if (err) return next(err);
+    clearCartSnapshot({ sessionID: oldSessionId });
     req.session.customer = customerSession(customer);
     req.session.cart = cart;
     req.session.coupon = coupon;
+    saveCartSnapshot(req, res.locals.lang);
     res.redirect('/account');
   });
 });

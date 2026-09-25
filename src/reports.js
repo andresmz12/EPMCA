@@ -355,25 +355,31 @@ function packingSlipPdf(res, order, items, settings) {
 
   doc.moveTo(30, doc.y + 12).lineTo(30 + pageW, doc.y + 12).strokeColor('#E4E1DA').lineWidth(1).stroke();
 
-  // The big label box.
+  // The big label box. Content is written first, flowing top-to-bottom so a
+  // long name or address just makes the box taller instead of overlapping
+  // the phone line; the border is stroked afterward around the final height.
   const boxY = doc.y + 26;
-  const boxH = 240;
-  doc.roundedRect(30, boxY, pageW, boxH, 8).lineWidth(1.5).strokeColor('#111214').stroke();
+  doc.y = boxY + 20;
   doc.font('Helvetica-Bold').fontSize(11).fillColor('#6A6E75').text(
-    order.fulfillment === 'pickup' ? 'RECOGE EN TIENDA' : 'ENVIAR A', 50, boxY + 20);
-
+    order.fulfillment === 'pickup' ? 'RECOGE EN TIENDA' : 'ENVIAR A', 50, doc.y, { width: pageW - 40 });
+  doc.moveDown(0.3);
+  doc.font('Helvetica-Bold').fontSize(26).fillColor('#111214').text(order.name, 50, doc.y, { width: pageW - 40 });
+  doc.moveDown(0.2);
   if (order.fulfillment === 'pickup') {
-    doc.font('Helvetica-Bold').fontSize(26).fillColor('#111214').text(order.name, 50, boxY + 44, { width: pageW - 40 });
-    doc.font('Helvetica').fontSize(14).fillColor('#111214').text(settings.pickup_address || '—', 50, doc.y + 10, { width: pageW - 40 });
+    doc.font('Helvetica').fontSize(14).fillColor('#111214').text(settings.pickup_address || '—', 50, doc.y, { width: pageW - 40 });
   } else {
-    doc.font('Helvetica-Bold').fontSize(26).fillColor('#111214').text(order.name, 50, boxY + 44, { width: pageW - 40 });
-    doc.font('Helvetica-Bold').fontSize(22).fillColor('#111214').text(order.address1, 50, doc.y + 8, { width: pageW - 40 });
+    doc.font('Helvetica-Bold').fontSize(22).fillColor('#111214').text(order.address1, 50, doc.y, { width: pageW - 40 });
     if (order.address2) doc.text(order.address2, { width: pageW - 40 });
     doc.text(`${order.city}, ${order.state} ${order.zip}`, { width: pageW - 40 });
   }
-  if (order.phone) doc.font('Helvetica').fontSize(12).fillColor('#6A6E75').text(order.phone, 50, boxY + boxH - 26);
+  if (order.phone) {
+    doc.moveDown(0.5);
+    doc.font('Helvetica').fontSize(12).fillColor('#6A6E75').text(order.phone, 50, doc.y, { width: pageW - 40 });
+  }
+  const boxBottom = Math.max(doc.y + 20, boxY + 240);
+  doc.roundedRect(30, boxY, pageW, boxBottom - boxY, 8).lineWidth(1.5).strokeColor('#111214').stroke();
 
-  doc.y = boxY + boxH + 20;
+  doc.y = boxBottom + 20;
   doc.font('Helvetica-Bold').fontSize(13).fillColor('#111214').text(`Pedido ${order.number}`, 30, doc.y, { continued: true })
     .font('Helvetica').fontSize(11).fillColor('#6A6E75').text(`   ·   ${fmtDateTime(order.created_at)}`);
   if (order.notes) {

@@ -115,7 +115,7 @@
     }
     input.value = c.name + ' — ' + c.email;
     hide();
-    f.dispatchEvent(new Event('change'));
+    document.querySelector('form[action="/admin/orders/new"]').dispatchEvent(new Event('change'));
   }
   input.addEventListener('input', function () {
     clearTimeout(timer);
