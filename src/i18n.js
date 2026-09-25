@@ -103,6 +103,8 @@ const dict = {
     email_intro_reminder: "We're holding your boxes, but we haven't received your payment yet. As soon as it arrives we'll prepare your order:",
     email_subj_upcoming: 'Your recurring order renews on {date}', email_upcoming_cta: 'Manage recurring orders',
     email_upcoming_body: "Heads-up: on {date} we'll charge {amount} and ship your usual order ({items}). To change or cancel it, do it from your account before that date.",
+    promo_popup_title: 'Get 10% off your first order', promo_popup_body: 'Create a free account and save 10% at checkout with this code:',
+    promo_popup_cta: 'Create my account', promo_popup_dismiss: 'No thanks',
   },
   es: {
     nav_shop: 'Cajas', nav_sizes: 'Medidas', nav_shipping: 'Envíos', nav_faq: 'Preguntas', nav_cart: 'Carrito',
@@ -207,6 +209,8 @@ const dict = {
     email_intro_reminder: 'Tenemos tus cajas apartadas, pero aún no recibimos tu pago. Apenas llegue preparamos tu pedido:',
     email_subj_upcoming: 'Tu pedido recurrente se renueva el {date}', email_upcoming_cta: 'Administrar pedidos recurrentes',
     email_upcoming_body: 'Te avisamos: el {date} cobraremos {amount} y enviaremos tu pedido de siempre ({items}). Si quieres cambiarlo o cancelarlo, hazlo desde tu cuenta antes de esa fecha.',
+    promo_popup_title: 'Ten 10% de descuento en tu primer pedido', promo_popup_body: 'Crea una cuenta gratis y ahorra 10% al pagar con este código:',
+    promo_popup_cta: 'Crear mi cuenta', promo_popup_dismiss: 'No, gracias',
   },
 };
 
