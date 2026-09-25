@@ -57,6 +57,33 @@ r.get('/products/:slug', async (req, res, next) => {
   });
 });
 
+// Remembers a session's cart so an abandoned-cart email can go out later, once
+// we know an address to send it to (account email, or one typed at checkout).
+// Never blocks the response: a hiccup here shouldn't break adding to cart.
+function saveCartSnapshot(req) {
+  const cart = req.session.cart || {};
+  const sessionId = req.sessionID;
+  if (!sessionId) return;
+  if (!Object.keys(cart).length) {
+    q('DELETE FROM cart_snapshots WHERE session_id=$1', [sessionId]).catch(() => {});
+    return;
+  }
+  const customer = req.session.customer;
+  q(
+    `INSERT INTO cart_snapshots(session_id, customer_id, email, lang, items, updated_at, reminded_at)
+     VALUES($1,$2,$3,$4,$5,now(),NULL)
+     ON CONFLICT (session_id) DO UPDATE SET
+       customer_id = EXCLUDED.customer_id,
+       email = COALESCE(EXCLUDED.email, cart_snapshots.email),
+       lang = EXCLUDED.lang, items = EXCLUDED.items, updated_at = now(), reminded_at = NULL`,
+    [sessionId, customer ? customer.id : null, customer ? customer.email : null, req.session.lang || 'es', JSON.stringify(cart)],
+  ).catch((e) => console.error('Cart snapshot error:', e.message));
+}
+
+function clearCartSnapshot(req) {
+  if (req.sessionID) q('DELETE FROM cart_snapshots WHERE session_id=$1', [req.sessionID]).catch(() => {});
+}
+
 r.post('/cart/add', async (req, res) => {
   const id = lib.int(req.body.product_id);
   const qty = Math.max(1, Math.min(lib.int(req.body.qty, 1), 999));
@@ -67,6 +94,7 @@ r.post('/cart/add', async (req, res) => {
     req.session.cart = cart;
     if (req.body.next !== 'cart') req.session.cartAdded = { name: p.name, name_es: p.name_es, qty, price_cents: p.price_cents, image_id: p.image_id };
   }
+  saveCartSnapshot(req);
   res.redirect(req.body.next === 'cart' ? '/cart' : backTo(req));
 });
 
@@ -80,6 +108,7 @@ r.post('/cart/update', (req, res) => {
   }
   if (req.body.remove) delete cart[lib.int(req.body.remove)];
   req.session.cart = cart;
+  saveCartSnapshot(req);
   res.redirect('/cart');
 });
 
@@ -167,6 +196,7 @@ r.post('/checkout', async (req, res) => {
       req.session.pendingCart = req.session.cart; // restore if the customer cancels
       req.session.cart = {};
       req.session.coupon = null;
+      clearCartSnapshot(req);
       return res.redirect(303, url);
     } catch (e) {
       console.error('Stripe error:', e.message);
@@ -177,6 +207,7 @@ r.post('/checkout', async (req, res) => {
 
   req.session.cart = {};
   req.session.coupon = null;
+  clearCartSnapshot(req);
   notify.orderPlaced(order, res.locals.siteUrl);
   res.redirect(`/order/${order.number}?t=${order.access_token}`);
 });
@@ -187,8 +218,37 @@ r.get('/checkout/cancel', async (req, res) => {
   if (req.session.pendingCart) {
     req.session.cart = req.session.pendingCart;
     delete req.session.pendingCart;
+    saveCartSnapshot(req);
   }
   req.session.flash = { type: 'warn', key: 'cancelled_payment' };
+  res.redirect('/cart');
+});
+
+// Lets a guest's cart-abandonment reminder go out even if they never finish
+// checkout: captures the email as soon as they type it, tied to their
+// existing cart snapshot (a no-op if the cart is already empty by then).
+r.post('/checkout/save-email', (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 200);
+  if (EMAIL_RE.test(email) && req.sessionID) {
+    q('UPDATE cart_snapshots SET email=$1 WHERE session_id=$2', [email, req.sessionID]).catch(() => {});
+  }
+  res.status(204).end();
+});
+
+// Rebuilds a cart from an abandoned-cart email link: only items still active
+// and in stock are restored, so a stale email never oversells.
+r.get('/cart/restore', async (req, res) => {
+  const ids = String(req.query.items || '').split(',').map((s) => lib.int(s.split(':')[0])).filter(Boolean);
+  if (ids.length) {
+    const qtyById = Object.fromEntries(String(req.query.items).split(',').map((s) => s.split(':').map(Number)));
+    const products = await all('SELECT id, stock FROM products WHERE id = ANY($1::int[]) AND active', [ids]);
+    const cart = req.session.cart || {};
+    for (const p of products) {
+      const qty = Math.max(1, Math.min(lib.int(qtyById[p.id]) || 1, p.stock, 999));
+      if (qty) cart[p.id] = qty;
+    }
+    req.session.cart = cart;
+  }
   res.redirect('/cart');
 });
 

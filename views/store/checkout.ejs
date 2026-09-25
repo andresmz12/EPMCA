@@ -8,7 +8,7 @@
         <legend><%= t('contact_info') %></legend>
         <div class="field"><label for="name"><%= t('full_name') %> *</label><input id="name" name="name" required autocomplete="name" value="<%= form.name || '' %>"></div>
         <div class="row">
-          <div class="field"><label for="email"><%= t('email') %> *</label><input id="email" type="email" name="email" required autocomplete="email" value="<%= form.email || '' %>"></div>
+          <div class="field"><label for="email"><%= t('email') %> *</label><input id="email" type="email" name="email" required autocomplete="email" value="<%= form.email || '' %>" data-save-email></div>
           <div class="field"><label for="phone"><%= t('phone') %></label><input id="phone" type="tel" name="phone" autocomplete="tel" value="<%= form.phone || '' %>"></div>
         </div>
       </fieldset>
@@ -63,6 +63,16 @@
   }
   f.addEventListener('change', sync); sync();
   f.addEventListener('submit', function () { setTimeout(function () { btn.disabled = true; }, 0); });
+  var emailInput = f.querySelector('[data-save-email]');
+  if (emailInput) {
+    emailInput.addEventListener('blur', function () {
+      if (!emailInput.checkValidity()) return;
+      fetch('/checkout/save-email', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'email=' + encodeURIComponent(emailInput.value.trim()),
+      }).catch(function () {});
+    });
+  }
 })();
 </script>
 <%- include('_foot') %>

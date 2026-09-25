@@ -25,6 +25,21 @@ async function paymentReminders(settings) {
   }
 }
 
+// Carts left untouched for 2-3 hours with a known email get one reminder.
+// The window's upper bound keeps a months-old session from suddenly emailing
+// someone once a stale row finally gets noticed.
+async function cartReminders(settings) {
+  if (settings.cart_reminder_enabled !== 'true') return;
+  const due = await all(
+    `SELECT session_id, email, lang, items FROM cart_snapshots
+     WHERE email IS NOT NULL AND reminded_at IS NULL
+       AND updated_at < now() - interval '2 hours' AND updated_at > now() - interval '3 days'`);
+  for (const row of due) {
+    const claimed = await one('UPDATE cart_snapshots SET reminded_at=now() WHERE session_id=$1 AND reminded_at IS NULL RETURNING session_id', [row.session_id]);
+    if (claimed) await notify.abandonedCart(row);
+  }
+}
+
 async function digestData() {
   const toShip = await all(
     `SELECT id, number, name, city, state, fulfillment, GREATEST(0, floor(extract(epoch FROM now() - COALESCE(paid_at, created_at)) / 86400))::int AS days
@@ -55,7 +70,7 @@ async function dailyDigest(settings) {
 async function runAll() {
   const { getSettings } = require('./db');
   const settings = await getSettings();
-  for (const job of [releaseAbandoned, () => paymentReminders(settings), () => dailyDigest(settings)]) {
+  for (const job of [releaseAbandoned, () => paymentReminders(settings), () => cartReminders(settings), () => dailyDigest(settings)]) {
     try { await job(); } catch (e) { console.error('Job error:', e.message); }
   }
 }

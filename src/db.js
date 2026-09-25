@@ -238,6 +238,20 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 
+-- One row per browser session with a non-empty cart, so an abandoned-cart
+-- reminder can be sent once the customer's email is known (account, or
+-- typed at checkout) and the cart has sat untouched for a couple of hours.
+CREATE TABLE IF NOT EXISTS cart_snapshots (
+  session_id TEXT PRIMARY KEY,
+  customer_id INT REFERENCES customers(id) ON DELETE SET NULL,
+  email TEXT,
+  lang TEXT NOT NULL DEFAULT 'es',
+  items JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  reminded_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS cart_snapshots_due_idx ON cart_snapshots(updated_at) WHERE reminded_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS "session" (
   "sid" varchar NOT NULL COLLATE "default" PRIMARY KEY,
   "sess" json NOT NULL,

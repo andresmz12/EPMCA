@@ -102,6 +102,29 @@ ${button(`${base}/admin/orders?status=paid`, 'Abrir pedidos')}`;
   return mail.send({ to, subject: `Resumen del día · ${d.toShip.length} por despachar · ${d.unpaid.length} sin pagar`, html: layout(settings, 'Resumen del día', body, 'Resumen automático diario. Se puede apagar en Admin → Configuración.') });
 }
 
+// A session's cart sat untouched for a couple of hours and we now know an
+// email to reach them at (account, or typed at checkout).
+async function abandonedCart(row) {
+  const settings = await getSettings();
+  if (settings.cart_reminder_enabled !== 'true' || !row.email) return;
+  const ids = Object.keys(row.items || {}).map(Number).filter(Boolean);
+  if (!ids.length) return;
+  const products = await all('SELECT id, name, name_es, price_cents, image_id, stock FROM products WHERE id = ANY($1::int[]) AND active', [ids]);
+  const t = makeT(row.lang);
+  const lines = products
+    .map((p) => ({ p, qty: Math.max(0, Math.min(Number(row.items[p.id]) || 0, p.stock || 0)) }))
+    .filter((l) => l.qty > 0);
+  if (!lines.length) return;
+  const base = siteUrl();
+  const restoreItems = lines.map((l) => `${l.p.id}:${l.qty}`).join(',');
+  const rows = lines.map((l) => `<tr><td style="padding:8px 0;border-bottom:1px solid #EEE;font-size:14px">${esc(row.lang === 'es' && l.p.name_es ? l.p.name_es : l.p.name)} × ${l.qty}</td></tr>`).join('');
+  const subject = t('email_subj_cart');
+  const body = `<p>${t('email_cart_body')}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
+${button(`${base}/cart/restore?items=${encodeURIComponent(restoreItems)}`, t('email_cart_cta'))}`;
+  await mail.send({ to: row.email, subject, html: layout(settings, subject, body, t('email_footer', { email: esc(settings.support_email) })) });
+}
+
 // Fires the moment an order pushes a product at or below the low-stock line,
 // instead of waiting for the next daily digest.
 async function lowStockAlert(crossed) {
@@ -122,6 +145,7 @@ ${button(`${base}/admin/products`, 'Abrir productos')}`;
 module.exports = {
   rememberBase,
   lowStockAlert: safe(lowStockAlert),
+  abandonedCart: safe(abandonedCart),
   // Web order with manual payment: confirm to the customer, alert the store.
   orderPlaced: safe(async (order, base) => { await customerOrderEmail(order, 'pending', base); await storeOrderAlert(order, base); }),
   // Card payment confirmed (Stripe checkout or recurring cycle).
