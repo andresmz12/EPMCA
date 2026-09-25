@@ -17,41 +17,43 @@
     <div>
       <h1><%= pt(product, 'name') %></h1>
       <p class="muted"><%= pt(product, 'short_desc') %></p>
+      <% const tiers = wholesaleTiers(product); %>
       <div class="buybox">
-        <div class="price">
-          <%= money(product.price_cents) %><% if (product.compare_at_cents > product.price_cents) { %><s><%= money(product.compare_at_cents) %></s><span class="badge-off">-<%= Math.round((1 - product.price_cents / product.compare_at_cents) * 100) %>%</span><% } %>
+        <div class="price" id="unitprice">
+          <span id="unitprice-val"><%= money(product.price_cents) %></span><% if (product.compare_at_cents > product.price_cents) { %><s><%= money(product.compare_at_cents) %></s><span class="badge-off">-<%= Math.round((1 - product.price_cents / product.compare_at_cents) * 100) %>%</span><% } %>
           <span class="per"><%= product.pack_size > 1 ? '' : t('per_box') %></span>
         </div>
+        <% if (tiers.length) { %><div class="muted small" id="unitprice-hint" style="margin:-8px 0 10px"></div><% } %>
         <%- include('_stock', { p: product }) %>
         <table class="specs">
           <tr><th><%= t('dimensions') %></th><td><%= product.dimensions || '—' %></td></tr>
           <tr><th><%= t('strength') %></th><td><%= product.wall_type === 'single' ? t('strength_val_single') : t('strength_val') %></td></tr>
           <tr><th><%= t('nav_shipping') %></th><td><%= t('info_ship_d') %></td></tr>
         </table>
-        <form method="post" action="/cart/add" class="buy">
+        <form method="post" action="/cart/add" class="buy" id="buyform" data-price="<%= product.price_cents %>" data-tiers='<%- JSON.stringify(tiers) %>'>
           <input type="hidden" name="product_id" value="<%= product.id %>">
           <input type="hidden" name="next" value="cart">
           <div class="qty">
             <button type="button" data-step="-1" aria-label="-">−</button>
-            <input type="number" name="qty" value="<%= product.pack_size > 1 ? 1 : 10 %>" min="1" max="<%= Math.max(1, product.stock) %>" aria-label="<%= t('qty') %>">
+            <input type="number" name="qty" id="qtyinput" value="<%= product.pack_size > 1 ? 1 : 10 %>" min="1" max="<%= Math.max(1, product.stock) %>" aria-label="<%= t('qty') %>">
             <button type="button" data-step="1" aria-label="+">+</button>
           </div>
           <button class="btn orange" <%= product.stock <= 0 ? 'disabled' : '' %>><%= product.stock <= 0 ? t('out_of_stock') : t('add_to_cart') %></button>
         </form>
+        <% if (tiers.length) { %>
+        <details class="wholesale-details">
+          <summary><%= t('wholesale_title') %></summary>
+          <p class="muted small"><%= t('wholesale_sub') %></p>
+          <table class="specs">
+            <tr><th><%= t('wholesale_col_qty') %></th><th class="num"><%= t('wholesale_col_price') %></th></tr>
+            <% tiers.forEach(function (tier) { %>
+            <tr><td><%= tier.qty %>+</td><td class="num"><%= money(tier.cents) %></td></tr>
+            <% }) %>
+          </table>
+        </details>
+        <% } %>
       </div>
       <div class="prose"><p><%= pt(product, 'description') %></p></div>
-      <% const tiers = wholesaleTiers(product); if (tiers.length) { %>
-      <div class="panel" style="margin-top:18px">
-        <h3 style="font-size:15px;margin-bottom:2px"><%= t('wholesale_title') %></h3>
-        <p class="muted small" style="margin-bottom:12px"><%= t('wholesale_sub') %></p>
-        <table class="specs">
-          <tr><th><%= t('wholesale_col_qty') %></th><th class="num"><%= t('wholesale_col_price') %></th></tr>
-          <% tiers.forEach(function (tier) { %>
-          <tr><td><%= tier.qty %>+</td><td class="num"><%= money(tier.cents) %></td></tr>
-          <% }) %>
-        </table>
-      </div>
-      <% } %>
     </div>
   </div>
   <% if (others.length) { %>
@@ -82,4 +84,32 @@
 })();
 </script>
 <% } %>
+<script>
+(function () {
+  var form = document.getElementById('buyform');
+  if (!form) return;
+  var qtyInput = document.getElementById('qtyinput');
+  var valEl = document.getElementById('unitprice-val');
+  var hintEl = document.getElementById('unitprice-hint');
+  var basePrice = Number(form.dataset.price);
+  var tiers = JSON.parse(form.dataset.tiers || '[]');
+  function fmt(cents) { return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function update() {
+    var qty = parseInt(qtyInput.value, 10) || 0;
+    var price = basePrice, next = null;
+    tiers.forEach(function (t) {
+      if (qty >= t.qty) price = t.cents;
+      else if (next === null) next = t;
+    });
+    valEl.textContent = fmt(price);
+    if (hintEl) {
+      hintEl.textContent = price < basePrice
+        ? '<%= t("wholesale_applied") %>'
+        : (next ? '<%= t("wholesale_col_qty") %> ' + next.qty + '+: ' + fmt(next.cents) + ' <%= t("per_box") %>' : '');
+    }
+  }
+  qtyInput.addEventListener('input', update);
+  update();
+})();
+</script>
 <%- include('_foot') %>

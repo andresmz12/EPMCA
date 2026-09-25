@@ -195,6 +195,10 @@ table.sizes td a { font-weight: 700; }
 .specs th { text-align: left; font-weight: 600; color: var(--muted); width: 40%; padding: 9px 0; border-bottom: 1px solid var(--line-2); }
 .specs td { padding: 9px 0; border-bottom: 1px solid var(--line-2); }
 .buybox { border: 1px solid var(--line); border-radius: 10px; padding: 20px; box-shadow: 0 8px 28px -18px rgba(17,18,20,.35); }
+.wholesale-details { margin-top: 16px; border-top: 1px solid var(--line-2); padding-top: 14px; }
+.wholesale-details summary { cursor: pointer; font-weight: 700; font-size: 14.5px; color: var(--ink-2); }
+.wholesale-details summary:hover { color: var(--ink); }
+.wholesale-details .specs { margin: 10px 0 0; font-size: 14px; }
 .buy { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; margin: 22px 0; }
 .buy .btn { flex: 1; min-width: 200px; }
 .prose p { white-space: pre-line; color: var(--ink-2); }
