@@ -50,6 +50,10 @@
         <div class="field"><label>Teléfono</label><input name="phone" value="<%= form.phone || '' %>"></div>
       </div>
       <div class="hint">Con correo, el pedido queda en el historial del cliente.</div>
+      <div class="f2" style="margin-top:10px;align-items:center">
+        <label class="check"><input type="checkbox" name="send_email" <%= form.send_email ? 'checked' : '' %>> Enviarle confirmación por correo</label>
+        <div class="field" style="margin:0"><select name="lang"><option value="es" <%= form.lang !== 'en' ? 'selected' : '' %>>Correo en español</option><option value="en" <%= form.lang === 'en' ? 'selected' : '' %>>Email in English</option></select></div>
+      </div>
     </div>
     <div class="card">
       <h2>Entrega</h2>

@@ -10,6 +10,10 @@
         <div class="field"><label>Correo de contacto</label><input name="support_email" type="email" value="<%= settings.support_email %>"></div>
         <div class="field"><label>Teléfono</label><input name="support_phone" value="<%= settings.support_phone %>" placeholder="(713) 555-0100"></div>
       </div>
+      <div class="f2">
+        <div class="field"><label>WhatsApp</label><input name="whatsapp_number" value="<%= settings.whatsapp_number %>" placeholder="(713) 555-0100"><div class="hint">Muestra un botón flotante de WhatsApp en la tienda. Vacío = oculto.</div></div>
+        <div class="field"><label>Correo para avisos de pedidos</label><input name="notify_email" type="email" value="<%= settings.notify_email %>" placeholder="Si lo dejas vacío, se usa el de contacto"><div class="hint">Aquí llegan los pedidos nuevos y mensajes del formulario.</div></div>
+      </div>
       <div class="field"><label>Anuncio superior (inglés)</label><input name="announcement_en" value="<%= settings.announcement_en %>"></div>
       <div class="field"><label>Anuncio superior (español)</label><input name="announcement_es" value="<%= settings.announcement_es %>"><div class="hint">Déjalos vacíos para ocultar la barra.</div></div>
     </div>

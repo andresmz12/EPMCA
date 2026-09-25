@@ -80,6 +80,31 @@ Sin `ADMIN_EMAIL`/`ADMIN_PASSWORD`, en desarrollo el acceso es `admin@empacalo.n
 
 ---
 
+## Correos automáticos (SendGrid)
+
+Sin SendGrid la tienda funciona igual, pero no envía correos. Con SendGrid se envían:
+
+- Al cliente: confirmación del pedido, pago recibido, "va en camino"/"listo para recoger" (con número de rastreo), entregado y cancelado; bienvenida con el cupón `WELCOME10`; enlace para recuperar la contraseña.
+- A la tienda: aviso de cada pedido nuevo y de cada mensaje del formulario de contacto (se puede responder directo al cliente). Llegan al "Correo para avisos de pedidos" de *Configuración* (o al correo de contacto).
+
+Pasos:
+
+1. En SendGrid → **Settings → Sender Authentication → Authenticate Your Domain**: elige tu proveedor DNS (Hostinger), dominio `empacalo.us`, y agrega en Hostinger los registros CNAME que te da. Sin esto los correos caen en spam.
+2. **Settings → API Keys → Create API Key** con permiso **Mail Send**.
+3. En Railway → Variables:
+
+   | Variable | Valor |
+   |---|---|
+   | `SENDGRID_API_KEY` | la llave `SG....` |
+   | `EMAIL_FROM` | un correo de tu dominio autenticado, ej. `pedidos@empacalo.us` |
+   | `EMAIL_FROM_NAME` | `EMPACALO` (opcional) |
+
+Al cambiar el estado de un pedido en el admin, la casilla *Enviar correo al cliente* decide si se le avisa. En los pedidos registrados a mano también puedes elegir si mandar la confirmación y en qué idioma.
+
+## WhatsApp
+
+En *Admin → Configuración* escribe tu número de WhatsApp: aparece un botón flotante en toda la tienda (en la página de cada caja, el mensaje ya menciona esa caja). Déjalo vacío para ocultarlo.
+
 ## SEO
 
 Ya incluido: títulos y descripciones por página, canonical, versiones en inglés (`/`) y español (`/?lang=es`) enlazadas con hreflang, Open Graph para redes sociales, datos estructurados (Organization, FAQ, Product con precio/stock/envío, Breadcrumb), `/robots.txt` y `/sitemap.xml`. Carrito, checkout, cuenta y pedidos no se indexan.

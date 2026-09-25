@@ -297,3 +297,8 @@ footer.site .legal { border-top: 1px solid #2B2D32; margin-top: 32px; padding-to
   .line .amt { grid-column: 2; text-align: left; }
   footer.site .cols { grid-template-columns: 1fr; }
 }
+
+/* WhatsApp floating button */
+.wa-float { position: fixed; right: 18px; bottom: 18px; z-index: 90; display: flex; align-items: center; gap: 8px; background: #25D366; color: #fff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 12px 16px; border-radius: 999px; box-shadow: 0 8px 24px -8px rgba(0,0,0,.35); }
+.wa-float:hover { background: #1EBE5A; }
+@media (max-width: 640px) { .wa-float span { display: none; } .wa-float { padding: 13px; } }

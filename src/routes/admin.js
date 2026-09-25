@@ -5,6 +5,7 @@ const lib = require('../lib');
 const auth = require('../auth');
 const orders = require('../orders');
 const reports = require('../reports');
+const notify = require('../notify');
 const { limiter } = require('../ratelimit');
 
 const r = express.Router();
@@ -324,7 +325,7 @@ const manualForm = async (res, form, error, status = 200) => {
   res.status(status).render('admin/order_new', { section: 'orders', products, form, error, PAYMENTS: lib.MANUAL_PAYMENTS.map((k) => [k, lib.PAYMENT_ES[k]]) });
 };
 
-r.get('/orders/new', (req, res) => manualForm(res, { status: 'paid', payment_method: 'cash', fulfillment: 'pickup', qty: {}, price: {} }, null));
+r.get('/orders/new', (req, res) => manualForm(res, { status: 'paid', payment_method: 'cash', fulfillment: 'pickup', qty: {}, price: {}, lang: 'es', send_email: true }, null));
 
 r.post('/orders/new', async (req, res) => {
   const b = req.body;
@@ -335,6 +336,7 @@ r.post('/orders/new', async (req, res) => {
     status: lib.STATUS_ES[b.status] && b.status !== 'cancelled' ? b.status : 'pending',
     payment_method: lib.MANUAL_PAYMENTS.includes(b.payment_method) ? b.payment_method : 'other',
     shipping: b.shipping || '', discount: b.discount || '', tax: b.tax || '', allow_oversell: b.allow_oversell === 'on', qty: {}, price: {},
+    lang: b.lang === 'en' ? 'en' : 'es', send_email: b.send_email === 'on',
   };
   const lines = [];
   for (const [k, v] of Object.entries(b)) {
@@ -363,7 +365,8 @@ r.post('/orders/new', async (req, res) => {
       lines, form, amounts, paymentMethod: form.payment_method, status: form.status,
       adminEmail: res.locals.admin.email, allowOversell: form.allow_oversell,
     });
-    notice(req, `Pedido ${order.number} registrado.`);
+    if (form.send_email && order.email) notify.orderStatus(order, res.locals.siteUrl);
+    notice(req, `Pedido ${order.number} registrado.${form.send_email && order.email ? ' Se envió la confirmación al cliente.' : ''}`);
     res.redirect(`/admin/orders/${order.id}`);
   } catch (e) {
     if (e instanceof orders.StockError) return manualForm(res, form, `No hay suficiente stock de: ${e.message}. Ajusta la cantidad o marca "vender aunque no haya stock".`, 400);
@@ -396,6 +399,9 @@ r.post('/orders/:id', async (req, res, next) => {
     `UPDATE orders SET status=$1, tracking=$2, notes=$3, updated_at=now(),
        paid_at = CASE WHEN $1 IN ('paid','shipped','delivered') AND paid_at IS NULL THEN now() ELSE paid_at END
      WHERE id=$4`, [status, tracking, notes, id]);
+  if (status !== order.status && req.body.notify_customer === 'on') {
+    notify.orderStatus(await one('SELECT * FROM orders WHERE id=$1', [id]), res.locals.siteUrl);
+  }
   notice(req, status === 'cancelled' && order.status !== 'cancelled' ? 'Pedido cancelado y stock devuelto al inventario.' : 'Pedido actualizado.');
   res.redirect(`/admin/orders/${id}`);
 });
@@ -486,7 +492,7 @@ r.post('/coupons/:id/delete', async (req, res) => {
 
 /* ───────────── Settings ───────────── */
 r.use('/settings', requirePerm('store'));
-const SETTING_FIELDS = ['store_name', 'support_email', 'support_phone', 'pickup_address', 'announcement_en', 'announcement_es'];
+const SETTING_FIELDS = ['store_name', 'support_email', 'support_phone', 'pickup_address', 'announcement_en', 'announcement_es', 'notify_email'];
 r.get('/settings', (req, res) => res.render('admin/settings', { section: 'settings' }));
 r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings'), async (req, res) => {
   const values = {};
@@ -499,6 +505,10 @@ r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings')
   const tax = Number(String(req.body.tax_rate_percent || '0').replace(',', '.'));
   values.tax_rate_percent = String(Number.isFinite(tax) && tax >= 0 && tax < 50 ? tax : 0);
   values.pickup_enabled = req.body.pickup_enabled === 'on' ? 'true' : 'false';
+  // wa.me needs digits with country code; a 10-digit number is assumed to be US.
+  let wa = String(req.body.whatsapp_number || '').replace(/\D/g, '').slice(0, 15);
+  if (wa.length === 10) wa = `1${wa}`;
+  values.whatsapp_number = wa;
   await tx(async (c) => {
     for (const [k, v] of Object.entries(values)) {
       await c.query('INSERT INTO settings(key,value) VALUES($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value', [k, v]);

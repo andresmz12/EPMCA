@@ -141,6 +141,16 @@ ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS subscription_id INT REFERENCES subscriptions(id) ON DELETE SET NULL;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_invoice_id TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'web';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS lang TEXT NOT NULL DEFAULT 'en';
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS lang TEXT NOT NULL DEFAULT 'en';
+
+-- Only a hash of the emailed token is stored.
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash TEXT PRIMARY KEY,
+  customer_id INT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ
+);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_by TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS orders_stripe_invoice_uidx ON orders(stripe_invoice_id) WHERE stripe_invoice_id IS NOT NULL;
 
@@ -233,6 +243,8 @@ const DEFAULT_SETTINGS = {
   pickup_address: '',
   support_email: 'info@empacalo.net',
   support_phone: '',
+  whatsapp_number: '',
+  notify_email: '',
   announcement_en: 'We ship anywhere in the USA · Free shipping on orders over $150',
   announcement_es: 'Enviamos a todo Estados Unidos · Envío gratis en pedidos desde $150',
 };

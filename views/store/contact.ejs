@@ -22,6 +22,7 @@
     </div>
     <aside class="panel gray">
       <h3><%= t('contact_direct_title') %></h3>
+      <% if (settings.whatsapp_number) { %><p><a class="btn block" style="background:#25D366" href="https://wa.me/<%= settings.whatsapp_number %>?text=<%= encodeURIComponent(t('wa_general')) %>" target="_blank" rel="noopener"><%= t('wa_label') %></a></p><% } %>
       <% if (settings.support_email) { %><p><a href="mailto:<%= settings.support_email %>"><%= settings.support_email %></a></p><% } %>
       <% if (settings.support_phone) { %><p><a href="tel:<%= settings.support_phone.replace(/[^\d+]/g,'') %>"><%= settings.support_phone %></a></p><% } %>
       <p class="muted small" style="margin-top:14px"><%= t('contact_hours_note') %></p>

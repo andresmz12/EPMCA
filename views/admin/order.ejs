@@ -38,6 +38,7 @@
     </div>
     <div class="field"><label>Número de rastreo / info de entrega</label><input name="tracking" value="<%= order.tracking %>" placeholder="Ej: UPS 1Z999... o 'Listo para recoger'"><div class="hint">El cliente lo ve en la página de su pedido.</div></div>
     <div class="field"><label>Notas</label><textarea name="notes" rows="4"><%= order.notes %></textarea></div>
+    <% if (order.email) { %><label class="check"><input type="checkbox" name="notify_customer" checked> Enviar correo al cliente si cambia el estado</label><% } %>
     <button class="btn orange" style="width:100%;justify-content:center">Guardar</button>
     <p class="small muted" style="margin-bottom:0">Enlace del cliente: <a href="/order/<%= order.number %>?t=<%= order.access_token %>" target="_blank" rel="noopener">ver pedido ↗</a></p>
   </form>

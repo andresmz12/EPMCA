@@ -3,6 +3,14 @@
 const { one } = require('./db');
 const orders = require('./orders');
 const subscriptions = require('./subscriptions');
+const notify = require('./notify');
+
+// Emails only once: markPaid returns the row only on the pending → paid transition.
+async function markPaidAndNotify(orderId, base) {
+  const paid = await orders.markPaid(orderId);
+  if (paid) notify.orderPaid(paid, base);
+  return paid;
+}
 
 const key = process.env.STRIPE_SECRET_KEY;
 const stripe = key ? require('stripe')(key) : null;
@@ -47,11 +55,11 @@ async function createCheckout(req, order, priced) {
 }
 
 /** Called from the success page so orders get marked paid even if the webhook isn't set up. */
-async function syncFromSession(order, sessionId) {
+async function syncFromSession(order, sessionId, base) {
   if (!enabled || !sessionId || order.stripe_session_id !== sessionId || order.status !== 'pending') return order;
   try {
     const s = await stripe.checkout.sessions.retrieve(sessionId);
-    if (s.payment_status === 'paid') return (await orders.markPaid(order.id)) || order;
+    if (s.payment_status === 'paid') return (await markPaidAndNotify(order.id, base)) || order;
   } catch (e) {
     console.error('Stripe sync error:', e.message);
   }
@@ -82,7 +90,7 @@ async function webhook(req, res) {
   const orderId = Number(s.metadata && s.metadata.order_id);
   if (orderId) {
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
-      if (s.payment_status === 'paid') await orders.markPaid(orderId);
+      if (s.payment_status === 'paid') await markPaidAndNotify(orderId, `${req.protocol}://${req.get('host')}`);
     } else if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') {
       const o = await one('SELECT status FROM orders WHERE id=$1', [orderId]);
       if (o && o.status === 'pending') await orders.cancelOrder(orderId);

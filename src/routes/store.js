@@ -7,12 +7,16 @@ const payments = require('../payments');
 const subscriptions = require('../subscriptions');
 const { limiter } = require('../ratelimit');
 const seo = require('../seo');
+const notify = require('../notify');
+const mail = require('../mail');
+const crypto = require('crypto');
 
 const r = express.Router();
 
 const loginLimit = limiter({ max: 10, windowMs: 15 * 60 * 1000 });
 const signupLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
 const contactLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
+const forgotLimit = limiter({ max: 5, windowMs: 60 * 60 * 1000 });
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const couponText = (t, msg) => (msg ? t(msg.key, msg.vars) : null);
@@ -137,6 +141,7 @@ r.get('/checkout', async (req, res) => {
 r.post('/checkout', async (req, res) => {
   const { settings, t, customer } = res.locals;
   const form = readForm(req.body);
+  form.lang = res.locals.lang;
   req.session.checkoutForm = form;
   const fail = (key) => { req.session.checkoutError = t(key); res.redirect('/checkout'); };
 
@@ -171,6 +176,7 @@ r.post('/checkout', async (req, res) => {
 
   req.session.cart = {};
   req.session.coupon = null;
+  notify.orderPlaced(order, res.locals.siteUrl);
   res.redirect(`/order/${order.number}?t=${order.access_token}`);
 });
 
@@ -196,7 +202,7 @@ r.get('/order/:number', async (req, res, next) => {
   }
   if (!order) return next();
   if (req.query.session_id) {
-    order = await payments.syncFromSession(order, String(req.query.session_id));
+    order = await payments.syncFromSession(order, String(req.query.session_id), res.locals.siteUrl);
     delete req.session.pendingCart;
   }
   const items = await all('SELECT oi.*, p.name_es FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=$1 ORDER BY oi.id', [order.id]);
@@ -235,6 +241,7 @@ r.post('/account/register', async (req, res, next) => {
   const customer = existing
     ? await one(`UPDATE customers SET name=$1, password_hash=$2, phone='', account_created_at=now() WHERE id=$3 RETURNING *`, [name, hash, existing.id])
     : await one('INSERT INTO customers(email, name, password_hash, account_created_at) VALUES($1,$2,$3,now()) RETURNING *', [email, name, hash]);
+  if (!existing) notify.welcome(customer, res.locals.lang, res.locals.siteUrl);
   const cart = req.session.cart, coupon = req.session.coupon;
   req.session.regenerate((err) => {
     if (err) return next(err);
@@ -301,7 +308,7 @@ r.post('/account/subscribe', async (req, res) => {
   const priced = await lib.priceCart(req.session.cart, null, settings, 'delivery');
   if (!priced.lines.length) return res.redirect('/cart');
   try {
-    const url = await subscriptions.createCheckout(req, full, priced, form, interval);
+    const url = await subscriptions.createCheckout(req, full, priced, form, interval, res.locals.lang);
     res.redirect(303, url);
   } catch (e) {
     console.error('Subscription checkout error:', e.message);
@@ -359,7 +366,54 @@ r.post('/contact', async (req, res) => {
   if (!EMAIL_RE.test(form.email)) return fail('err_email');
   contactLimit.hit(req.ip);
   await q('INSERT INTO contact_messages(name, email, phone, message) VALUES($1,$2,$3,$4)', [form.name, form.email, form.phone, form.message]);
+  notify.contactMessage(form);
   res.render('store/contact', { error: null, sent: true, form: {}, title: t('contact_title') });
+});
+
+/* ───────────── Password reset ───────────── */
+const hashToken = (tok) => crypto.createHash('sha256').update(tok).digest('hex');
+
+r.get('/account/forgot', (req, res) => {
+  const { t } = res.locals;
+  res.render('store/account_forgot', { sent: false, error: mail.enabled ? null : t('forgot_unavailable'), title: t('forgot_title'), noindex: true });
+});
+
+r.post('/account/forgot', async (req, res) => {
+  const { t, siteUrl, lang } = res.locals;
+  const render = (o) => res.render('store/account_forgot', { sent: false, error: null, title: t('forgot_title'), noindex: true, ...o });
+  if (!mail.enabled) return render({ error: t('forgot_unavailable') });
+  if (forgotLimit.blocked(req.ip)) return render({ error: t('err_too_many') });
+  forgotLimit.hit(req.ip);
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 200);
+  const customer = EMAIL_RE.test(email) ? await one('SELECT * FROM customers WHERE email=$1 AND password_hash IS NOT NULL', [email]) : null;
+  if (customer) {
+    const token = crypto.randomBytes(32).toString('base64url');
+    await q("INSERT INTO password_resets(token_hash, customer_id, expires_at) VALUES($1,$2, now() + interval '1 hour')", [hashToken(token), customer.id]);
+    notify.passwordReset(customer, `${siteUrl}/account/reset/${token}`, lang);
+  }
+  // Same answer either way, so this form can't be used to find out who has an account.
+  render({ sent: true });
+});
+
+const validReset = (token) => one(
+  'SELECT * FROM password_resets WHERE token_hash=$1 AND used_at IS NULL AND expires_at > now()', [hashToken(String(token))]);
+
+r.get('/account/reset/:token', async (req, res) => {
+  const { t } = res.locals;
+  const ok = await validReset(req.params.token);
+  res.render('store/account_reset', { token: ok ? req.params.token : null, error: ok ? null : t('reset_invalid'), title: t('reset_title'), noindex: true });
+});
+
+r.post('/account/reset/:token', async (req, res) => {
+  const { t } = res.locals;
+  const row = await validReset(req.params.token);
+  if (!row) return res.status(400).render('store/account_reset', { token: null, error: t('reset_invalid'), title: t('reset_title'), noindex: true });
+  const password = String(req.body.password || '');
+  if (password.length < 8) return res.status(400).render('store/account_reset', { token: req.params.token, error: t('err_password_len'), title: t('reset_title'), noindex: true });
+  await q('UPDATE customers SET password_hash=$1 WHERE id=$2', [await auth.hashPassword(password), row.customer_id]);
+  await q('UPDATE password_resets SET used_at=now() WHERE customer_id=$1 AND used_at IS NULL', [row.customer_id]);
+  req.session.flash = { type: 'ok', key: 'reset_done' };
+  res.redirect('/account/login');
 });
 
 module.exports = r;

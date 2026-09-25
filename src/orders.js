@@ -40,11 +40,11 @@ async function createManualOrder({ lines, form, amounts, paymentMethod, status, 
     const paid = ['paid', 'shipped', 'delivered'].includes(status);
     const { rows: [order] } = await c.query(
       `INSERT INTO orders(number, access_token, customer_id, email, name, phone, fulfillment, address1, address2, city, state, zip,
-         subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, status, payment_method, notes, source, created_by, paid_at)
-       VALUES($1,$2,$3,lower($4),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,'admin',$21, ${paid ? 'now()' : 'NULL'}) RETURNING *`,
+         subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, status, payment_method, notes, source, created_by, lang, paid_at)
+       VALUES($1,$2,$3,lower($4),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,'admin',$21,$22, ${paid ? 'now()' : 'NULL'}) RETURNING *`,
       [lib.orderNumber(), lib.token(), cust ? cust.id : null, form.email, form.name, form.phone, form.fulfillment,
        form.address1, form.address2, form.city, form.state, form.zip,
-       subtotal, discount, amounts.shipping, amounts.tax, total, status, paymentMethod, form.notes, adminEmail]);
+       subtotal, discount, amounts.shipping, amounts.tax, total, status, paymentMethod, form.notes, adminEmail, form.lang === 'en' ? 'en' : 'es']);
     for (const l of lines) {
       await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty) VALUES($1,$2,$3,$4,$5)',
         [order.id, l.product_id, byId[l.product_id].name, l.unit_price_cents, l.qty]);
@@ -85,12 +85,12 @@ async function createOrder({ priced, form, paymentMethod, customerId = null }) {
 
     const { rows: [order] } = await c.query(
       `INSERT INTO orders(number, access_token, customer_id, email, name, phone, fulfillment, address1, address2, city, state, zip,
-         subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, coupon_code, payment_method, notes)
-       VALUES($1,$2,$3,lower($4),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
+         subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, coupon_code, payment_method, notes, lang)
+       VALUES($1,$2,$3,lower($4),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`,
       [lib.orderNumber(), lib.token(), cust.id, form.email, form.name, form.phone, form.fulfillment,
        form.address1, form.address2, form.city, form.state, form.zip,
        priced.subtotal, priced.discount, priced.shipping, priced.tax, priced.total,
-       priced.coupon ? priced.coupon.code : null, paymentMethod, form.notes]);
+       priced.coupon ? priced.coupon.code : null, paymentMethod, form.notes, form.lang === 'es' ? 'es' : 'en']);
 
     for (const l of priced.lines) {
       await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty) VALUES($1,$2,$3,$4,$5)',

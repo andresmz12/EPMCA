@@ -1,0 +1,18 @@
+<%- include('_head') %>
+<div class="wrap page">
+  <div style="max-width:440px;margin:0 auto">
+    <h1 style="font-size:28px"><%= t('forgot_title') %></h1>
+    <% if (sent) { %>
+      <div class="flash ok"><%= t('forgot_sent') %></div>
+    <% } else { %>
+      <p class="muted"><%= t('forgot_sub') %></p>
+      <% if (error) { %><div class="flash err"><%= error %></div><% } %>
+      <form method="post" action="/account/forgot" class="panel">
+        <div class="field"><label for="email"><%= t('email') %></label><input id="email" type="email" name="email" required autocomplete="email" autofocus></div>
+        <button class="btn orange block"><%= t('forgot_send') %></button>
+      </form>
+    <% } %>
+    <p class="muted small" style="margin-top:16px"><a class="textlink" href="/account/login"><%= t('account_login') %></a></p>
+  </div>
+</div>
+<%- include('_foot') %>
