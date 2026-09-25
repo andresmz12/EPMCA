@@ -20,7 +20,7 @@ function baseUrl(req) {
   return (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
 }
 
-async function createCheckout(req, order, priced) {
+async function createCheckout(req, order, priced, urls) {
   const line_items = priced.lines.map((l) => ({
     quantity: l.qty,
     price_data: {
@@ -42,8 +42,8 @@ async function createCheckout(req, order, priced) {
     metadata: { order_id: String(order.id), order_number: order.number },
     line_items,
     expires_at: Math.floor(Date.now() / 1000) + 60 * 31,
-    success_url: `${baseUrl(req)}/order/${order.number}?t=${order.access_token}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl(req)}/checkout/cancel?o=${order.number}&t=${order.access_token}`,
+    success_url: (urls && urls.success) || `${baseUrl(req)}/order/${order.number}?t=${order.access_token}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: (urls && urls.cancel) || `${baseUrl(req)}/checkout/cancel?o=${order.number}&t=${order.access_token}`,
   };
   if (priced.discount > 0) {
     const c = await stripe.coupons.create({ amount_off: priced.discount, currency: 'usd', duration: 'once', name: order.coupon_code || 'Discount' });

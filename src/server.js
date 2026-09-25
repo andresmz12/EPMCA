@@ -105,6 +105,9 @@ app.get('/sitemap.xml', async (req, res) => {
   res.type('application/xml').set('Cache-Control', 'public, max-age=3600').send(seo.sitemap(siteUrlOf(req), pages));
 });
 
+// Mounted before sessions: the mobile app is stateless (bearer token, not a cookie).
+app.use('/api', require('./routes/api'));
+
 app.use(
   session({
     store: new PgStore({ pool, tableName: 'session', createTableIfMissing: false }),
