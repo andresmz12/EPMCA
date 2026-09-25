@@ -3,7 +3,7 @@
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn ghost sm" href="/admin/products/inventory.pdf">Inventario PDF</a>
     <a class="btn ghost sm" href="/admin/products/inventory.xlsx">Inventario Excel</a>
-    <a class="btn orange sm" href="/admin/products/new">+ Nuevo producto</a>
+    <% if (can.settings) { %><a class="btn orange sm" href="/admin/products/new">+ Nuevo producto</a><% } %>
   </div>
 </div>
 <div class="card"><div class="table-wrap"><table>

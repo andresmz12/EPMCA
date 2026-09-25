@@ -17,9 +17,11 @@
   <a class="nav <%= section==='customers'?'on':'' %>" href="/admin/customers">Clientes</a>
   <a class="nav <%= section==='messages'?'on':'' %>" href="/admin/messages">Mensajes<% if (unreadMessages) { %> <span class="pill pending"><%= unreadMessages %></span><% } %></a>
   <% } %>
-  <% if (can.store) { %>
+  <% if (can.products) { %>
   <a class="nav <%= section==='products'?'on':'' %>" href="/admin/products">Productos</a>
   <a class="nav <%= section==='coupons'?'on':'' %>" href="/admin/coupons">Cupones</a>
+  <% } %>
+  <% if (can.settings) { %>
   <a class="nav <%= section==='settings'?'on':'' %>" href="/admin/settings">Configuración</a>
   <% } %>
   <% if (can.users) { %>

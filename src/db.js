@@ -104,7 +104,16 @@ CREATE TABLE IF NOT EXISTS admin_users (
 -- limited staff instead.
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'owner' CHECK (role IN ('owner','staff'));
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS perm_orders BOOLEAN NOT NULL DEFAULT true;
-ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS perm_store BOOLEAN NOT NULL DEFAULT true;
+-- perm_store (old "Tienda": productos + cupones + configuración) is split so
+-- staff can manage the catalog without touching site text/images/settings,
+-- which stay owner-only. Existing "Tienda" grants become "Productos".
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='admin_users' AND column_name='perm_store')
+     AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='admin_users' AND column_name='perm_products') THEN
+    ALTER TABLE admin_users RENAME COLUMN perm_store TO perm_products;
+  END IF;
+END $$;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS perm_products BOOLEAN NOT NULL DEFAULT true;
 
 CREATE TABLE IF NOT EXISTS subscriptions (
   id SERIAL PRIMARY KEY,

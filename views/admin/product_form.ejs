@@ -1,21 +1,27 @@
 <%- include('_head') %>
-<% const cents = (c) => c == null || c === '' ? '' : (c / 100).toFixed(2); %>
+<% const cents = (c) => c == null || c === '' ? '' : (c / 100).toFixed(2); const fullEdit = can.settings; %>
 <div class="top">
   <div><a class="muted small" href="/admin/products">← Productos</a><h1><%= p.id ? p.name : 'Nuevo producto' %></h1></div>
   <% if (p.id) { %><a class="btn ghost sm" href="/products/<%= p.slug %>" target="_blank" rel="noopener">Ver en tienda ↗</a><% } %>
 </div>
 <% if (error) { %><div class="notice err"><%= error %></div><% } %>
+<% if (!fullEdit) { %><div class="notice">Solo puedes cambiar precio, stock y visibilidad. El nombre, la descripción y las fotos las maneja un administrador completo.</div><% } %>
 <form method="post" action="/admin/products<%= p.id ? '/' + p.id : '' %>" enctype="multipart/form-data">
 <div class="grid cols2">
   <div class="card">
+    <% if (fullEdit) { %>
     <div class="field"><label>Nombre (inglés) *</label><input name="name" required value="<%= p.name || '' %>" placeholder='16 × 16 × 16" Double Wall Box'></div>
     <div class="field"><label>Descripción corta (inglés)</label><input name="short_desc" value="<%= p.short_desc || '' %>" maxlength="200"><div class="hint">Aparece en la tarjeta del producto.</div></div>
     <div class="field"><label>Descripción completa (inglés)</label><textarea name="description" rows="7"><%= p.description || '' %></textarea></div>
+    <% } else { %>
+    <div class="field"><label>Nombre</label><input value="<%= p.name || '' %>" disabled></div>
+    <% } %>
     <div class="f3">
       <div class="field"><label>Precio (USD) *</label><input name="price" inputmode="decimal" required value="<%= cents(p.price_cents) %>" placeholder="5.99"></div>
       <div class="field"><label>Precio anterior</label><input name="compare_at" inputmode="decimal" value="<%= cents(p.compare_at_cents) %>" placeholder="Opcional"><div class="hint">Se muestra tachado.</div></div>
       <div class="field"><label>Stock</label><input name="stock" type="number" min="0" value="<%= p.stock ?? 0 %>"></div>
     </div>
+    <% if (fullEdit) { %>
     <div class="f3">
       <div class="field"><label>Medidas</label><input name="dimensions" value="<%= p.dimensions || '' %>" placeholder='16" × 16" × 16"'><div class="hint">Se usa para dibujar la caja si no hay foto.</div></div>
       <div class="field"><label>Unidades por paquete</label><input name="pack_size" type="number" min="1" value="<%= p.pack_size || 1 %>"></div>
@@ -27,6 +33,12 @@
     <div class="field"><label>Descripción corta (español)</label><input name="short_desc_es" value="<%= p.short_desc_es || '' %>" maxlength="200"></div>
     <div class="field"><label>Descripción completa (español)</label><textarea name="description_es" rows="5"><%= p.description_es || '' %></textarea></div>
     <div class="field"><label>URL (slug)</label><input name="slug" value="<%= p.slug || '' %>" placeholder="se genera del nombre"></div>
+    <% } else { %>
+    <div class="f3">
+      <div class="field"><label>Unidades por paquete</label><input value="<%= p.pack_size || 1 %>" disabled></div>
+      <div class="field"><label>Orden</label><input value="<%= p.sort || 0 %>" disabled></div>
+    </div>
+    <% } %>
   </div>
   <div class="grid" style="gap:16px">
     <div class="card">
@@ -37,10 +49,13 @@
     <div class="card">
       <h2>Foto principal</h2>
       <div class="imgprev"><%- include('_pic', { p }) %></div>
+      <% if (fullEdit) { %>
       <input type="file" name="image" accept="image/png,image/jpeg,image/webp">
       <div class="hint">PNG, JPG o WebP, máximo 3 MB. Es la foto de portada: aparece en el catálogo y como imagen grande de la ficha. Sin foto se muestra un dibujo de la caja a escala.</div>
       <% if (p.image_id) { %><label class="check"><input type="checkbox" name="remove_image"> Quitar foto</label><% } %>
+      <% } else { %><div class="hint">Solo un administrador completo puede cambiar la foto.</div><% } %>
     </div>
+    <% if (fullEdit) { %>
     <div class="card">
       <h2>Galería (fotos adicionales)</h2>
       <div class="hint" style="margin-top:-4px;margin-bottom:10px">Hasta 8 fotos extra que el cliente puede ver como miniaturas en la ficha del producto (ángulos, empaque, tamaño de referencia, etc.).</div>
@@ -58,11 +73,12 @@
       <input type="file" name="gallery" accept="image/png,image/jpeg,image/webp" multiple>
       <div class="hint">Puedes seleccionar varias imágenes a la vez.</div>
     </div>
+    <% } %>
     <button class="btn orange" style="justify-content:center;padding:13px"><%= p.id ? 'Guardar cambios' : 'Crear producto' %></button>
   </div>
 </div>
 </form>
-<% if (p.id) { %>
+<% if (p.id && fullEdit) { %>
 <form method="post" action="/admin/products/<%= p.id %>/delete" data-confirm="¿Eliminar este producto? Si tiene pedidos, solo se ocultará." style="margin-top:24px">
   <button class="btn danger sm">Eliminar producto</button>
 </form>

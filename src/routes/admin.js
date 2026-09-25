@@ -73,7 +73,7 @@ r.post('/logout', (req, res) => {
 // permissions) takes effect immediately instead of when their cookie expires.
 r.use(async (req, res, next) => {
   const id = req.session.admin && lib.int(req.session.admin.id, 0);
-  const a = id ? await one('SELECT id, email, role, perm_orders, perm_store FROM admin_users WHERE id=$1', [id]) : null;
+  const a = id ? await one('SELECT id, email, role, perm_orders, perm_products FROM admin_users WHERE id=$1', [id]) : null;
   if (!a) {
     delete req.session.admin;
     return res.redirect('/admin/login');
@@ -81,7 +81,10 @@ r.use(async (req, res, next) => {
   res.locals.admin = a;
   res.locals.can = {
     orders: a.role === 'owner' || a.perm_orders,
-    store: a.role === 'owner' || a.perm_store,
+    products: a.role === 'owner' || a.perm_products,
+    // Site text/images/shipping/payment settings and managing other admins
+    // stay owner-only; there is no partial grant for either.
+    settings: a.role === 'owner',
     users: a.role === 'owner',
   };
   res.locals.unreadMessages = res.locals.can.orders ? (await one("SELECT count(*)::int AS n FROM contact_messages WHERE NOT read")).n : 0;
@@ -139,7 +142,7 @@ r.get('/reports/sales.xlsx', (req, res) => reports.salesXlsx(res, reports.parseR
 r.get('/reports/sales.pdf', (req, res) => reports.salesPdf(res, reports.parseRange(req.query)));
 
 /* ───────────── Products ───────────── */
-r.use('/products', requirePerm('store'));
+r.use('/products', requirePerm('products'));
 r.get('/products', async (req, res) => {
   const products = await all(`SELECT p.*, COALESCE((SELECT sum(oi.qty) FROM order_items oi JOIN orders o ON o.id=oi.order_id
                                 WHERE oi.product_id=p.id AND o.${PAID}),0)::int AS sold
@@ -150,7 +153,10 @@ r.get('/products', async (req, res) => {
 r.get('/products/inventory.xlsx', (req, res) => reports.inventoryXlsx(res));
 r.get('/products/inventory.pdf', (req, res) => reports.inventoryPdf(res));
 
-r.get('/products/new', (req, res) =>
+// Creating a product, changing its name/description/photos, or deleting it
+// requires the owner-only "settings" permission; "Productos y cupones" staff
+// can only adjust price/stock/visibility on existing products.
+r.get('/products/new', requirePerm('settings'), (req, res) =>
   res.render('admin/product_form', { section: 'products', p: { active: true, pack_size: 1, stock: 0, sort: 0 }, gallery: [], error: null }));
 
 r.get('/products/:id', async (req, res, next) => {
@@ -195,7 +201,7 @@ async function saveGallery(productId, files) {
   }
 }
 
-r.post('/products', handleUpload(uploadProduct, () => '/admin/products/new'), async (req, res) => {
+r.post('/products', requirePerm('settings'), handleUpload(uploadProduct, () => '/admin/products/new'), async (req, res) => {
   const p = readProduct(req.body);
   if (!p.name || p.price_cents == null) return res.status(400).render('admin/product_form', { section: 'products', p: { ...p, price_cents: p.price_cents ?? undefined }, gallery: [], error: 'Nombre y precio son obligatorios.' });
   const clash = await one('SELECT id FROM products WHERE slug=$1', [p.slug]);
@@ -214,32 +220,46 @@ r.post('/products/:id', handleUpload(uploadProduct, (req) => `/admin/products/${
   const id = lib.int(req.params.id);
   const existing = await one('SELECT * FROM products WHERE id=$1', [id]);
   if (!existing) return next();
-  const p = readProduct(req.body);
+  const fullEdit = res.locals.can.settings;
+  // Price/stock-only staff: whatever they submit for name/text/photos is
+  // ignored server-side and the existing values are kept, rather than
+  // trusting a hidden field or a disabled input's last value.
+  const p = fullEdit ? readProduct(req.body) : {
+    ...readProduct(req.body),
+    name: existing.name, name_es: existing.name_es, short_desc: existing.short_desc, short_desc_es: existing.short_desc_es,
+    description: existing.description, description_es: existing.description_es, dimensions: existing.dimensions, slug: existing.slug,
+  };
   if (!p.name || p.price_cents == null) {
     const gallery = await all('SELECT id, image_id FROM product_images WHERE product_id=$1 ORDER BY sort, id', [id]);
     return res.status(400).render('admin/product_form', { section: 'products', p: { ...existing, ...p, price_cents: p.price_cents ?? undefined }, gallery, error: 'Nombre y precio son obligatorios.' });
   }
-  const clash = await one('SELECT id FROM products WHERE slug=$1 AND id<>$2', [p.slug, id]);
-  if (clash) p.slug = `${p.slug}-${id}`;
+  if (fullEdit) {
+    const clash = await one('SELECT id FROM products WHERE slug=$1 AND id<>$2', [p.slug, id]);
+    if (clash) p.slug = `${p.slug}-${id}`;
+  }
   let imageId = existing.image_id;
-  if (req.files?.image?.[0]) imageId = await saveImage(req.files.image[0]);
-  if (req.body.remove_image === 'on') imageId = null;
+  if (fullEdit) {
+    if (req.files?.image?.[0]) imageId = await saveImage(req.files.image[0]);
+    if (req.body.remove_image === 'on') imageId = null;
+  }
   await q(
     `UPDATE products SET name=$1,slug=$2,short_desc=$3,description=$4,dimensions=$5,pack_size=$6,price_cents=$7,compare_at_cents=$8,
        stock=$9,sort=$10,active=$11,featured=$12,image_id=$13,name_es=$15,short_desc_es=$16,description_es=$17,updated_at=now() WHERE id=$14`,
     [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, id, p.name_es, p.short_desc_es, p.description_es]);
-  if (existing.image_id && existing.image_id !== imageId) await q('DELETE FROM images WHERE id=$1', [existing.image_id]);
-  const removeIds = [].concat(req.body.remove_gallery || []).map(Number).filter(Boolean);
-  if (removeIds.length) {
-    await q('DELETE FROM images WHERE id IN (SELECT image_id FROM product_images WHERE product_id=$1 AND id = ANY($2::int[]))', [id, removeIds]);
-    await q('DELETE FROM product_images WHERE product_id=$1 AND id = ANY($2::int[])', [id, removeIds]);
+  if (fullEdit) {
+    if (existing.image_id && existing.image_id !== imageId) await q('DELETE FROM images WHERE id=$1', [existing.image_id]);
+    const removeIds = [].concat(req.body.remove_gallery || []).map(Number).filter(Boolean);
+    if (removeIds.length) {
+      await q('DELETE FROM images WHERE id IN (SELECT image_id FROM product_images WHERE product_id=$1 AND id = ANY($2::int[]))', [id, removeIds]);
+      await q('DELETE FROM product_images WHERE product_id=$1 AND id = ANY($2::int[])', [id, removeIds]);
+    }
+    await saveGallery(id, req.files?.gallery);
   }
-  await saveGallery(id, req.files?.gallery);
   notice(req, 'Cambios guardados.');
   res.redirect(`/admin/products/${id}`);
 });
 
-r.post('/products/:id/gallery/:rowId/cover', async (req, res, next) => {
+r.post('/products/:id/gallery/:rowId/cover', requirePerm('settings'), async (req, res, next) => {
   const id = lib.int(req.params.id);
   const rowId = lib.int(req.params.rowId);
   const product = await one('SELECT id, image_id FROM products WHERE id=$1', [id]);
@@ -255,7 +275,7 @@ r.post('/products/:id/gallery/:rowId/cover', async (req, res, next) => {
   res.redirect(`/admin/products/${id}`);
 });
 
-r.post('/products/:id/delete', async (req, res) => {
+r.post('/products/:id/delete', requirePerm('settings'), async (req, res) => {
   const id = lib.int(req.params.id);
   const used = await one('SELECT 1 FROM order_items WHERE product_id=$1 LIMIT 1', [id]);
   if (used) {
@@ -453,7 +473,7 @@ r.post('/messages/:id/delete', async (req, res) => {
 });
 
 /* ───────────── Coupons ───────────── */
-r.use('/coupons', requirePerm('store'));
+r.use('/coupons', requirePerm('products'));
 r.get('/coupons', async (req, res) => {
   const list = await all('SELECT * FROM coupons ORDER BY created_at DESC');
   res.render('admin/coupons', { section: 'coupons', list, error: null, form: {} });
@@ -493,7 +513,7 @@ r.post('/coupons/:id/delete', async (req, res) => {
 });
 
 /* ───────────── Settings ───────────── */
-r.use('/settings', requirePerm('store'));
+r.use('/settings', requirePerm('settings'));
 const SETTING_FIELDS = ['store_name', 'support_email', 'support_phone', 'pickup_address', 'announcement_en', 'announcement_es', 'notify_email'];
 r.get('/settings', (req, res) => res.render('admin/settings', { section: 'settings' }));
 r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings'), async (req, res) => {
@@ -545,7 +565,7 @@ r.post('/password', async (req, res) => {
 r.use('/users', requirePerm('users'));
 
 r.get('/users', async (req, res) => {
-  const list = await all('SELECT id, email, role, perm_orders, perm_store, created_at FROM admin_users ORDER BY created_at');
+  const list = await all('SELECT id, email, role, perm_orders, perm_products, created_at FROM admin_users ORDER BY created_at');
   res.render('admin/users', { section: 'users', list, error: null });
 });
 
@@ -554,18 +574,18 @@ r.post('/users', async (req, res) => {
   const password = String(req.body.password || '');
   const role = req.body.role === 'owner' ? 'owner' : 'staff';
   const permOrders = role === 'owner' || req.body.perm_orders === 'on';
-  const permStore = role === 'owner' || req.body.perm_store === 'on';
+  const permProducts = role === 'owner' || req.body.perm_products === 'on';
   let error = null;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) error = 'Ingresa un correo válido.';
   else if (password.length < 8) error = 'La contraseña debe tener al menos 8 caracteres.';
-  else if (role === 'staff' && !permOrders && !permStore) error = 'Elige al menos un permiso (Pedidos o Tienda).';
+  else if (role === 'staff' && !permOrders && !permProducts) error = 'Elige al menos un permiso (Pedidos o Productos).';
   else if (await one('SELECT 1 FROM admin_users WHERE email=$1', [email])) error = 'Ya existe un admin con ese correo.';
   if (error) {
-    const list = await all('SELECT id, email, role, perm_orders, perm_store, created_at FROM admin_users ORDER BY created_at');
+    const list = await all('SELECT id, email, role, perm_orders, perm_products, created_at FROM admin_users ORDER BY created_at');
     return res.status(400).render('admin/users', { section: 'users', list, error });
   }
-  await q('INSERT INTO admin_users(email, password_hash, role, perm_orders, perm_store) VALUES($1,$2,$3,$4,$5)',
-    [email, await auth.hashPassword(password), role, permOrders, permStore]);
+  await q('INSERT INTO admin_users(email, password_hash, role, perm_orders, perm_products) VALUES($1,$2,$3,$4,$5)',
+    [email, await auth.hashPassword(password), role, permOrders, permProducts]);
   notice(req, `Admin ${email} creado.`);
   res.redirect('/admin/users');
 });

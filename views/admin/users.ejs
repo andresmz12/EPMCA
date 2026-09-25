@@ -9,7 +9,7 @@
       <td><b><%= u.email %></b><% if (u.id === admin.id) { %> <span class="pill on">Tú</span><% } %></td>
       <td class="small">
         <% if (u.role === 'owner') { %>Administrador completo<% } else { %>
-          <%= [u.perm_orders && 'Pedidos', u.perm_store && 'Tienda'].filter(Boolean).join(' + ') || 'Sin permisos' %>
+          <%= [u.perm_orders && 'Pedidos y clientes', u.perm_products && 'Productos y cupones'].filter(Boolean).join(' + ') || 'Sin permisos' %>
         <% } %>
       </td>
       <td class="small"><%= fmtDate(u.created_at, false) %></td>
@@ -31,9 +31,10 @@
     <div class="field">
       <label>Permisos</label>
       <label class="check"><input type="checkbox" name="perm_orders" class="permchk"> Pedidos y clientes</label>
-      <label class="check"><input type="checkbox" name="perm_store" class="permchk"> Tienda (productos, cupones, configuración)</label>
-      <label class="check"><input type="checkbox" name="role" value="owner" id="roleowner"> Administrador completo (incluye poder crear/quitar otros admins)</label>
+      <label class="check"><input type="checkbox" name="perm_products" class="permchk"> Productos y cupones (precio, stock, fotos y descripciones)</label>
+      <label class="check"><input type="checkbox" name="role" value="owner" id="roleowner"> Administrador completo (incluye Configuración del sitio y poder crear/quitar otros admins)</label>
     </div>
+    <div class="hint" style="margin:-6px 0 14px">Configuración (textos, imágenes, envíos, WhatsApp) solo la puede tocar un Administrador completo.</div>
     <button class="btn orange" style="width:100%;justify-content:center">Crear admin</button>
   </form>
 </div>
