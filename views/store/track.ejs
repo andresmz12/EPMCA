@@ -5,7 +5,7 @@
     <p class="muted"><%= t('track_sub') %></p>
     <% if (error) { %><div class="flash err"><%= error %></div><% } %>
     <form method="post" action="/track" class="panel">
-      <div class="field"><label for="number"><%= t('track_number') %></label><input id="number" name="number" required value="<%= form.number || '' %>" placeholder="BX-XXXXXXXX" autocomplete="off" style="text-transform:uppercase"></div>
+      <div class="field"><label for="number"><%= t('track_number') %></label><input id="number" name="number" required value="<%= form.number || '' %>" placeholder="12345678" autocomplete="off" style="text-transform:uppercase"></div>
       <div class="field"><label for="contact"><%= t('track_contact') %></label><input id="contact" name="contact" required value="<%= form.contact || '' %>" autocomplete="email"></div>
       <div class="hint" style="margin:-6px 0 14px"><%= t('track_hint') %></div>
       <button class="btn orange block"><%= t('track_btn') %></button>
