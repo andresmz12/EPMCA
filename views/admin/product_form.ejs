@@ -27,6 +27,13 @@
       <div class="field"><label>Unidades por paquete</label><input name="pack_size" type="number" min="1" value="<%= p.pack_size || 1 %>"></div>
       <div class="field"><label>Orden</label><input name="sort" type="number" value="<%= p.sort || 0 %>"><div class="hint">Menor = aparece primero.</div></div>
     </div>
+    <div class="field"><label>Tipo de pared</label>
+      <select name="wall_type">
+        <option value="double" <%= p.wall_type !== 'single' ? 'selected' : '' %>>Doble pared (275 lb)</option>
+        <option value="single" <%= p.wall_type === 'single' ? 'selected' : '' %>>Pared sencilla</option>
+      </select>
+      <div class="hint">Controla el texto de "Resistencia" que ve el cliente en la ficha del producto.</div>
+    </div>
     <h2 style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">Texto en español</h2>
     <p class="hint" style="margin-top:-8px;margin-bottom:14px">Lo que ven los clientes con la tienda en español. Si lo dejas vacío, se muestra el texto en inglés.</p>
     <div class="field"><label>Nombre (español)</label><input name="name_es" value="<%= p.name_es || '' %>" placeholder='Caja doble pared 16 × 16 × 16"'></div>

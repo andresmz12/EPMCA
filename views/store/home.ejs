@@ -73,7 +73,7 @@
           <tr>
             <td><a href="/products/<%= p.slug %>"><%= p.dimensions || pt(p, 'name') %></a></td>
             <td class="num"><%= vol ? vol.toFixed(vol < 10 ? 1 : 0) + ' ' + t('cuft') : '—' %></td>
-            <td><%= t('strength_val') %></td>
+            <td><%= p.wall_type === 'single' ? t('strength_val_single') : t('strength_val') %></td>
             <td class="num"><b><%= money(p.price_cents) %></b></td>
             <td><%- include('_stock', { p }) %></td>
           </tr>

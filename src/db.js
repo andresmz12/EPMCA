@@ -65,6 +65,12 @@ CREATE TABLE IF NOT EXISTS products (
 ALTER TABLE products ADD COLUMN IF NOT EXISTS name_es TEXT NOT NULL DEFAULT '';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS short_desc_es TEXT NOT NULL DEFAULT '';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS description_es TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS wall_type TEXT NOT NULL DEFAULT 'double';
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'products_wall_type_check') THEN
+    ALTER TABLE products ADD CONSTRAINT products_wall_type_check CHECK (wall_type IN ('single','double'));
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS product_images (
   id SERIAL PRIMARY KEY,
@@ -282,6 +288,7 @@ const DEFAULT_SETTINGS = {
   reminder_payment_enabled: 'true',
   digest_enabled: 'true',
   digest_last_date: '',
+  catalog_2026_loaded: 'false',
   lowstock_alert_enabled: 'true',
   cart_reminder_enabled: 'true',
   payment_instructions: '',
@@ -292,6 +299,50 @@ const DEFAULT_SETTINGS = {
 // Precios de ejemplo: cámbialos desde el panel de administración.
 const DW_EN = 'Double-wall corrugated cardboard with a 275 lb bursting test. Two layers of fluting make these boxes much stiffer than standard single-wall moving boxes, so they hold their shape when stacked and loaded with heavy items.\n\nShips flat. Assembles in seconds with packing tape.';
 const DW_ES = 'Cartón corrugado de doble pared con prueba de estallido de 275 lb. Las dos capas de onda las hacen mucho más rígidas que una caja de mudanza normal: no se deforman al apilarlas ni con peso adentro.\n\nSe envían planas. Se arman en segundos con cinta de embalaje.';
+const SW_EN = 'Single-wall corrugated cardboard — our lightest, most economical option for everyday items that don\'t need extra reinforcement.\n\nShips flat. Assembles in seconds with packing tape.';
+const SW_ES = 'Cartón corrugado de pared sencilla — nuestra opción más ligera y económica, para cosas de uso diario que no necesitan refuerzo extra.\n\nSe envían planas. Se arman en segundos con cinta de embalaje.';
+
+// Full 2026 price sheet (KIT EMPACALO 2026), "PUBLICO" column — retail price.
+// A size that comes in both wall types needs a distinct slug per type; a
+// size sold only one way keeps the plain "box-{size}" slug already used by
+// the 4 boxes that existed before this sheet, so this upserts them in place
+// instead of creating duplicates. "30x24x36" is the same box as the existing
+// "box-24x30x36" (dimensions just listed in a different order on the sheet).
+const RAW_SHEET_2026 = [
+  { size: '12x12x12', wall: 'single', price: 411 }, { size: '12x12x12', wall: 'double', price: 420 },
+  { size: '14x14x14', wall: 'single', price: 579 }, { size: '14x14x14', wall: 'double', price: 570 },
+  { size: '16x16x16', wall: 'single', price: 577 }, { size: '16x16x16', wall: 'double', price: 585 },
+  { size: '18x18x18', wall: 'single', price: 600 }, { size: '18x18x18', wall: 'double', price: 632 },
+  { size: '18x18x24', wall: 'single', price: 650 }, { size: '18x18x24', wall: 'double', price: 705 },
+  { size: '20x20x20', wall: 'single', price: 724 }, { size: '20x20x20', wall: 'double', price: 750 },
+  { size: '22x22x22', wall: 'single', price: 750 }, { size: '22x22x22', wall: 'double', price: 880 },
+  { size: '24x24x24', wall: 'double', price: 1200 },
+  { size: '24x24x30', wall: 'double', price: 1600 },
+  { size: '24x24x36', wall: 'double', price: 1700 },
+  { size: '26x26x28', wall: 'double', price: 1900 },
+  { size: '28x28x34', wall: 'double', price: 1905 },
+  { size: '30x30x30', wall: 'double', price: 1900 },
+  { size: '30x24x36', wall: 'double', price: 1900 },
+  { size: '42x29x26', wall: 'double', price: 2000 },
+];
+const SIZE_SLUG_OVERRIDE = { '30x24x36': '24x30x36' };
+const sizeCounts = RAW_SHEET_2026.reduce((m, p) => ({ ...m, [p.size]: (m[p.size] || 0) + 1 }), {});
+const PRICE_SHEET_2026 = RAW_SHEET_2026.map((p, i) => {
+  const [a, b, c] = (SIZE_SLUG_OVERRIDE[p.size] || p.size).split('x');
+  const dims = `${a}" × ${b}" × ${c}"`;
+  const isDW = p.wall === 'double';
+  const slugSize = SIZE_SLUG_OVERRIDE[p.size] || p.size;
+  const slug = sizeCounts[p.size] > 1 ? `box-${slugSize}-${p.wall}` : `box-${slugSize}`;
+  return {
+    slug, dims, price: p.price, pack: 1, compare: null, wallType: p.wall,
+    desc: isDW ? DW_EN : SW_EN, desc_es: isDW ? DW_ES : SW_ES,
+    name: `${isDW ? 'Double' : 'Single'} Wall Box ${a}×${b}×${c}"`,
+    name_es: `Caja ${isDW ? 'doble pared' : 'pared sencilla'} ${a}×${b}×${c}"`,
+    short: isDW ? 'Double wall — extra strength for heavier or bulkier loads.' : 'Single wall — our lightest, most economical option.',
+    short_es: isDW ? 'Doble pared — refuerzo extra para cargas más pesadas o grandes.' : 'Pared sencilla — nuestra opción más ligera y económica.',
+    sort: 100 + i,
+  };
+});
 const SEED_PRODUCTS = [
   { slug: 'box-12x12x12', dims: '12" × 12" × 12"', price: 399, stock: 500, featured: false, sort: 1,
     short: 'Books, tools, parts and small heavy items.', short_es: 'Libros, herramientas, repuestos y cosas pesadas pequeñas.' },
@@ -332,6 +383,36 @@ async function migrate() {
     );
     console.log('Base de datos inicializada con productos de ejemplo.');
   }
+
+  // One-time: load the full 2026 price sheet (KIT EMPACALO 2026). Existing
+  // products keep their stock, photos and visibility; only name/price/specs
+  // sync from the sheet, so it's safe even if this runs more than once.
+  const catalogLoaded = (await pool.query("SELECT value FROM settings WHERE key='catalog_2026_loaded'")).rows[0];
+  if (!catalogLoaded || catalogLoaded.value !== 'true') {
+    // These two sizes existed pre-sheet as double-wall-only under the plain
+    // slug; the sheet also has a single-wall version, so free up "-double"
+    // for them without creating a duplicate of the box already selling.
+    for (const size of ['12x12x12', '16x16x16']) {
+      await pool.query(
+        `UPDATE products SET slug=$1 WHERE slug=$2 AND NOT EXISTS (SELECT 1 FROM products WHERE slug=$1)`,
+        [`box-${size}-double`, `box-${size}`]);
+    }
+    for (const p of PRICE_SHEET_2026) {
+      await pool.query(
+        `INSERT INTO products(slug,name,short_desc,description,dimensions,pack_size,price_cents,compare_at_cents,stock,featured,sort,name_es,short_desc_es,description_es,wall_type)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,200,false,$9,$10,$11,$12,$13)
+         ON CONFLICT (slug) DO UPDATE SET
+           name=EXCLUDED.name, short_desc=EXCLUDED.short_desc, description=EXCLUDED.description,
+           dimensions=EXCLUDED.dimensions, pack_size=EXCLUDED.pack_size, price_cents=EXCLUDED.price_cents,
+           name_es=EXCLUDED.name_es, short_desc_es=EXCLUDED.short_desc_es, description_es=EXCLUDED.description_es,
+           wall_type=EXCLUDED.wall_type, updated_at=now()`,
+        [p.slug, p.name, p.short, p.desc, p.dims, p.pack, p.price, p.compare, p.sort, p.name_es, p.short_es, p.desc_es, p.wallType]
+      );
+    }
+    await pool.query("INSERT INTO settings(key,value) VALUES('catalog_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
+    console.log(`Catálogo 2026 cargado: ${PRICE_SHEET_2026.length} cajas.`);
+  }
+
   const noAdmins = (await pool.query('SELECT count(*)::int AS n FROM admin_users')).rows[0].n === 0;
   const envEmail = (process.env.ADMIN_EMAIL || (isProd ? '' : 'admin@empacalo.net')).trim().toLowerCase();
   const envPassword = process.env.ADMIN_PASSWORD || (isProd ? '' : 'admin123');

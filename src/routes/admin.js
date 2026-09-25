@@ -177,6 +177,7 @@ function readProduct(body) {
     short_desc: String(body.short_desc || '').trim().slice(0, 200),
     description: String(body.description || '').trim().slice(0, 5000),
     dimensions: String(body.dimensions || '').trim().slice(0, 60),
+    wall_type: body.wall_type === 'single' ? 'single' : 'double',
     pack_size: Math.max(1, lib.int(body.pack_size, 1)),
     price_cents: lib.toCents(body.price),
     compare_at_cents: lib.toCents(body.compare_at),
@@ -225,9 +226,9 @@ r.post('/products', requirePerm('settings'), handleUpload(uploadProduct, () => '
   if (clash) p.slug = `${p.slug}-${Date.now().toString(36).slice(-4)}`;
   const imageId = await saveImage(req.files?.image?.[0]);
   const row = await one(
-    `INSERT INTO products(name,slug,short_desc,description,dimensions,pack_size,price_cents,compare_at_cents,stock,sort,active,featured,image_id,name_es,short_desc_es,description_es)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
-    [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, p.name_es, p.short_desc_es, p.description_es]);
+    `INSERT INTO products(name,slug,short_desc,description,dimensions,pack_size,price_cents,compare_at_cents,stock,sort,active,featured,image_id,name_es,short_desc_es,description_es,wall_type)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
+    [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, p.name_es, p.short_desc_es, p.description_es, p.wall_type]);
   await saveGallery(row.id, req.files?.gallery);
   notice(req, 'Producto creado.');
   res.redirect(`/admin/products/${row.id}`);
@@ -245,6 +246,7 @@ r.post('/products/:id', handleUpload(uploadProduct, (req) => `/admin/products/${
     ...readProduct(req.body),
     name: existing.name, name_es: existing.name_es, short_desc: existing.short_desc, short_desc_es: existing.short_desc_es,
     description: existing.description, description_es: existing.description_es, dimensions: existing.dimensions, slug: existing.slug,
+    wall_type: existing.wall_type,
   };
   if (!p.name || p.price_cents == null) {
     const gallery = await all('SELECT id, image_id FROM product_images WHERE product_id=$1 ORDER BY sort, id', [id]);
@@ -261,8 +263,8 @@ r.post('/products/:id', handleUpload(uploadProduct, (req) => `/admin/products/${
   }
   await q(
     `UPDATE products SET name=$1,slug=$2,short_desc=$3,description=$4,dimensions=$5,pack_size=$6,price_cents=$7,compare_at_cents=$8,
-       stock=$9,sort=$10,active=$11,featured=$12,image_id=$13,name_es=$15,short_desc_es=$16,description_es=$17,updated_at=now() WHERE id=$14`,
-    [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, id, p.name_es, p.short_desc_es, p.description_es]);
+       stock=$9,sort=$10,active=$11,featured=$12,image_id=$13,name_es=$15,short_desc_es=$16,description_es=$17,wall_type=$18,updated_at=now() WHERE id=$14`,
+    [p.name, p.slug, p.short_desc, p.description, p.dimensions, p.pack_size, p.price_cents, p.compare_at_cents, p.stock, p.sort, p.active, p.featured, imageId, id, p.name_es, p.short_desc_es, p.description_es, p.wall_type]);
   if (fullEdit) {
     if (existing.image_id && existing.image_id !== imageId) await q('DELETE FROM images WHERE id=$1', [existing.image_id]);
     const removeIds = [].concat(req.body.remove_gallery || []).map(Number).filter(Boolean);

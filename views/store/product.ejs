@@ -25,7 +25,7 @@
         <%- include('_stock', { p: product }) %>
         <table class="specs">
           <tr><th><%= t('dimensions') %></th><td><%= product.dimensions || '—' %></td></tr>
-          <tr><th><%= t('strength') %></th><td><%= t('strength_val') %></td></tr>
+          <tr><th><%= t('strength') %></th><td><%= product.wall_type === 'single' ? t('strength_val_single') : t('strength_val') %></td></tr>
           <tr><th><%= t('nav_shipping') %></th><td><%= t('info_ship_d') %></td></tr>
         </table>
         <form method="post" action="/cart/add" class="buy">
