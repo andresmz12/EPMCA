@@ -79,47 +79,21 @@
 </section>
 
 <% const wholesaleBoxes = boxes.filter(p => wholesaleTiers(p).length); %>
-<% const wholesaleDouble = doubleBoxes.filter(p => wholesaleTiers(p).length); %>
-<% const wholesaleSingle = singleBoxes.filter(p => wholesaleTiers(p).length); %>
 <% if (wholesaleBoxes.length) { %>
 <section class="block" id="wholesale">
   <div class="wrap">
-    <div class="section-head"><h2><%= t('wholesale_section_title') %></h2><p><%= t('wholesale_section_sub') %></p></div>
-    <div class="wholesale-badge"><%= t('wholesale_min_order', { n: 50 }) %></div>
-    <% [
-      { title: t('wall_double_title'), list: wholesaleDouble },
-      { title: t('wall_single_title'), list: wholesaleSingle },
-    ].forEach(function (grp) { if (!grp.list.length) return; %>
-    <h3 class="wall-group-title"><%= grp.title %></h3>
-    <div class="table-scroll">
-      <table class="sizes">
-        <thead><tr>
-          <th><%= t('wholesale_col_size') %></th><th><%= t('wholesale_col_type') %></th>
-          <th class="num">50+</th><th class="num">100+</th><th class="num">200+</th>
-          <th class="num">300+</th><th class="num">400+</th><th class="num">500+</th>
-        </tr></thead>
-        <tbody>
-        <% grp.list.forEach(function (p) { const wtiers = wholesaleTiers(p); const byQty = Object.fromEntries(wtiers.map(t2 => [t2.qty, t2.cents])); %>
-          <tr>
-            <td><a href="/products/<%= p.slug %>"><%= p.dimensions || pt(p, 'name') %></a></td>
-            <td><%= p.wall_type === 'single' ? t('strength_val_single') : t('strength_val') %></td>
-            <% [50, 100, 200, 300, 400, 500].forEach(function (q) { %>
-              <td class="num"><%= byQty[q] != null ? money(byQty[q]) : '—' %></td>
-            <% }) %>
-          </tr>
-        <% }) %>
-        </tbody>
-      </table>
-    </div>
-    <% }) %>
-    <div class="wholesale-cta">
-      <% const waMsg = t('wa_wholesale'); %>
-      <% if (settings.whatsapp_number) { %>
-        <a class="btn orange" href="https://wa.me/<%= settings.whatsapp_number %>?text=<%= encodeURIComponent(waMsg) %>" target="_blank" rel="noopener"><%= t('wholesale_cta') %></a>
-      <% } else { %>
-        <a class="btn orange" href="/contact"><%= t('wholesale_cta') %></a>
-      <% } %>
-      <span class="muted small"><%= t('wholesale_cta_note') %></span>
+    <div class="wholesale-banner">
+      <h2><%= t('wholesale_banner_title') %></h2>
+      <p><%= t('wholesale_section_sub') %></p>
+      <div class="wholesale-cta">
+        <% const waMsg = t('wa_wholesale'); %>
+        <% if (settings.whatsapp_number) { %>
+          <a class="btn orange" href="https://wa.me/<%= settings.whatsapp_number %>?text=<%= encodeURIComponent(waMsg) %>" target="_blank" rel="noopener"><%= t('wholesale_cta') %></a>
+        <% } else { %>
+          <a class="btn orange" href="/contact"><%= t('wholesale_cta') %></a>
+        <% } %>
+        <span class="muted small"><%= t('wholesale_cta_note') %></span>
+      </div>
     </div>
   </div>
 </section>
