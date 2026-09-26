@@ -1,6 +1,4 @@
-@font-face { font-family: "Montserrat"; font-weight: 600; font-display: swap; src: url(/fonts/montserrat-latin-600-normal.woff2) format("woff2"); }
-@font-face { font-family: "Montserrat"; font-weight: 700; font-display: swap; src: url(/fonts/montserrat-latin-700-normal.woff2) format("woff2"); }
-@font-face { font-family: "Montserrat"; font-weight: 800; font-display: swap; src: url(/fonts/montserrat-latin-800-normal.woff2) format("woff2"); }
+@font-face { font-family: "Oswald"; font-weight: 500 700; font-display: swap; src: url(/fonts/oswald-latin-variable.woff2) format("woff2"); }
 @font-face { font-family: "Source Sans 3"; font-weight: 400; font-display: swap; src: url(/fonts/source-sans-3-latin-400-normal.woff2) format("woff2"); }
 @font-face { font-family: "Source Sans 3"; font-weight: 600; font-display: swap; src: url(/fonts/source-sans-3-latin-600-normal.woff2) format("woff2"); }
 @font-face { font-family: "Source Sans 3"; font-weight: 700; font-display: swap; src: url(/fonts/source-sans-3-latin-700-normal.woff2) format("woff2"); }
@@ -22,7 +20,7 @@
   --err: #B42318;
   --r: 4px;
   --wrap: 1200px;
-  --head: "Montserrat", "Arial Black", Arial, sans-serif;
+  --head: "Oswald", "Arial Narrow", Arial, sans-serif;
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -30,7 +28,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.55 "Sou
 a { color: inherit; }
 img, svg { max-width: 100%; display: block; }
 .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
-h1, h2, h3 { font-family: var(--head); line-height: 1.15; margin: 0 0 .45em; letter-spacing: -.01em; }
+h1, h2, h3 { font-family: var(--head); line-height: 1.15; margin: 0 0 .45em; letter-spacing: .01em; }
 h1 { font-size: clamp(30px, 4.2vw, 46px); font-weight: 800; }
 h2 { font-size: clamp(24px, 2.6vw, 30px); font-weight: 800; }
 h3 { font-size: 17px; font-weight: 700; }
