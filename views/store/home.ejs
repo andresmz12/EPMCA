@@ -135,6 +135,26 @@
   </div>
 </section>
 
+<section class="block" id="callback">
+  <div class="wrap">
+    <div class="callback-box">
+      <div>
+        <h2><%= t('callback_title') %></h2>
+        <p><%= t('callback_sub') %></p>
+      </div>
+      <form method="post" action="/callback" class="callback-form">
+        <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+        <input type="text" name="name" placeholder="<%= t('callback_name') %>" required maxlength="200">
+        <input type="tel" name="phone" placeholder="<%= t('callback_phone') %>" required maxlength="60">
+        <input type="text" name="note" placeholder="<%= t('callback_note') %>" maxlength="500">
+        <button class="btn orange" type="submit"><%= t('callback_submit') %></button>
+        <% if (callbackSent) { %><p class="callback-msg ok"><%= t('callback_sent') %></p><% } %>
+        <% if (callbackError) { %><p class="callback-msg err"><%= callbackError %></p><% } %>
+      </form>
+    </div>
+  </div>
+</section>
+
 <section class="block alt" id="faq">
   <div class="wrap">
     <div class="section-head"><h2><%= t('faq_title') %></h2></div>

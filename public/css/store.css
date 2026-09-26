@@ -184,6 +184,14 @@ table.sizes tr.popular { background: var(--orange-soft); }
 .info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
 .info div { border-top: 3px solid var(--ink); padding-top: 14px; }
 .info p { color: var(--ink-2); margin: 0; }
+.callback-box { display: grid; grid-template-columns: 1.1fr 1fr; gap: 36px; align-items: center; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 40px; }
+.callback-box h2 { margin-bottom: .3em; }
+.callback-box p { margin: 0; color: var(--ink-2); }
+.callback-form { display: flex; flex-direction: column; gap: 10px; }
+.callback-form input { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); font: inherit; font-size: 16px; }
+.callback-msg { margin: 0; font-weight: 700; font-size: 14px; }
+.callback-msg.ok { color: var(--ok); }
+.callback-msg.err { color: var(--err); }
 .faq { max-width: 760px; }
 .faq-item { padding: 16px 0; border-bottom: 1px solid var(--line); }
 .faq-item summary { font-family: "Source Sans 3", Arial, sans-serif; font-size: 18px; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -297,7 +305,8 @@ footer.site .brand .name { color: #fff; }
 footer.site .legal { border-top: 1px solid #2B2D32; margin-top: 32px; padding-top: 18px; font-size: 14px; }
 
 @media (max-width: 960px) {
-  .hero .wrap, .pdp, .two { grid-template-columns: 1fr; }
+  .hero .wrap, .pdp, .two, .callback-box { grid-template-columns: 1fr; }
+  .callback-box { padding: 28px 22px; }
   .nav .links { display: none; }
   .info { grid-template-columns: 1fr; gap: 20px; }
   footer.site .cols { grid-template-columns: 1fr 1fr; }

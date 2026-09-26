@@ -40,7 +40,28 @@ function backTo(req) {
 r.get('/', async (req, res) => {
   const products = await all('SELECT * FROM products WHERE active ORDER BY sort, id');
   const { siteUrl, settings, t, money } = res.locals;
-  res.render('store/home', { products, title: null, jsonld: seo.homeLd({ siteUrl, settings, t, money }) });
+  res.render('store/home', {
+    products, title: null, jsonld: seo.homeLd({ siteUrl, settings, t, money }),
+    callbackSent: req.query.callback === 'ok',
+    callbackError: req.query.callback === 'err' ? t(req.query.k === 'too_many' ? 'err_too_many' : 'err_required') : null,
+  });
+});
+
+// Quick "call me back" lead capture: just name + phone, reuses the contact inbox.
+r.post('/callback', async (req, res) => {
+  const { t } = res.locals;
+  const name = String(req.body.name || '').trim().slice(0, 200);
+  const phone = String(req.body.phone || '').trim().slice(0, 60);
+  const note = String(req.body.note || '').trim().slice(0, 500);
+  // Bots fill the hidden "website" field; pretend it worked and drop it.
+  if (req.body.website) return res.redirect('/?callback=ok#callback');
+  if (contactLimit.blocked(req.ip)) return res.redirect('/?callback=err&k=too_many#callback');
+  if (!name || !phone) return res.redirect('/?callback=err#callback');
+  contactLimit.hit(req.ip);
+  const message = note || t('callback_default_note');
+  await q('INSERT INTO contact_messages(name, email, phone, message) VALUES($1,$2,$3,$4)', [name, '', phone, message]);
+  notify.contactMessage({ name, email: '', phone, message });
+  res.redirect('/?callback=ok#callback');
 });
 
 r.get('/products/:slug', async (req, res, next) => {

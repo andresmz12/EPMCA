@@ -7,7 +7,7 @@
 <div class="card" style="margin-bottom:14px<%= m.read ? '' : ';border-left:4px solid var(--orange)' %>">
   <div class="top" style="margin-bottom:10px">
     <div>
-      <b><%= m.name %></b> <a class="muted small" href="mailto:<%= m.email %>"><%= m.email %></a><% if (m.phone) { %> · <span class="muted small"><%= m.phone %></span><% } %>
+      <b><%= m.name %></b><% if (m.email) { %> <a class="muted small" href="mailto:<%= m.email %>"><%= m.email %></a><% } %><% if (m.phone) { %> · <span class="muted small"><%= m.phone %></span><% } %>
       <div class="muted small"><%= fmtDate(m.created_at) %></div>
     </div>
     <div style="display:flex;gap:8px">
