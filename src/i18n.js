@@ -1,7 +1,7 @@
 // Textos de la tienda en inglés y español. Para cambiar un texto, edítalo aquí.
 const dict = {
   en: {
-    nav_shop: 'Boxes', nav_wholesale: 'Wholesale', nav_shipping: 'Shipping', nav_faq: 'FAQ', nav_cart: 'Cart',
+    nav_shop: 'Boxes', nav_wholesale: 'Wholesale', nav_supplies: 'Supplies', nav_shipping: 'Shipping', nav_faq: 'FAQ', nav_cart: 'Cart',
     hero_eyebrow: 'Corrugated double wall · 275 lb test',
     hero_title: 'Double wall cardboard boxes, shipped anywhere in the USA.',
     hero_sub: 'Order one box or a few hundred. They arrive flat and ready to fold, at any address in the country.',
@@ -12,6 +12,7 @@ const dict = {
     wall_double_title: 'Double wall', wall_double_sub: '275 lb test — our strongest, best for shipping and heavier loads.',
     wall_single_title: 'Single wall', wall_single_sub: 'Lighter-duty and more economical — best for light items and short storage.',
     hero_wholesale_link: 'Buying in bulk? See wholesale pricing →',
+    hero_supplies_link: 'Also need tape, stretch film, or a scale? See packing supplies →',
     wholesale_section_title: 'Wholesale pricing', wholesale_section_sub: "Buying for a business, a warehouse, or to resell? The more you order, the less you pay per box — applied automatically at checkout, no code needed.",
     wholesale_min_order: 'Minimum order: {n} boxes per size', wholesale_col_size: 'Size', wholesale_col_type: 'Type',
     wholesale_cta: 'Talk to us about a wholesale account', wholesale_cta_note: "For custom sizes, pallet orders, or an even better rate on larger volumes.",
@@ -121,7 +122,7 @@ const dict = {
     promo_popup_cta: 'Create my account', promo_popup_dismiss: 'No thanks',
   },
   es: {
-    nav_shop: 'Cajas', nav_wholesale: 'Mayorista', nav_shipping: 'Envíos', nav_faq: 'Preguntas', nav_cart: 'Carrito',
+    nav_shop: 'Cajas', nav_wholesale: 'Mayorista', nav_supplies: 'Suministros', nav_shipping: 'Envíos', nav_faq: 'Preguntas', nav_cart: 'Carrito',
     hero_eyebrow: 'Cartón corrugado doble pared · prueba de 275 lb',
     hero_title: 'Cajas de cartón doble pared, con envío a todo Estados Unidos.',
     hero_sub: 'Compra la cantidad que necesites, desde una caja hasta al por mayor con mejores precios. Te llegan planas y listas para armar, con envío a cualquier dirección del país.',
@@ -132,6 +133,7 @@ const dict = {
     wall_double_title: 'Doble pared', wall_double_sub: '275 lb — la más resistente, ideal para envíos y cargas pesadas.',
     wall_single_title: 'Pared sencilla', wall_single_sub: 'Más económica — ideal para objetos livianos y almacenamiento corto.',
     hero_wholesale_link: '¿Compras al por mayor? Mira los precios mayoristas →',
+    hero_supplies_link: '¿También necesitas cinta, plástico film o báscula? Mira los suministros →',
     wholesale_section_title: 'Precios mayoristas', wholesale_section_sub: '¿Compras para tu negocio, bodega o para revender? Mientras más pidas, menos pagas por caja. El descuento se aplica automáticamente al pagar, sin necesidad de ningún código.',
     wholesale_min_order: 'Pedido mínimo: {n} cajas por tamaño', wholesale_col_size: 'Tamaño', wholesale_col_type: 'Tipo',
     wholesale_cta: 'Escríbenos por una cuenta mayorista', wholesale_cta_note: 'Para tamaños especiales, pedidos por pallet, o un mejor precio en volúmenes más grandes.',

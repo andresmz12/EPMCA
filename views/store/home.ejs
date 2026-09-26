@@ -23,7 +23,10 @@
         <li><b>275 lb</b><%= t('fact_strength_lbl') %></li>
         <li><b><%= t('fact_ship_big') %></b><%= t('fact_ship_lbl') %></li>
       </ul>
-      <a class="wholesale-teaser" href="#wholesale"><%= t('hero_wholesale_link') %></a>
+      <div class="hero-teasers">
+        <a class="wholesale-teaser" href="#wholesale"><%= t('hero_wholesale_link') %></a>
+        <% if (supplies.length) { %><a class="wholesale-teaser" href="#supplies"><%= t('hero_supplies_link') %></a><% } %>
+      </div>
     </div>
     <% if (settings.hero_image_id) { %>
       <figure class="art photo"><img src="/img/<%= settings.hero_image_id %>" alt="<%= settings.store_name %>"></figure>

@@ -116,7 +116,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--orange); ou
 .facts { display: flex; flex-wrap: wrap; margin: 34px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
 .facts li { padding: 14px 20px 0 0; margin-right: 20px; font-size: 15px; color: var(--ink-2); }
 .facts li b { display: block; font-family: var(--head); font-size: 17px; color: var(--ink); }
-.wholesale-teaser { display: inline-block; margin-top: 22px; padding: 10px 16px; border-radius: 999px; background: var(--orange-soft); color: var(--warn); font-weight: 700; font-size: 14px; text-decoration: none; }
+.hero-teasers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.wholesale-teaser { display: inline-block; padding: 10px 16px; border-radius: 999px; background: var(--orange-soft); color: var(--warn); font-weight: 700; font-size: 14px; text-decoration: none; }
 .wholesale-teaser:hover { background: #FAE3B8; }
 .art { background: var(--kraft); border: 1px solid #E2D3BC; border-radius: var(--r); padding: 28px 24px 14px; margin: 0; }
 .art .row-boxes { display: flex; align-items: flex-end; justify-content: center; gap: 0; }
