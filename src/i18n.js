@@ -134,7 +134,7 @@ const dict = {
     wall_single_title: 'Pared sencilla', wall_single_sub: 'Más económica — ideal para objetos livianos y almacenamiento corto.',
     hero_wholesale_link: '¿Compras al por mayor? Mira los precios mayoristas →',
     hero_supplies_link: '¿También necesitas cinta, plástico film o báscula? Mira los suministros →',
-    wholesale_section_title: 'Precios mayoristas', wholesale_section_sub: '¿Compras para tu negocio, bodega o para revender? Mientras más pidas, menos pagas por caja. El descuento se aplica automáticamente al pagar, sin necesidad de ningún código.',
+    wholesale_section_title: 'Precios mayoristas', wholesale_section_sub: '¿Compras para tu negocio, bodega o para revender? Mientras más pidas, menos pagas por caja.',
     wholesale_banner_title: 'Pregunta por nuestros precios mayoristas desde 50 cajas',
     wholesale_cta: 'Escríbenos por una cuenta mayorista', wholesale_cta_note: 'Para tamaños especiales, pedidos por pallet, o un mejor precio en volúmenes más grandes.',
     wa_wholesale: '¡Hola! Quisiera información sobre precios de mayoreo.',
