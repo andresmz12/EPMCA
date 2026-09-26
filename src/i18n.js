@@ -124,7 +124,7 @@ const dict = {
     nav_shop: 'Cajas', nav_wholesale: 'Mayorista', nav_shipping: 'Envíos', nav_faq: 'Preguntas', nav_cart: 'Carrito',
     hero_eyebrow: 'Cartón corrugado doble pared · prueba de 275 lb',
     hero_title: 'Cajas de cartón doble pared, con envío a todo Estados Unidos.',
-    hero_sub: 'Compra una caja o cientos de ellas. Te llegan planas y listas para armar, con envío a cualquier dirección del país.',
+    hero_sub: 'Compra la cantidad que necesites, desde una caja hasta cientos. Te llegan planas y listas para armar, con envío a cualquier dirección del país.',
     hero_cta: 'Ver tamaños y precios',
     fact_price_lbl: 'precio desde, por caja', fact_strength_lbl: 'resistencia, doble pared', fact_ship_big: '50 estados', fact_ship_lbl: 'enviamos a todo el país',
     art_caption: 'Dibujadas a escala',
