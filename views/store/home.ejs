@@ -17,7 +17,6 @@
       <p class="lead"><%= t('hero_sub') %></p>
       <div class="ctas">
         <a class="btn orange" href="#shop"><%= t('hero_cta') %></a>
-        <a class="textlink" href="#sizes"><%= t('hero_cta2') %></a>
       </div>
       <ul class="facts">
         <% if (minPrice) { %><li><b><%= money(minPrice) %></b><%= t('fact_price_lbl') %></li><% } %>
@@ -71,35 +70,6 @@
         </article>
         <% }) %>
       </div>
-    </div>
-    <% }) %>
-  </div>
-</section>
-
-<section class="block alt" id="sizes">
-  <div class="wrap">
-    <div class="section-head"><h2><%= t('retail_title') %></h2><p><%= t('retail_sub') %> <%= t('chart_sub') %></p></div>
-    <% [
-      { title: t('wall_double_title'), sub: t('wall_double_sub'), list: doubleBoxes },
-      { title: t('wall_single_title'), sub: t('wall_single_sub'), list: singleBoxes },
-    ].forEach(function (grp) { if (!grp.list.length) return; %>
-    <h3 class="wall-group-title"><%= grp.title %></h3>
-    <p class="wall-group-sub"><%= grp.sub %></p>
-    <div class="table-scroll">
-      <table class="sizes">
-        <thead><tr><th><%= t('col_size') %></th><th class="num"><%= t('col_volume') %></th><th><%= t('col_strength') %></th><th class="num"><%= t('col_price') %></th><th><%= t('col_stock') %></th></tr></thead>
-        <tbody>
-        <% grp.list.forEach(function (p) { const d = dimsOf(p); const vol = d.length >= 3 ? (d[0] * d[1] * d[2] / 1728) : null; %>
-          <tr class="<%= p.featured ? 'popular' : '' %>">
-            <td><a href="/products/<%= p.slug %>"><%= p.dimensions || pt(p, 'name') %></a><% if (p.featured) { %><span class="pill-popular"><%= t('popular') %></span><% } %></td>
-            <td class="num"><%= vol ? vol.toFixed(vol < 10 ? 1 : 0) + ' ' + t('cuft') : '—' %></td>
-            <td><%= p.wall_type === 'single' ? t('strength_val_single') : t('strength_val') %></td>
-            <td class="num"><b><%= money(p.price_cents) %></b></td>
-            <td><%- include('_stock', { p }) %></td>
-          </tr>
-        <% }) %>
-        </tbody>
-      </table>
     </div>
     <% }) %>
   </div>
