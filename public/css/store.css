@@ -137,6 +137,11 @@ section.block.alt { background: var(--bg-2); border-top: 1px solid var(--line); 
 .section-head p { margin: 0; color: var(--muted); }
 .wholesale-badge { display: inline-block; margin-bottom: 18px; padding: 8px 16px; border-radius: 999px; background: var(--orange-soft); color: var(--warn); font-weight: 700; font-size: 13.5px; }
 .wholesale-cta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
+.wall-group + .wall-group { margin-top: 44px; }
+.wall-group-title { display: inline-block; font-size: 20px; margin: 0 0 4px; padding-left: 14px; border-left: 4px solid var(--orange); }
+.wall-group-sub { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
+#wholesale .wall-group-title { margin-top: 30px; }
+#wholesale .wall-group-title:first-of-type { margin-top: 0; }
 
 /* Product grid */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(214px, 1fr)); gap: 20px; }

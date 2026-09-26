@@ -1,6 +1,8 @@
 <%- include('_head') %>
 <%
   const boxes = products.filter(p => p.category !== 'supply');
+  const doubleBoxes = boxes.filter(p => p.wall_type !== 'single');
+  const singleBoxes = boxes.filter(p => p.wall_type === 'single');
   const supplies = products.filter(p => p.category === 'supply');
   const minPrice = boxes.length ? Math.min(...boxes.map(p => p.price_cents)) : 0;
   const flat = Number(settings.shipping_flat_cents || 0), freeMin = Number(settings.free_shipping_min_cents || 0);
@@ -43,36 +45,51 @@
 <section class="block" id="shop">
   <div class="wrap">
     <div class="section-head"><h2><%= t('shop_title') %></h2><p><%= t('shop_sub') %></p></div>
-    <div class="grid">
-      <% boxes.forEach(function (p) { %>
-      <article class="card">
-        <a class="pic <%= p.image_id ? 'has-img' : '' %>" href="/products/<%= p.slug %>"><%- include('_pic', { p, fixed: true }) %></a>
-        <% if (p.featured) { %><span class="tagline"><%= t('popular') %></span><% } %>
-        <div class="body">
-          <a class="name" href="/products/<%= p.slug %>"><%= pt(p, 'name') %></a>
-          <p class="desc"><%= pt(p, 'short_desc') %></p>
-          <div class="price"><%= money(p.price_cents) %><% if (p.compare_at_cents > p.price_cents) { %><s><%= money(p.compare_at_cents) %></s><span class="badge-off">-<%= Math.round((1 - p.price_cents / p.compare_at_cents) * 100) %>%</span><% } %> <span class="per"><%= p.pack_size > 1 ? '' : t('per_box') %></span></div>
-          <%- include('_stock', { p }) %>
-          <form method="post" action="/cart/add">
-            <input type="hidden" name="product_id" value="<%= p.id %>">
-            <input type="number" name="qty" value="<%= p.pack_size > 1 ? 1 : 10 %>" min="1" max="<%= Math.max(1, p.stock) %>" aria-label="<%= t('qty') %>" <%= p.stock <= 0 ? 'disabled' : '' %>>
-            <button class="btn" <%= p.stock <= 0 ? 'disabled' : '' %>><%= t('add_to_cart') %></button>
-          </form>
-        </div>
-      </article>
-      <% }) %>
+    <% [
+      { title: t('wall_double_title'), sub: t('wall_double_sub'), list: doubleBoxes },
+      { title: t('wall_single_title'), sub: t('wall_single_sub'), list: singleBoxes },
+    ].forEach(function (grp) { if (!grp.list.length) return; %>
+    <div class="wall-group">
+      <h3 class="wall-group-title"><%= grp.title %></h3>
+      <p class="wall-group-sub"><%= grp.sub %></p>
+      <div class="grid">
+        <% grp.list.forEach(function (p) { %>
+        <article class="card">
+          <a class="pic <%= p.image_id ? 'has-img' : '' %>" href="/products/<%= p.slug %>"><%- include('_pic', { p, fixed: true }) %></a>
+          <% if (p.featured) { %><span class="tagline"><%= t('popular') %></span><% } %>
+          <div class="body">
+            <a class="name" href="/products/<%= p.slug %>"><%= pt(p, 'name') %></a>
+            <p class="desc"><%= pt(p, 'short_desc') %></p>
+            <div class="price"><%= money(p.price_cents) %><% if (p.compare_at_cents > p.price_cents) { %><s><%= money(p.compare_at_cents) %></s><span class="badge-off">-<%= Math.round((1 - p.price_cents / p.compare_at_cents) * 100) %>%</span><% } %> <span class="per"><%= p.pack_size > 1 ? '' : t('per_box') %></span></div>
+            <%- include('_stock', { p }) %>
+            <form method="post" action="/cart/add">
+              <input type="hidden" name="product_id" value="<%= p.id %>">
+              <input type="number" name="qty" value="<%= p.pack_size > 1 ? 1 : 10 %>" min="1" max="<%= Math.max(1, p.stock) %>" aria-label="<%= t('qty') %>" <%= p.stock <= 0 ? 'disabled' : '' %>>
+              <button class="btn" <%= p.stock <= 0 ? 'disabled' : '' %>><%= t('add_to_cart') %></button>
+            </form>
+          </div>
+        </article>
+        <% }) %>
+      </div>
     </div>
+    <% }) %>
   </div>
 </section>
 
 <section class="block alt" id="sizes">
   <div class="wrap">
     <div class="section-head"><h2><%= t('retail_title') %></h2><p><%= t('retail_sub') %> <%= t('chart_sub') %></p></div>
+    <% [
+      { title: t('wall_double_title'), sub: t('wall_double_sub'), list: doubleBoxes },
+      { title: t('wall_single_title'), sub: t('wall_single_sub'), list: singleBoxes },
+    ].forEach(function (grp) { if (!grp.list.length) return; %>
+    <h3 class="wall-group-title"><%= grp.title %></h3>
+    <p class="wall-group-sub"><%= grp.sub %></p>
     <div class="table-scroll">
       <table class="sizes">
         <thead><tr><th><%= t('col_size') %></th><th class="num"><%= t('col_volume') %></th><th><%= t('col_strength') %></th><th class="num"><%= t('col_price') %></th><th><%= t('col_stock') %></th></tr></thead>
         <tbody>
-        <% boxes.forEach(function (p) { const d = dimsOf(p); const vol = d.length >= 3 ? (d[0] * d[1] * d[2] / 1728) : null; %>
+        <% grp.list.forEach(function (p) { const d = dimsOf(p); const vol = d.length >= 3 ? (d[0] * d[1] * d[2] / 1728) : null; %>
           <tr class="<%= p.featured ? 'popular' : '' %>">
             <td><a href="/products/<%= p.slug %>"><%= p.dimensions || pt(p, 'name') %></a><% if (p.featured) { %><span class="pill-popular"><%= t('popular') %></span><% } %></td>
             <td class="num"><%= vol ? vol.toFixed(vol < 10 ? 1 : 0) + ' ' + t('cuft') : '—' %></td>
@@ -84,15 +101,23 @@
         </tbody>
       </table>
     </div>
+    <% }) %>
   </div>
 </section>
 
 <% const wholesaleBoxes = boxes.filter(p => wholesaleTiers(p).length); %>
+<% const wholesaleDouble = doubleBoxes.filter(p => wholesaleTiers(p).length); %>
+<% const wholesaleSingle = singleBoxes.filter(p => wholesaleTiers(p).length); %>
 <% if (wholesaleBoxes.length) { %>
 <section class="block" id="wholesale">
   <div class="wrap">
     <div class="section-head"><h2><%= t('wholesale_section_title') %></h2><p><%= t('wholesale_section_sub') %></p></div>
     <div class="wholesale-badge"><%= t('wholesale_min_order', { n: 50 }) %></div>
+    <% [
+      { title: t('wall_double_title'), list: wholesaleDouble },
+      { title: t('wall_single_title'), list: wholesaleSingle },
+    ].forEach(function (grp) { if (!grp.list.length) return; %>
+    <h3 class="wall-group-title"><%= grp.title %></h3>
     <div class="table-scroll">
       <table class="sizes">
         <thead><tr>
@@ -101,7 +126,7 @@
           <th class="num">300+</th><th class="num">400+</th><th class="num">500+</th>
         </tr></thead>
         <tbody>
-        <% wholesaleBoxes.forEach(function (p) { const wtiers = wholesaleTiers(p); const byQty = Object.fromEntries(wtiers.map(t2 => [t2.qty, t2.cents])); %>
+        <% grp.list.forEach(function (p) { const wtiers = wholesaleTiers(p); const byQty = Object.fromEntries(wtiers.map(t2 => [t2.qty, t2.cents])); %>
           <tr>
             <td><a href="/products/<%= p.slug %>"><%= p.dimensions || pt(p, 'name') %></a></td>
             <td><%= p.wall_type === 'single' ? t('strength_val_single') : t('strength_val') %></td>
@@ -113,6 +138,7 @@
         </tbody>
       </table>
     </div>
+    <% }) %>
     <div class="wholesale-cta">
       <% const waMsg = t('wa_wholesale'); %>
       <% if (settings.whatsapp_number) { %>
