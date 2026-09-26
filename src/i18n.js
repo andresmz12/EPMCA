@@ -132,7 +132,7 @@ const dict = {
     wall_double_title: 'Doble pared', wall_double_sub: '275 lb — la más resistente, ideal para envíos y cargas pesadas.',
     wall_single_title: 'Pared sencilla', wall_single_sub: 'Más económica — ideal para objetos livianos y almacenamiento corto.',
     hero_wholesale_link: '¿Compras al por mayor? Mira los precios mayoristas →',
-    wholesale_section_title: 'Precios mayoristas', wholesale_section_sub: '¿Compras para tu negocio, bodega o para revender? Mientras más pidas, menos pagas por caja — se aplica solo al pagar, sin código.',
+    wholesale_section_title: 'Precios mayoristas', wholesale_section_sub: '¿Compras para tu negocio, bodega o para revender? Mientras más pidas, menos pagas por caja. El descuento se aplica automáticamente al pagar, sin necesidad de ningún código.',
     wholesale_min_order: 'Pedido mínimo: {n} cajas por tamaño', wholesale_col_size: 'Tamaño', wholesale_col_type: 'Tipo',
     wholesale_cta: 'Escríbenos por una cuenta mayorista', wholesale_cta_note: 'Para tamaños especiales, pedidos por pallet, o un mejor precio en volúmenes más grandes.',
     wa_wholesale: '¡Hola! Quisiera información sobre precios de mayoreo.',
