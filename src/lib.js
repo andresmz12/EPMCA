@@ -165,6 +165,8 @@ module.exports.boxSvg = boxSvg;
 
 // Generic fallback icon for non-box supplies (tape, stretch film, scale)
 // that don't have a photo yet — boxSvg only makes sense for actual boxes.
+// Tape and film get visibly different shapes (not just a color swap) so a
+// grid of 20 supply SKUs doesn't read as identical circles.
 function supplySvg(kind, color) {
   const c = color || '#D08A1E';
   if (kind === 'scale') {
@@ -174,10 +176,30 @@ function supplySvg(kind, color) {
 <rect x="24" y="27" width="16" height="6" rx="1" fill="#111214"/>
 </svg>`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Roll" class="boxsvg">
-<circle cx="32" cy="32" r="26" fill="${c}" stroke="#6b4a24" stroke-width="1.4"/>
-<circle cx="32" cy="32" r="10" fill="#F5F3EF" stroke="#6b4a24" stroke-width="1.2"/>
-<circle cx="32" cy="32" r="4" fill="#6b4a24"/>
+  if (kind === 'film') {
+    // Upright wrapped roll, like a stretch-film roll standing on a table.
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Stretch film roll" class="boxsvg">
+<rect x="19" y="8" width="26" height="48" rx="13" fill="${c}" stroke="#6b4a24" stroke-width="1.4"/>
+<ellipse cx="32" cy="12" rx="13" ry="4.2" fill="#F5F3EF" stroke="#6b4a24" stroke-width="1.2"/>
+<ellipse cx="32" cy="12" rx="4.5" ry="1.6" fill="#6b4a24"/>
+</svg>`;
+  }
+  // Tape: a ring with a peeling tail so it doesn't read as a generic circle.
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Packing tape roll" class="boxsvg">
+<path d="M49 39 L60 51 L45 48 Z" fill="${c}" stroke="#6b4a24" stroke-width="1"/>
+<circle cx="30" cy="30" r="24" fill="${c}" stroke="#6b4a24" stroke-width="1.4"/>
+<circle cx="30" cy="30" r="9" fill="#F5F3EF" stroke="#6b4a24" stroke-width="1.2"/>
+<circle cx="30" cy="30" r="3.4" fill="#6b4a24"/>
 </svg>`;
 }
 module.exports.supplySvg = supplySvg;
+
+// Kind + brand color guessed from the SKU slug (e.g. supply-tape-2in-blue → tape, blue).
+const SUPPLY_COLORS = { black: '#2b2b2b', lightblue: '#8FCBEA', orange: '#EEA331', blue: '#2E6FCE', tan: '#C9A06A', clear: '#D8D3C8' };
+function supplyIcon(slug) {
+  const s = String(slug || '');
+  const kind = /scale/.test(s) ? 'scale' : /film/.test(s) ? 'film' : 'tape';
+  const colorKey = Object.keys(SUPPLY_COLORS).find((k) => s.includes(k));
+  return supplySvg(kind, SUPPLY_COLORS[colorKey]);
+}
+module.exports.supplyIcon = supplyIcon;

@@ -35,7 +35,7 @@
         data-label-d="<%= payEnabled ? t('pay_now', { amount: money(delivery.total) }) : t('place_order') %>"
         data-label-p="<%= pickup ? (payEnabled ? t('pay_now', { amount: money(pickup.total) }) : t('place_order')) : '' %>">
         <%= payEnabled ? t('pay_now', { amount: money(delivery.total) }) : t('place_order') %></button>
-      <p class="muted small" style="margin:12px 0 0;text-align:center"><%= payEnabled ? t('pay_stripe_note') : t('pay_manual_note') %></p>
+      <p class="muted small trust-line"><% if (payEnabled) { %><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><% } %><%= payEnabled ? t('pay_stripe_note') : t('pay_manual_note') %></p>
       <p class="muted small" style="margin:6px 0 0;text-align:center"><%- t('checkout_legal_note', { terms: `<a class="textlink" href="/terms">${t('footer_terms')}</a>`, privacy: `<a class="textlink" href="/privacy">${t('footer_privacy')}</a>` }) %></p>
     </form>
     <aside class="panel gray">

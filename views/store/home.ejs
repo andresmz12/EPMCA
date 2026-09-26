@@ -73,8 +73,8 @@
         <thead><tr><th><%= t('col_size') %></th><th class="num"><%= t('col_volume') %></th><th><%= t('col_strength') %></th><th class="num"><%= t('col_price') %></th><th><%= t('col_stock') %></th></tr></thead>
         <tbody>
         <% boxes.forEach(function (p) { const d = dimsOf(p); const vol = d.length >= 3 ? (d[0] * d[1] * d[2] / 1728) : null; %>
-          <tr>
-            <td><a href="/products/<%= p.slug %>"><%= p.dimensions || pt(p, 'name') %></a></td>
+          <tr class="<%= p.featured ? 'popular' : '' %>">
+            <td><a href="/products/<%= p.slug %>"><%= p.dimensions || pt(p, 'name') %></a><% if (p.featured) { %><span class="pill-popular"><%= t('popular') %></span><% } %></td>
             <td class="num"><%= vol ? vol.toFixed(vol < 10 ? 1 : 0) + ' ' + t('cuft') : '—' %></td>
             <td><%= p.wall_type === 'single' ? t('strength_val_single') : t('strength_val') %></td>
             <td class="num"><b><%= money(p.price_cents) %></b></td>
@@ -166,8 +166,11 @@
   <div class="wrap">
     <div class="section-head"><h2><%= t('faq_title') %></h2></div>
     <div class="faq">
-      <% [1,2,3,4].forEach(function (n) { %>
-      <div><h3><%= t('faq_' + n + '_q') %></h3><p><%= t('faq_' + n + '_a', { flat: money(flat), min: money(freeMin) }) %></p></div>
+      <% [1,2,3,4,5,6].forEach(function (n, i) { %>
+      <details class="faq-item" <%= i === 0 ? 'open' : '' %>>
+        <summary><%= t('faq_' + n + '_q') %></summary>
+        <p><%= t('faq_' + n + '_a', { flat: money(flat), min: money(freeMin) }) %></p>
+      </details>
       <% }) %>
     </div>
   </div>

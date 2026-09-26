@@ -37,6 +37,7 @@ h3 { font-size: 17px; font-weight: 700; }
 p { margin: 0 0 1em; }
 .muted { color: var(--muted); }
 .small { font-size: 15px; }
+.trust-line { margin: 12px 0 0; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
 /* Top bar + header */
 .topbar { background: var(--ink); color: #E9E9EA; font-size: 14px; }
@@ -171,15 +172,21 @@ table.sizes td { padding: 13px 16px; border-bottom: 1px solid var(--line-2); }
 table.sizes tr:last-child td { border-bottom: 0; }
 table.sizes td.num, table.sizes th.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.sizes td a { font-weight: 700; }
+table.sizes tr.popular { background: var(--orange-soft); }
+.pill-popular { display: inline-block; background: #fff; border: 1px solid var(--orange-d); color: var(--orange-d); font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 2px; margin-left: 8px; vertical-align: middle; }
 
 /* Info columns + FAQ */
 .info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
 .info div { border-top: 3px solid var(--ink); padding-top: 14px; }
 .info p { color: var(--ink-2); margin: 0; }
-.faq { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 48px; }
-.faq div { padding: 16px 0; border-bottom: 1px solid var(--line); }
-.faq h3 { font-family: "Source Sans 3", Arial, sans-serif; font-size: 18px; margin-bottom: 6px; }
-.faq p { margin: 0; color: var(--ink-2); }
+.faq { max-width: 760px; }
+.faq-item { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.faq-item summary { font-family: "Source Sans 3", Arial, sans-serif; font-size: 18px; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: "+"; font-size: 22px; font-weight: 400; color: var(--muted); flex-shrink: 0; }
+.faq-item[open] summary::after { content: "\2212"; }
+.faq-item summary:hover { color: var(--orange); }
+.faq-item p { margin: 10px 0 0; color: var(--ink-2); }
 
 /* Product page */
 .pdp { display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; padding: 32px 0 64px; align-items: start; }
@@ -288,7 +295,6 @@ footer.site .legal { border-top: 1px solid #2B2D32; margin-top: 32px; padding-to
   .hero .wrap, .pdp, .two { grid-template-columns: 1fr; }
   .nav .links { display: none; }
   .info { grid-template-columns: 1fr; gap: 20px; }
-  .faq { grid-template-columns: 1fr; }
   footer.site .cols { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 640px) {

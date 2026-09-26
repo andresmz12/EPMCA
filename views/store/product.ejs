@@ -5,7 +5,7 @@
     <div>
       <div class="gallery <%= images.length ? 'has-img' : '' %>" id="mainpic">
         <% if (images.length) { %><img src="/img/<%= images[0] %>" alt="<%= pt(product, 'name') %>" id="mainpic-img">
-        <% } else if (product.category === 'supply') { %><%- supplySvg(/scale/i.test(product.slug) ? 'scale' : 'roll') %>
+        <% } else if (product.category === 'supply') { %><%- supplyIcon(product.slug) %>
         <% } else { %><%- boxSvg(product.dimensions) %><% } %>
       </div>
       <% if (images.length > 1) { %>
