@@ -372,7 +372,9 @@ r.post('/account/register', async (req, res, next) => {
     req.session.cart = cart;
     req.session.coupon = existing ? coupon : (coupon || 'WELCOME10');
     saveCartSnapshot(req, res.locals.lang);
-    res.redirect('/account');
+    // Explicit save: without it, the browser's very next request can arrive
+    // before the new session finishes writing and look logged out.
+    req.session.save((err2) => (err2 ? next(err2) : res.redirect('/account')));
   });
 });
 
@@ -399,7 +401,9 @@ r.post('/account/login', async (req, res, next) => {
     req.session.cart = cart;
     req.session.coupon = coupon;
     saveCartSnapshot(req, res.locals.lang);
-    res.redirect('/account');
+    // Explicit save: without it, the browser's very next request can arrive
+    // before the new session finishes writing and look logged out.
+    req.session.save((err2) => (err2 ? next(err2) : res.redirect('/account')));
   });
 });
 

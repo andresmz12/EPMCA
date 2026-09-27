@@ -64,7 +64,9 @@ r.post('/login', async (req, res, next) => {
   req.session.regenerate((err) => {
     if (err) return next(err);
     req.session.admin = { id: admin.id, lastSeen: Date.now() };
-    res.redirect('/admin');
+    // Explicit save: without it, the browser's very next request can arrive
+    // before the new session finishes writing and bounce back to login.
+    req.session.save((err2) => { if (err2) return next(err2); res.redirect('/admin'); });
   });
 });
 
