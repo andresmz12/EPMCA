@@ -36,6 +36,9 @@ function handleUpload(mw, backUrl) {
 }
 
 const loginLimit = limiter({ max: 8, windowMs: 15 * 60 * 1000 });
+// The admin handles customer data and payments, so it logs out on its own after
+// a while of no clicks — unlike the shopper session, which stays for a month.
+const ADMIN_IDLE_MS = 30 * 60 * 1000;
 
 r.use((req, res, next) => {
   res.locals.STATUS = lib.STATUS_ES;
@@ -60,7 +63,7 @@ r.post('/login', async (req, res, next) => {
   }
   req.session.regenerate((err) => {
     if (err) return next(err);
-    req.session.admin = { id: admin.id };
+    req.session.admin = { id: admin.id, lastSeen: Date.now() };
     res.redirect('/admin');
   });
 });
@@ -74,11 +77,17 @@ r.post('/logout', (req, res) => {
 // permissions) takes effect immediately instead of when their cookie expires.
 r.use(async (req, res, next) => {
   const id = req.session.admin && lib.int(req.session.admin.id, 0);
+  if (id && Date.now() - (req.session.admin.lastSeen || 0) > ADMIN_IDLE_MS) {
+    delete req.session.admin;
+    req.session.notice = { text: 'Tu sesión expiró por inactividad. Inicia sesión de nuevo.', type: 'warn' };
+    return res.redirect('/admin/login');
+  }
   const a = id ? await one('SELECT id, email, role, perm_orders, perm_products FROM admin_users WHERE id=$1', [id]) : null;
   if (!a) {
     delete req.session.admin;
     return res.redirect('/admin/login');
   }
+  req.session.admin.lastSeen = Date.now();
   res.locals.admin = a;
   res.locals.can = {
     orders: a.role === 'owner' || a.perm_orders,

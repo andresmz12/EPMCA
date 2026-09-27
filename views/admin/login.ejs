@@ -5,6 +5,7 @@
 <body><div class="login"><div class="card">
   <img src="/logo.png" alt="<%= settings.store_name %>">
   <h1 style="text-align:center;font-size:20px;margin-bottom:18px">Panel de administración</h1>
+  <% if (typeof notice !== 'undefined' && notice) { %><div class="notice <%= notice.type %>"><%= notice.text %></div><% } %>
   <% if (error) { %><div class="notice err"><%= error %></div><% } %>
   <form method="post" action="/admin/login">
     <div class="field"><label for="email">Correo</label><input id="email" name="email" type="email" required autocomplete="username" autofocus></div>
