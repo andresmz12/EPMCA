@@ -7,6 +7,7 @@
   <div class="two">
     <div>
       <% if (subJustCreated) { %><div class="flash ok"><%= t('sub_created') %></div><% } %>
+      <% if (showWelcomeCoupon) { %><div class="flash ok"><%= t('account_welcome_coupon') %></div><% } %>
       <% if (subs.length) { %>
       <h2 style="font-size:20px"><%= t('sub_my_subs') %></h2>
       <% subs.forEach(function (s) { %>
@@ -38,6 +39,7 @@
           </div>
           <span class="status-pill <%= o.status %>"><%= t('st_' + o.status) %></span>
           <b><%= money(o.total_cents) %></b>
+          <form method="post" action="/account/orders/<%= o.id %>/reorder"><button class="btn ghost sm"><%= t('reorder') %></button></form>
         </div>
       </div>
       <% }) %>

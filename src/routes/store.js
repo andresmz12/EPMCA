@@ -415,7 +415,34 @@ r.get('/account', async (req, res) => {
      WHERE o.customer_id=$1 AND o.created_at >= COALESCE(c.account_created_at, c.created_at)
      ORDER BY o.created_at DESC`, [res.locals.customer.id]);
   const subs = await all('SELECT * FROM subscriptions WHERE customer_id=$1 ORDER BY created_at DESC', [res.locals.customer.id]);
-  res.render('store/account', { orders: list, subs, subJustCreated: req.query.sub === 'ok', title: res.locals.t('account_title') });
+  const welcomeUsed = await one(
+    `SELECT 1 FROM orders WHERE customer_id=$1 AND upper(coupon_code)='WELCOME10' AND status<>'cancelled' LIMIT 1`,
+    [res.locals.customer.id]);
+  res.render('store/account', {
+    orders: list, subs, subJustCreated: req.query.sub === 'ok', showWelcomeCoupon: !welcomeUsed, title: res.locals.t('account_title'),
+  });
+});
+
+// Copies a past order's items into the current cart, skipping anything no
+// longer available, so a repeat customer doesn't have to re-pick every size.
+r.post('/account/orders/:id/reorder', async (req, res) => {
+  if (!res.locals.customer) return res.redirect('/account/login');
+  const order = await one('SELECT id FROM orders WHERE id=$1 AND customer_id=$2', [lib.int(req.params.id), res.locals.customer.id]);
+  if (!order) return res.redirect('/account');
+  const items = await all('SELECT product_id, qty FROM order_items WHERE order_id=$1 AND product_id IS NOT NULL', [order.id]);
+  const products = items.length ? await all('SELECT id, stock, active FROM products WHERE id = ANY($1::int[])', [items.map((i) => i.product_id)]) : [];
+  const byId = Object.fromEntries(products.map((p) => [p.id, p]));
+  const cart = req.session.cart || {};
+  let skipped = false;
+  for (const it of items) {
+    const p = byId[it.product_id];
+    if (!p || !p.active || p.stock <= 0) { skipped = true; continue; }
+    cart[p.id] = Math.min((lib.int(cart[p.id]) || 0) + it.qty, p.stock, 999);
+  }
+  req.session.cart = cart;
+  saveCartSnapshot(req, res.locals.lang);
+  req.session.flash = { type: skipped ? 'warn' : 'ok', key: skipped ? 'reorder_partial' : 'reorder_ok' };
+  res.redirect('/cart');
 });
 
 r.post('/account/subscribe', async (req, res) => {
