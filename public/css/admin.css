@@ -35,6 +35,11 @@ aside.side { background: var(--ink); color: #C9CBD0; padding: 22px 14px; positio
 main { padding: 28px 32px 60px; min-width: 0; }
 .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.msg-fields { margin: 0; flex: 1; min-width: 240px; }
+.msg-fields > div { display: flex; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.msg-fields > div:last-child { border-bottom: 0; }
+.msg-fields dt { flex: 0 0 90px; font-weight: 700; color: var(--muted); font-size: 13px; }
+.msg-fields dd { margin: 0; flex: 1; }
 .grid { display: grid; gap: 16px; }
 .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .cols2 { grid-template-columns: 1.6fr 1fr; align-items: start; }
