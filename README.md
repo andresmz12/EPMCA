@@ -98,7 +98,7 @@ Pasos:
    | Variable | Valor |
    |---|---|
    | `SENDGRID_API_KEY` | la llave `SG....` |
-   | `EMAIL_FROM` | un correo de tu dominio autenticado, ej. `pedidos@empacalo.us` |
+   | `EMAIL_FROM` | un correo de tu dominio autenticado, ej. `info@empacalo.us` |
    | `EMAIL_FROM_NAME` | `EMPACALO` (opcional) |
 
 **Cuándo sale cada correo**

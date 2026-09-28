@@ -307,7 +307,7 @@ const DEFAULT_SETTINGS = {
   pickup_enabled: 'false',
   pickup_address: '',
   business_address: '',
-  support_email: 'info@empacalo.net',
+  support_email: 'info@empacalo.us',
   support_phone: '',
   whatsapp_number: '',
   notify_email: '',
