@@ -27,6 +27,9 @@
               <select id="state" name="state" autocomplete="address-level1"><option value=""><%= t('select_state') %></option><% states.forEach(function (s) { %><option <%= form.state === s ? 'selected' : '' %>><%= s %></option><% }) %></select></div>
             <div class="field"><label for="zip"><%= t('zip') %> *</label><input id="zip" name="zip" inputmode="numeric" autocomplete="postal-code" maxlength="10" value="<%= form.zip || '' %>"></div>
           </div>
+          <% if (customer) { %>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:15px;color:var(--ink-2)"><input type="checkbox" name="save_address" value="1" checked style="width:auto"><%= t('save_address_check') %></label>
+          <% } %>
         </div>
         <% if (pickup && settings.pickup_address) { %><p id="pickupinfo" class="muted small" hidden><b><%= t('pickup_at') %>:</b> <%= settings.pickup_address %></p><% } %>
       </fieldset>

@@ -194,6 +194,7 @@ CREATE TABLE IF NOT EXISTS password_resets (
   used_at TIMESTAMPTZ
 );
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS list_price_cents INT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS clover_checkout_id TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS orders_stripe_invoice_uidx ON orders(stripe_invoice_id) WHERE stripe_invoice_id IS NOT NULL;
 

@@ -43,8 +43,17 @@
     </div>
   </div>
   <div class="panel gray" style="max-width:640px;margin:0 auto 80px">
-    <% items.forEach(function (it) { %>
-      <div class="mini"><span><%= (lang === 'es' && it.name_es) || it.name %><br><span class="muted"><%= t('qty') %>: <%= it.qty %></span></span><b><%= money(it.unit_price_cents * it.qty) %></b></div>
+    <% items.forEach(function (it) { const wholesale = it.list_price_cents && it.list_price_cents > it.unit_price_cents; %>
+      <div class="mini">
+        <span>
+          <%= (lang === 'es' && it.name_es) || it.name %><br>
+          <span class="muted">
+            <% if (wholesale) { %><s><%= money(it.list_price_cents) %></s> <b style="color:var(--ink)"><%= money(it.unit_price_cents) %></b> <%= t('per_box') %> · <% } %><%= t('qty') %>: <%= it.qty %>
+            <% if (wholesale) { %> · <span class="ok" style="font-weight:700"><%= t('wholesale_applied') %></span><% } %>
+          </span>
+        </span>
+        <b><%= money(it.unit_price_cents * it.qty) %></b>
+      </div>
     <% }) %>
     <div style="height:10px"></div>
     <div class="sumrow"><span><%= t('subtotal') %></span><span><%= money(order.subtotal_cents) %></span></div>

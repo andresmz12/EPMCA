@@ -30,7 +30,14 @@ const button = (url, label) => `<p style="margin:22px 0"><a href="${esc(url)}" s
 function itemsTable(order, items, t) {
   const row = (a, b, bold) => `<tr><td style="padding:6px 0;${bold ? 'font-weight:bold;border-top:1px solid #DEDBD5' : ''}">${a}</td><td align="right" style="padding:6px 0;${bold ? 'font-weight:bold;border-top:1px solid #DEDBD5' : ''}">${b}</td></tr>`;
   let h = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin:8px 0 4px">';
-  for (const it of items) h += row(`${it.qty} × ${esc((order.lang === 'es' && it.name_es) || it.name)}`, lib.money(it.unit_price_cents * it.qty));
+  for (const it of items) {
+    const name = `${it.qty} × ${esc((order.lang === 'es' && it.name_es) || it.name)}`;
+    const wholesale = it.list_price_cents && it.list_price_cents > it.unit_price_cents;
+    const label = wholesale
+      ? `${name}<br><span style="font-size:12px;color:#6A6E75">${t('per_box')}: <s>${lib.money(it.list_price_cents)}</s> <b style="color:#111214">${lib.money(it.unit_price_cents)}</b> · ${t('wholesale_applied')}</span>`
+      : name;
+    h += row(label, lib.money(it.unit_price_cents * it.qty));
+  }
   h += row(t('subtotal'), lib.money(order.subtotal_cents), true);
   if (order.discount_cents) h += row(`${t('discount')}${order.coupon_code ? ` (${esc(order.coupon_code)})` : ''}`, `−${lib.money(order.discount_cents)}`);
   h += row(order.fulfillment === 'pickup' ? t('pickup') : t('shipping'), order.shipping_cents ? lib.money(order.shipping_cents) : t('free'));

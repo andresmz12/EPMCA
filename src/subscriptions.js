@@ -26,7 +26,7 @@ async function generateCycleOrder(sub) {
 
 /** Sets up a new recurring plan and returns the first cycle's checkout link (paid live, like a normal order). */
 async function createPlan(customer, priced, form, interval, lang) {
-  const items = priced.lines.map((l) => ({ product_id: l.product.id, name: l.product.name, unit_price_cents: l.unitCents, qty: l.qty }));
+  const items = priced.lines.map((l) => ({ product_id: l.product.id, name: l.product.name, unit_price_cents: l.unitCents, list_price_cents: l.product.price_cents, qty: l.qty }));
   const sub = await one(
     `INSERT INTO subscriptions(customer_id, interval, items, subtotal_cents, shipping_cents, tax_cents, total_cents,
        fulfillment, address1, address2, city, state, zip, name, phone, email, lang, next_order_at)

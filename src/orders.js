@@ -25,7 +25,7 @@ async function createManualOrder({ lines, form, amounts, paymentMethod, status, 
   const crossed = [];
   const order = await tx(async (c) => {
     const ids = lines.map((l) => l.product_id);
-    const { rows: locked } = await c.query('SELECT id, name, stock FROM products WHERE id = ANY($1::int[]) FOR UPDATE', [ids]);
+    const { rows: locked } = await c.query('SELECT id, name, stock, price_cents FROM products WHERE id = ANY($1::int[]) FOR UPDATE', [ids]);
     const byId = Object.fromEntries(locked.map((r) => [r.id, r]));
     for (const l of lines) {
       const p = byId[l.product_id];
@@ -53,8 +53,9 @@ async function createManualOrder({ lines, form, amounts, paymentMethod, status, 
        form.address1, form.address2, form.city, form.state, form.zip,
        subtotal, discount, amounts.shipping, amounts.tax, total, status, paymentMethod, form.notes, adminEmail, form.lang === 'en' ? 'en' : 'es']);
     for (const l of lines) {
-      await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty) VALUES($1,$2,$3,$4,$5)',
-        [order.id, l.product_id, byId[l.product_id].name, l.unit_price_cents, l.qty]);
+      const listPrice = byId[l.product_id].price_cents;
+      await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty, list_price_cents) VALUES($1,$2,$3,$4,$5,$6)',
+        [order.id, l.product_id, byId[l.product_id].name, l.unit_price_cents, l.qty, listPrice !== l.unit_price_cents ? listPrice : null]);
     }
     return order;
   });
@@ -106,8 +107,8 @@ async function createOrder({ priced, form, paymentMethod, customerId = null }) {
        priced.coupon ? priced.coupon.code : null, paymentMethod, form.notes, form.lang === 'es' ? 'es' : 'en']);
 
     for (const l of priced.lines) {
-      await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty) VALUES($1,$2,$3,$4,$5)',
-        [order.id, l.product.id, l.product.name, l.unitCents, l.qty]);
+      await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty, list_price_cents) VALUES($1,$2,$3,$4,$5,$6)',
+        [order.id, l.product.id, l.product.name, l.unitCents, l.qty, l.product.price_cents]);
     }
     return order;
   });
@@ -149,8 +150,8 @@ async function createRecurringOrder(sub) {
        sub.address1, sub.address2, sub.city, sub.state, sub.zip,
        sub.subtotal_cents, sub.shipping_cents, sub.tax_cents, sub.total_cents, sub.id, sub.lang || 'en']);
     for (const it of sub.items) {
-      await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty) VALUES($1,$2,$3,$4,$5)',
-        [order.id, it.product_id, it.name, it.unit_price_cents, it.qty]);
+      await c.query('INSERT INTO order_items(order_id, product_id, name, unit_price_cents, qty, list_price_cents) VALUES($1,$2,$3,$4,$5,$6)',
+        [order.id, it.product_id, it.name, it.unit_price_cents, it.qty, it.list_price_cents || null]);
       const { rows: [p] } = await c.query('UPDATE products SET stock = GREATEST(stock - $1, 0), updated_at=now() WHERE id=$2 RETURNING stock', [it.qty, it.product_id]);
       if (p && p.stock + it.qty > lib.LOW_STOCK_THRESHOLD && p.stock <= lib.LOW_STOCK_THRESHOLD) crossed.push({ name: it.name, stock: p.stock });
     }

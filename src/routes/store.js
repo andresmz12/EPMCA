@@ -208,6 +208,12 @@ r.post('/checkout', async (req, res) => {
   checkoutLimit.hit(req.ip);
   const err = validate(form, settings);
   if (err) return fail(err);
+  // Lets a logged-in customer check the box and skip retyping their address next time,
+  // instead of the separate "saved address" form in /account being the only way in.
+  if (customer && form.fulfillment === 'delivery' && req.body.save_address) {
+    q('UPDATE customers SET name=$1, phone=$2, address1=$3, address2=$4, city=$5, state=$6, zip=$7 WHERE id=$8',
+      [form.name, form.phone, form.address1, form.address2, form.city, form.state, form.zip, customer.id]).catch(() => {});
+  }
   const priced = await lib.priceCart(req.session.cart, req.session.coupon, settings, form.fulfillment);
   if (!priced.lines.length) return fail('err_empty');
   if (priced.lines.some((l) => l.overStock)) return fail('err_stock');
