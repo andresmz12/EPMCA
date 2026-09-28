@@ -117,9 +117,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--orange); ou
 .facts li { padding: 14px 20px 0 0; margin-right: 20px; font-size: 15px; color: var(--ink-2); }
 .facts li b { display: block; font-family: var(--head); font-size: 17px; color: var(--ink); }
 .hero-teasers { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 22px; }
-.wholesale-teaser { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px 9px 13px; border-radius: 999px; background: #fff; border: 1.5px solid var(--orange); color: var(--orange-d); font-weight: 700; font-size: 14px; text-decoration: none; transition: background .15s, border-color .15s; }
-.wholesale-teaser svg { flex-shrink: 0; }
-.wholesale-teaser:hover { background: var(--orange-soft); border-color: var(--orange-d); }
+.wholesale-teaser { display: inline-flex; align-items: center; gap: 10px; padding: 11px 20px 11px 14px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 700; font-size: 14.5px; text-decoration: none; box-shadow: 0 3px 10px rgba(17,18,20,.25); transition: transform .15s, box-shadow .15s, background .15s; }
+.wholesale-teaser .ico { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--orange); color: var(--ink); flex-shrink: 0; }
+.wholesale-teaser:hover { background: #26282d; transform: translateY(-1px); box-shadow: 0 5px 14px rgba(17,18,20,.32); }
 .art { background: var(--kraft); border: 1px solid #E2D3BC; border-radius: var(--r); padding: 28px 24px 14px; margin: 0; }
 .art .row-boxes { display: flex; align-items: flex-end; justify-content: center; gap: 0; }
 .art .row-boxes > div { flex: 1 1 0; min-width: 0; margin: 0 -1.5%; }

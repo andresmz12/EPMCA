@@ -171,8 +171,8 @@ module.exports = {
     const to = settings.notify_email || settings.support_email;
     if (!to) return;
     const subject = `Mensaje de ${msg.name} desde la web`;
-    const body = `<p><b>${esc(msg.name)}</b> · ${esc(msg.email)}${msg.phone ? ` · ${esc(msg.phone)}` : ''}</p><p style="white-space:pre-wrap">${esc(msg.message)}</p><p style="font-size:13px;color:#6A6E75">Responde este correo para contestarle directamente.</p>`;
-    await mail.send({ to, subject, html: layout(settings, subject, body, 'Aviso automático de tu tienda.'), replyTo: msg.email });
+    const body = `<p><b>${esc(msg.name)}</b>${msg.email ? ` · ${esc(msg.email)}` : ''}${msg.phone ? ` · ${esc(msg.phone)}` : ''}</p><p style="white-space:pre-wrap">${esc(msg.message)}</p><p style="font-size:13px;color:#6A6E75">Responde este correo para contestarle directamente.</p>`;
+    await mail.send({ to, subject, html: layout(settings, subject, body, 'Aviso automático de tu tienda.'), replyTo: msg.email || undefined });
   }),
   welcome: safe(async (customer, lang, base) => {
     const settings = await getSettings();
