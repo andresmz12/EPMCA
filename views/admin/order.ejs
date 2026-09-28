@@ -10,8 +10,16 @@
   <div class="grid" style="gap:16px">
     <div class="card">
       <h2>Productos</h2>
-      <table><thead><tr><th>Producto</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th></tr></thead><tbody>
-      <% items.forEach(function (it) { %><tr><td><%= it.name %></td><td class="num"><%= it.qty %></td><td class="num"><%= money(it.unit_price_cents) %></td><td class="num"><%= money(it.unit_price_cents * it.qty) %></td></tr><% }) %>
+      <table><thead><tr><th>Producto</th><th class="num">Cant.</th><th class="num">Precio normal</th><th class="num">Precio cobrado</th><th class="num">Total</th></tr></thead><tbody>
+      <% items.forEach(function (it) { const wholesale = it.list_price_cents && it.list_price_cents > it.unit_price_cents; %>
+      <tr>
+        <td><%= it.name %></td>
+        <td class="num"><%= it.qty %></td>
+        <td class="num muted"><%= wholesale ? money(it.list_price_cents) : '—' %></td>
+        <td class="num"><%= money(it.unit_price_cents) %><% if (wholesale) { %> <span class="pill on" style="font-size:11px;padding:2px 7px">mayoreo</span><% } %></td>
+        <td class="num"><%= money(it.unit_price_cents * it.qty) %></td>
+      </tr>
+      <% }) %>
       </tbody></table>
       <dl class="dl totals" style="margin-top:16px;grid-template-columns:1fr auto">
         <dt>Subtotal</dt><dd class="num"><%= money(order.subtotal_cents) %></dd>
