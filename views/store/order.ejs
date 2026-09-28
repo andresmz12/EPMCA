@@ -17,6 +17,7 @@
   <div class="thanks">
     <h1 style="font-size:clamp(28px,4vw,40px)"><%= fresh ? t('thanks_title', { name: order.name.split(' ')[0] }) : t('track_order_title', { number: order.number }) %></h1>
     <p class="muted"><%= t('placed_on', { number: order.number, date: fmt(order.created_at) }) %></p>
+    <% if (order.email) { %><p class="muted small"><%= t('order_email_sent', { email: order.email }) %></p><% } %>
     <% if (order.status === 'cancelled') { %>
       <p><span class="status-pill cancelled"><%= t('st_cancelled') %></span></p>
     <% } else { %>
