@@ -113,12 +113,15 @@ r.post('/cart/add', async (req, res) => {
   cartLimit.hit(req.ip);
   const id = lib.int(req.body.product_id);
   const qty = Math.max(1, Math.min(lib.int(req.body.qty, 1), 999));
-  const p = await one('SELECT id, name, name_es, price_cents, image_id, stock FROM products WHERE id=$1 AND active', [id]);
+  const p = await one('SELECT * FROM products WHERE id=$1 AND active', [id]);
   if (p && p.stock > 0) {
     const cart = req.session.cart || {};
-    cart[id] = Math.min((lib.int(cart[id]) || 0) + qty, p.stock, 999);
+    const newQty = Math.min((lib.int(cart[id]) || 0) + qty, p.stock, 999);
+    cart[id] = newQty;
     req.session.cart = cart;
-    if (req.body.next !== 'cart') req.session.cartAdded = { name: p.name, name_es: p.name_es, qty, price_cents: p.price_cents, image_id: p.image_id };
+    // Reflects the actual per-box price for the cart's new total quantity
+    // (wholesale tiers apply per size, not per add-to-cart click).
+    if (req.body.next !== 'cart') req.session.cartAdded = { name: p.name, name_es: p.name_es, qty, price_cents: lib.unitPriceCents(p, newQty), image_id: p.image_id };
   }
   saveCartSnapshot(req, res.locals.lang);
   res.redirect(req.body.next === 'cart' ? '/cart' : backTo(req));

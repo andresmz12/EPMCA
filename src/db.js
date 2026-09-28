@@ -316,6 +316,7 @@ const DEFAULT_SETTINGS = {
   digest_last_date: '',
   catalog_2026_loaded: 'false',
   wholesale_2026_loaded: 'false',
+  wholesale_double_small_2026_loaded: 'false',
   supplies_2026_loaded: 'false',
   lowstock_alert_enabled: 'true',
   cart_reminder_enabled: 'true',
@@ -392,6 +393,21 @@ const WHOLESALE_2026 = {
   'box-30x30x30': [1675, 1480, 1380, 1280, 1180, 1080],
   'box-24x30x36': [1675, 1480, 1380, 1280, 1180, 1080],
   'box-42x29x26': [1775, 1690, 1590, 1490, 1390, 1290],
+};
+
+// The 2026 sheet only gave wholesale tiers for single-wall small/mid sizes
+// and double-wall 24"+; these double-wall small/mid sizes were missing
+// entirely. Filled in by applying each size's own single-wall discount
+// curve (tier price ÷ retail price) to the double-wall retail price, so
+// the % off at each break point matches its single-wall counterpart.
+const WHOLESALE_2026_DOUBLE_SMALL = {
+  'box-12x12x12-double': [318, 297, 287, 277, 267, 256],
+  'box-14x14x14-double': [422, 358, 344, 329, 314, 294],
+  'box-16x16x16-double': [448, 433, 418, 403, 387, 372],
+  'box-18x18x18-double': [474, 453, 442, 421, 400, 379],
+  'box-18x18x24-double': [515, 493, 472, 450, 428, 407],
+  'box-20x20x20-double': [543, 517, 491, 465, 439, 408],
+  'box-22x22x22-double': [704, 639, 604, 569, 534, 499],
 };
 
 // Packing supplies (EMPACALO KIT 2026): stretch film, tape and a digital
@@ -509,6 +525,19 @@ async function migrate() {
     }
     await pool.query("INSERT INTO settings(key,value) VALUES('wholesale_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
     console.log(`Precios mayoristas cargados para ${Object.keys(WHOLESALE_2026).length} cajas.`);
+  }
+
+  // One-time: fill in the double-wall small/mid sizes the sheet above missed.
+  const wholesaleDoubleSmallLoaded = (await pool.query("SELECT value FROM settings WHERE key='wholesale_double_small_2026_loaded'")).rows[0];
+  if (!wholesaleDoubleSmallLoaded || wholesaleDoubleSmallLoaded.value !== 'true') {
+    for (const [slug, tiers] of Object.entries(WHOLESALE_2026_DOUBLE_SMALL)) {
+      await pool.query(
+        `UPDATE products SET wholesale_50_cents=$1, wholesale_100_cents=$2, wholesale_200_cents=$3,
+           wholesale_300_cents=$4, wholesale_400_cents=$5, wholesale_500_cents=$6, updated_at=now() WHERE slug=$7`,
+        [...tiers, slug]);
+    }
+    await pool.query("INSERT INTO settings(key,value) VALUES('wholesale_double_small_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
+    console.log(`Precios mayoristas cargados para ${Object.keys(WHOLESALE_2026_DOUBLE_SMALL).length} cajas de doble pared adicionales.`);
   }
 
   // One-time: load packing supplies (tape, stretch film, scale).
