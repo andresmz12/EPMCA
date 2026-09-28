@@ -16,14 +16,23 @@ const toText = (html) => html
   .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#34;|&quot;/g, '"').replace(/&#39;/g, "'")
   .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 
+// `to` can be one address, or several as an array or a comma/semicolon-separated
+// string (e.g. a store's "notify_email" setting listing more than one recipient).
+// Each gets its own personalization so recipients never see each other's address.
+function recipients(to) {
+  const raw = Array.isArray(to) ? to : String(to || '').split(/[,;]/);
+  return [...new Set(raw.map((s) => s.trim()).filter(Boolean))];
+}
+
 async function send({ to, subject, html, replyTo }) {
-  if (!to) return false;
+  const list = recipients(to);
+  if (!list.length) return false;
   if (!enabled) {
-    console.log(`[email no enviado: falta SendGrid] para=${to} asunto="${subject}"`);
+    console.log(`[email no enviado: falta SendGrid] para=${list.join(', ')} asunto="${subject}"`);
     return false;
   }
   const body = {
-    personalizations: [{ to: [{ email: to }] }],
+    personalizations: list.map((email) => ({ to: [{ email }] })),
     from: { email: FROM, name: FROM_NAME },
     subject,
     content: [{ type: 'text/plain', value: toText(html) }, { type: 'text/html', value: html }],
@@ -37,12 +46,12 @@ async function send({ to, subject, html, replyTo }) {
       signal: AbortSignal.timeout(10000),
     });
     if (!r.ok) {
-      console.error(`SendGrid ${r.status} para ${to}: ${(await r.text()).slice(0, 300)}`);
+      console.error(`SendGrid ${r.status} para ${list.join(', ')}: ${(await r.text()).slice(0, 300)}`);
       return false;
     }
     return true;
   } catch (e) {
-    console.error(`Error enviando email a ${to}:`, e.message);
+    console.error(`Error enviando email a ${list.join(', ')}:`, e.message);
     return false;
   }
 }
