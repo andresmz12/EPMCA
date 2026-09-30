@@ -122,10 +122,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--orange); ou
 .wholesale-teaser:hover { background: #26282d; transform: translateY(-1px); box-shadow: 0 5px 14px rgba(17,18,20,.32); }
 .art { background: var(--kraft); border: 1px solid #E2D3BC; border-radius: var(--r); padding: 28px 24px 14px; margin: 0; }
 .art .row-boxes { display: flex; align-items: flex-end; justify-content: center; gap: 0; }
-.art .row-boxes > div { flex: 1 1 0; min-width: 0; margin: 0 -1.5%; }
+.art .row-boxes > div { flex: 1 1 0; min-width: 0; margin: 0 -1%; }
 .art .row-boxes svg { width: 100%; height: auto; }
 .art .rule { height: 1px; background: #CDB894; margin-top: 2px; }
-.art figcaption { display: flex; justify-content: space-between; font-size: 13px; color: #7A6444; margin-top: 8px; }
+.art { padding: 44px 28px 18px; }
+.art figcaption { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; color: #7A6444; margin-top: 10px; }
+.art figcaption span { white-space: nowrap; }
+.art figcaption span + span { overflow: hidden; text-overflow: ellipsis; }
 .art.photo { padding: 0; overflow: hidden; aspect-ratio: 4 / 3; }
 .art.photo img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -157,6 +160,13 @@ section.block.alt { background: var(--bg-2); border-top: 1px solid var(--line); 
 .card .name { font-weight: 700; font-size: 18px; line-height: 1.25; text-decoration: none; }
 .card .name:hover { text-decoration: underline; }
 .card .desc { font-size: 15px; color: var(--muted); margin: 0 0 4px; flex: 1; }
+.card .body .price { margin-top: auto; padding-top: 4px; }
+.card .body .price .badge-off { margin-left: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 26px; }
+.chips a { padding: 8px 16px; border: 1.5px solid var(--line); border-radius: 999px; font-weight: 700; font-size: 15px; text-decoration: none; background: #fff; transition: border-color .15s, background .15s; }
+.chips a:hover, .chips a:focus-visible { border-color: var(--orange); background: #FCEFD9; }
+html { scroll-padding-top: 84px; }
+.buybox + .prose { margin-top: 26px; }
 .price { font-family: var(--head); font-weight: 700; font-size: 20px; }
 .price s { color: var(--muted); font-weight: 600; font-size: 15px; margin-left: 6px; }
 .price .per { font-family: "Source Sans 3", Arial, sans-serif; font-size: 15px; font-weight: 400; color: var(--muted); }

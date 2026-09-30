@@ -7,7 +7,11 @@
   const minPrice = boxes.length ? Math.min(...boxes.map(p => p.price_cents)) : 0;
   const flat = Number(settings.shipping_flat_cents || 0), freeMin = Number(settings.free_shipping_min_cents || 0);
   const dimsOf = (p) => (String(p.dimensions).match(/\d+(\.\d+)?/g) || []).map(Number);
-  const heroBoxes = boxes.filter(p => dimsOf(p).length >= 3).slice().sort((a, b) => dimsOf(a).reduce((x, y) => x * y, 1) - dimsOf(b).reduce((x, y) => x * y, 1));
+  const vol = (p) => dimsOf(p).reduce((x, y) => x * y, 1);
+  const allHero = boxes.filter(p => dimsOf(p).length >= 3).slice().sort((a, b) => vol(a) - vol(b));
+  const seenDims = new Set();
+  const uniqueHero = allHero.filter(p => { const k = dimsOf(p).join('x'); if (seenDims.has(k)) return false; seenDims.add(k); return true; });
+  const heroBoxes = uniqueHero.length <= 6 ? uniqueHero : Array.from({ length: 6 }, (_, i) => uniqueHero[Math.round(i * (uniqueHero.length - 1) / 5)]);
 %>
 <section class="hero">
   <div class="wrap">
@@ -55,11 +59,17 @@
 <section class="block" id="shop">
   <div class="wrap">
     <div class="section-head"><h2><%= t('shop_title') %></h2><p><%= t('shop_sub') %></p></div>
+    <nav class="chips" aria-label="<%= t('shop_title') %>">
+      <% if (doubleBoxes.length) { %><a href="#wall-double"><%= t('wall_double_title') %></a><% } %>
+      <% if (singleBoxes.length) { %><a href="#wall-single"><%= t('wall_single_title') %></a><% } %>
+      <% if (supplies.length) { %><a href="#supplies"><%= t('supplies_title') %></a><% } %>
+      <% if (wholesaleTiers && boxes.some(p => wholesaleTiers(p).length)) { %><a href="#wholesale"><%= t('nav_wholesale') %></a><% } %>
+    </nav>
     <% [
-      { title: t('wall_double_title'), sub: t('wall_double_sub'), list: doubleBoxes },
-      { title: t('wall_single_title'), sub: t('wall_single_sub'), list: singleBoxes },
+      { id: 'wall-double', title: t('wall_double_title'), sub: t('wall_double_sub'), list: doubleBoxes },
+      { id: 'wall-single', title: t('wall_single_title'), sub: t('wall_single_sub'), list: singleBoxes },
     ].forEach(function (grp) { if (!grp.list.length) return; %>
-    <div class="wall-group">
+    <div class="wall-group" id="<%= grp.id %>">
       <h3 class="wall-group-title"><%= grp.title %></h3>
       <p class="wall-group-sub"><%= grp.sub %></p>
       <div class="grid">
@@ -69,7 +79,6 @@
           <% if (p.featured) { %><span class="tagline"><%= t('popular') %></span><% } %>
           <div class="body">
             <a class="name" href="/products/<%= p.slug %>"><%= pt(p, 'name') %></a>
-            <p class="desc"><%= pt(p, 'short_desc') %></p>
             <div class="price"><%= money(p.price_cents) %><% if (p.compare_at_cents > p.price_cents) { %><s><%= money(p.compare_at_cents) %></s><span class="badge-off">-<%= Math.round((1 - p.price_cents / p.compare_at_cents) * 100) %>%</span><% } %> <span class="per"><%= p.pack_size > 1 ? '' : t('per_box') %></span></div>
             <%- include('_stock', { p }) %>
             <form method="post" action="/cart/add">
@@ -117,7 +126,6 @@
         <a class="pic <%= p.image_id ? 'has-img' : '' %>" href="/products/<%= p.slug %>"><%- include('_pic', { p, fixed: true }) %></a>
         <div class="body">
           <a class="name" href="/products/<%= p.slug %>"><%= pt(p, 'name') %></a>
-          <p class="desc"><%= pt(p, 'short_desc') %></p>
           <div class="price"><%= money(p.price_cents) %> <span class="per"><%= p.pack_size > 1 ? '' : t('per_unit') %></span></div>
           <%- include('_stock', { p }) %>
           <form method="post" action="/cart/add">
