@@ -78,7 +78,7 @@ async function dailyDigest(settings) {
 async function runAll() {
   const { getSettings } = require('./db');
   const settings = await getSettings();
-  for (const job of [releaseAbandoned, () => paymentReminders(settings), () => cartReminders(settings), () => dailyDigest(settings), subscriptions.runDueCycles]) {
+  for (const job of [require('./live').purge, releaseAbandoned, () => paymentReminders(settings), () => cartReminders(settings), () => dailyDigest(settings), subscriptions.runDueCycles]) {
     try { await job(); } catch (e) { console.error('Job error:', e.message); }
   }
 }

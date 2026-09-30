@@ -149,6 +149,10 @@ r.get('/', async (req, res) => {
   });
 });
 
+r.get('/live.json', async (req, res) => {
+  res.set('Cache-Control', 'no-store').json(await require('../live').snapshot());
+});
+
 /* ───────────── Sales reports (same audience as the dashboard) ───────────── */
 r.get('/reports/sales.xlsx', (req, res) => reports.salesXlsx(res, reports.parseRange(req.query)));
 r.get('/reports/sales.pdf', (req, res) => reports.salesPdf(res, reports.parseRange(req.query)));

@@ -37,13 +37,26 @@ function backTo(req) {
   return '/';
 }
 
-r.get('/', async (req, res) => {
+// The home page is the heaviest to render and the one ads and search send everyone to.
+// Visitors with nothing personal on screen (no login, cart, flash or popup) all get the
+// same HTML, so it's rendered once per language every few seconds instead of per request.
+const homeCache = new Map();
+const HOME_TTL_MS = 20 * 1000;
+r.get('/', async (req, res, next) => {
+  const { siteUrl, settings, t, money, lang, customer, flash, cartAdded, cartCount } = res.locals;
+  const cacheable = !customer && !flash && !cartAdded && cartCount === 0 && Object.keys(req.query).every((k) => k === 'lang');
+  const key = `${siteUrl}|${lang}`;
+  const hit = cacheable && homeCache.get(key);
+  if (hit && Date.now() - hit.at < HOME_TTL_MS) return res.send(hit.html);
   const products = await all('SELECT * FROM products WHERE active ORDER BY sort, id');
-  const { siteUrl, settings, t, money } = res.locals;
   res.render('store/home', {
     products, title: null, fullTitle: t('seo_home_title'), description: t('seo_home_desc'), jsonld: seo.homeLd({ siteUrl, settings, t, money }),
     callbackSent: req.query.callback === 'ok',
     callbackError: req.query.callback === 'err' ? t(req.query.k === 'too_many' ? 'err_too_many' : 'err_required') : null,
+  }, (err, html) => {
+    if (err) return next(err);
+    if (cacheable) { if (homeCache.size > 8) homeCache.clear(); homeCache.set(key, { at: Date.now(), html }); }
+    res.send(html);
   });
 });
 

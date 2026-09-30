@@ -13,8 +13,15 @@ const needsSsl = /sslmode=require/.test(connectionString) || process.env.PGSSL =
 const pool = new Pool({
   connectionString,
   ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
-  max: 10,
+  max: 15,
+  // Under a spike, fail fast instead of queueing requests forever.
+  connectionTimeoutMillis: 8000,
+  idleTimeoutMillis: 30000,
+  statement_timeout: 20000,
 });
+// Without this, a dropped idle connection (database restart, network blip) throws
+// an unhandled 'error' event and crashes the whole process.
+pool.on('error', (e) => console.error('Postgres (conexión inactiva):', e.message));
 
 const q = (text, params) => pool.query(text, params);
 const one = async (text, params) => (await pool.query(text, params)).rows[0] || null;
@@ -262,6 +269,23 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS order_items_product_idx ON order_items(product_id);
 
+-- Anonymous live-visitor counter: one row per browser (random id), no IP or name.
+CREATE TABLE IF NOT EXISTS site_visitors (
+  vid TEXT PRIMARY KEY,
+  first_seen TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen TIMESTAMPTZ NOT NULL DEFAULT now(),
+  page TEXT NOT NULL DEFAULT '/',
+  device TEXT NOT NULL DEFAULT 'desktop',
+  source TEXT NOT NULL DEFAULT 'direct',
+  lang TEXT NOT NULL DEFAULT 'en',
+  views INT NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS site_visitors_last_seen_idx ON site_visitors(last_seen DESC);
+CREATE TABLE IF NOT EXISTS site_stats_daily (
+  day DATE PRIMARY KEY,
+  views INT NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS contact_messages (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -322,6 +346,7 @@ const DEFAULT_SETTINGS = {
   catalog_2026_loaded: 'false',
   wholesale_2026_loaded: 'false',
   wholesale_double_small_2026_loaded: 'false',
+  box_copy_v2_loaded: 'false',
   supplies_2026_loaded: 'false',
   lowstock_alert_enabled: 'true',
   cart_reminder_enabled: 'true',
@@ -543,6 +568,30 @@ async function migrate() {
     }
     await pool.query("INSERT INTO settings(key,value) VALUES('wholesale_double_small_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
     console.log(`Precios mayoristas cargados para ${Object.keys(WHOLESALE_2026_DOUBLE_SMALL).length} cajas de doble pared adicionales.`);
+  }
+
+  // One-time: size-specific copy for boxes. Only rewrites text that is still the
+  // shared boilerplate (identical on 3+ boxes of the same wall type), so anything
+  // edited by hand in the admin is left alone.
+  const boxCopyLoaded = (await pool.query("SELECT value FROM settings WHERE key='box_copy_v2_loaded'")).rows[0];
+  if (!boxCopyLoaded || boxCopyLoaded.value !== 'true') {
+    const { boxCopy } = require('./boxcopy');
+    const rows = (await pool.query("SELECT id, wall_type, dimensions, description, short_desc, wholesale_50_cents FROM products WHERE category <> 'supply'")).rows;
+    const shared = (field) => {
+      const counts = new Map();
+      for (const r of rows) counts.set(`${r.wall_type}|${r[field]}`, (counts.get(`${r.wall_type}|${r[field]}`) || 0) + 1);
+      return (r) => counts.get(`${r.wall_type}|${r[field]}`) >= 3;
+    };
+    const sharedDesc = shared('description'), sharedShort = shared('short_desc');
+    let n = 0;
+    for (const r of rows) {
+      const c = boxCopy({ dimensions: r.dimensions, wall: r.wall_type, hasTiers: r.wholesale_50_cents != null });
+      if (!c) continue;
+      if (sharedDesc(r)) { await pool.query('UPDATE products SET description=$1, description_es=$2, updated_at=now() WHERE id=$3', [c.description, c.description_es, r.id]); n++; }
+      if (sharedShort(r)) await pool.query('UPDATE products SET short_desc=$1, short_desc_es=$2, updated_at=now() WHERE id=$3', [c.short_desc, c.short_desc_es, r.id]);
+    }
+    await pool.query("INSERT INTO settings(key,value) VALUES('box_copy_v2_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
+    console.log(`Descripciones específicas por tamaño para ${n} cajas.`);
   }
 
   // One-time: load packing supplies (tape, stretch film, scale).

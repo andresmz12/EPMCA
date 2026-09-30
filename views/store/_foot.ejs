@@ -68,6 +68,19 @@
 </script>
 <% } %>
 <script>
+(function () {
+  try { if (localStorage.getItem('emp_skip') || navigator.doNotTrack === '1') return; } catch (e) { return; }
+  var vid; try { vid = localStorage.getItem('emp_vid'); if (!vid) { vid = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now().toString(36)).slice(0, 28); localStorage.setItem('emp_vid', vid); } } catch (e) { return; }
+  function ping(first) {
+    var b = new URLSearchParams({ vid: vid, path: location.pathname, lang: document.documentElement.lang, first: first ? '1' : '0', ref: first ? document.referrer : '' });
+    if (navigator.sendBeacon) navigator.sendBeacon('/api/ping', b); else fetch('/api/ping', { method: 'POST', body: b, keepalive: true });
+  }
+  ping(true);
+  setInterval(function () { if (!document.hidden) ping(false); }, 30000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) ping(false); });
+})();
+</script>
+<script>
 document.querySelectorAll('form[data-confirm]').forEach(function (f) {
   f.addEventListener('submit', function (e) { if (!window.confirm(f.dataset.confirm)) e.preventDefault(); });
 });

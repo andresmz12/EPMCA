@@ -25,6 +25,47 @@
   <button class="btn ghost sm" formaction="/admin/reports/sales.xlsx">Excel</button>
 </form>
 
+<div class="card live" id="live" style="margin-bottom:16px">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="live-dot"></span>
+      <div><div class="lbl" style="font-size:13px;color:var(--muted);font-weight:600">En vivo · personas en la tienda ahora</div><div class="val" id="live-now" style="font-size:34px;font-weight:800;line-height:1.1">–</div></div>
+    </div>
+    <div class="live-stats">
+      <div><b id="live-30">–</b><span>últimos 30 min</span></div>
+      <div><b id="live-today">–</b><span>visitantes hoy</span></div>
+      <div><b id="live-views">–</b><span>páginas vistas hoy</span></div>
+      <div><b id="live-mobile">–</b><span>ahora en celular</span></div>
+      <div><b id="live-desktop">–</b><span>ahora en computadora</span></div>
+    </div>
+  </div>
+  <div class="live-cols">
+    <div><div class="lbl">Páginas que están viendo</div><ul id="live-pages" class="live-list"><li class="muted small">Cargando…</li></ul></div>
+    <div><div class="lbl">De dónde llegaron hoy</div><ul id="live-sources" class="live-list"><li class="muted small">Cargando…</li></ul></div>
+  </div>
+  <div class="hint" style="margin-top:8px">Datos reales de visitantes con la página abierta (se actualiza solo). No cuenta buscadores, robots ni tus propias visitas desde este navegador.</div>
+</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var names = { '/': 'Inicio', '/cart': 'Carrito', '/checkout': 'Checkout', '/contact': 'Contacto', '/track': 'Rastrear pedido' };
+  var pageName = function (p) { return names[p] || (p.indexOf('/products/') === 0 ? 'Producto: ' + p.slice(10) : p); };
+  var srcName = { direct: 'Directo', google: 'Google', search: 'Otro buscador', 'facebook/instagram': 'Facebook / Instagram', whatsapp: 'WhatsApp', tiktok: 'TikTok', other: 'Otro sitio' };
+  function list(el, rows, label) { el.innerHTML = rows.length ? rows.map(function (r) { return '<li><span>' + esc(label(r)) + '</span><b>' + r.n + '</b></li>'; }).join('') : '<li class="muted small">Nadie por ahora</li>'; }
+  function load() {
+    fetch('/admin/live.json', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d) return;
+      $('live-now').textContent = d.now5; $('live-30').textContent = d.min30; $('live-today').textContent = d.today; $('live-views').textContent = d.viewsToday;
+      $('live-mobile').textContent = d.mobile + (d.tablet ? d.tablet : 0); $('live-desktop').textContent = d.desktop;
+      list($('live-pages'), d.pages, function (r) { return pageName(r.page); });
+      list($('live-sources'), d.sources, function (r) { return srcName[r.source] || r.source; });
+    }).catch(function () {});
+  }
+  load(); setInterval(function () { if (!document.hidden) load(); }, 15000);
+})();
+</script>
+
 <div class="grid kpis">
   <div class="card kpi"><div class="lbl">Ingresos</div><div class="val"><%= money(cur.revenue) %></div><div class="delta <%= deltaCls(delta.revenue) %>"><%= deltaTxt(delta.revenue) %></div></div>
   <div class="card kpi"><div class="lbl">Pedidos</div><div class="val"><%= cur.orders %></div><div class="delta <%= deltaCls(delta.orders) %>"><%= deltaTxt(delta.orders) %></div></div>

@@ -11,6 +11,8 @@ const clover = require('./clover');
 const seo = require('./seo');
 const notify = require('./notify');
 const jobs = require('./jobs');
+const live = require('./live');
+const { limiter } = require('./ratelimit');
 const { isProd } = require('./env');
 
 const app = express();
@@ -75,10 +77,38 @@ app.get('/healthz', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Photos live in Postgres; keep the hot ones in memory so a traffic spike doesn't
+// turn every image request into a database read (ids are immutable, so this is safe).
+const imgCache = new Map();
+let imgCacheBytes = 0;
+const IMG_CACHE_MAX = 64 * 1024 * 1024;
 app.get('/img/:id', async (req, res) => {
-  const img = await one('SELECT mime, data FROM images WHERE id=$1', [lib.int(req.params.id)]);
-  if (!img) return res.status(404).end();
+  const id = lib.int(req.params.id);
+  let img = imgCache.get(id);
+  if (img) { imgCache.delete(id); imgCache.set(id, img); }
+  else {
+    img = await one('SELECT mime, data FROM images WHERE id=$1', [id]);
+    if (!img) return res.status(404).end();
+    if (img.data.length < 4 * 1024 * 1024) {
+      imgCache.set(id, img);
+      imgCacheBytes += img.data.length;
+      for (const [k, v] of imgCache) {
+        if (imgCacheBytes <= IMG_CACHE_MAX) break;
+        imgCache.delete(k);
+        imgCacheBytes -= v.data.length;
+      }
+    }
+  }
   res.set('Content-Type', img.mime).set('Cache-Control', 'public, max-age=31536000, immutable').send(img.data);
+});
+
+// Live-visitor heartbeat. Mounted before sessions so it never touches the session store.
+const pingLimit = limiter({ max: 300, windowMs: 60 * 1000 });
+app.post('/api/ping', async (req, res) => {
+  if (pingLimit.blocked(req.ip)) return res.status(204).end();
+  pingLimit.hit(req.ip);
+  try { await live.ping(req.body, req.get('user-agent'), req.get('host')); } catch (e) { console.error('ping:', e.message); }
+  res.status(204).end();
 });
 
 app.get('/robots.txt', (req, res) => {
@@ -179,13 +209,31 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).send(isProd ? 'Something went wrong. / Algo salió mal.' : `<pre>${String(err.stack).replace(/</g, '&lt;')}</pre>`);
 });
 
+// A failed background promise (email, job) must never take the whole store down.
+process.on('unhandledRejection', (e) => console.error('unhandledRejection:', e));
+
 migrate()
   .then(() => {
     jobs.start();
-    app.listen(PORT, (err) => {
+    const server = app.listen(PORT, (err) => {
       if (err) throw err;
       console.log(`Tienda lista en http://localhost:${PORT}  ·  Admin: /admin`);
     });
+    // Longer than the hosting proxy's idle timeout, so it never reuses a socket we just closed (random 502s).
+    server.keepAliveTimeout = 65 * 1000;
+    server.headersTimeout = 66 * 1000;
+    server.requestTimeout = 60 * 1000;
+    // Deploys send SIGTERM: stop taking new connections, let in-flight requests (checkouts!) finish.
+    let closing = false;
+    const shutdown = (sig) => {
+      if (closing) return;
+      closing = true;
+      console.log(`${sig}: cerrando…`);
+      server.close(() => pool.end().finally(() => process.exit(0)));
+      setTimeout(() => process.exit(0), 10000).unref();
+    };
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
   })
   .catch((e) => {
     console.error('Error inicializando la base de datos:', e);
