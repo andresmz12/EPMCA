@@ -183,6 +183,7 @@ app.use(async (req, res, next) => {
   notify.rememberBase(siteUrl);
   Object.assign(res.locals, {
     settings, lang, t: makeT(lang), money: lib.money, path: req.path, siteUrl, assetV: ASSET_V,
+    cloverOn: clover.enabled, stripeOn: payments.enabled,
     ga4: /^G-[A-Z0-9]{4,20}$/.test(settings.ga4_id) ? settings.ga4_id : '',
     adsId: /^AW-\d{5,15}$/.test(settings.google_ads_id) ? settings.google_ads_id : '',
     altUrl: (l) => `${siteUrl}${req.path}${l === 'es' ? '?lang=es' : ''}`,
