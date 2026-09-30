@@ -589,8 +589,10 @@ r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings')
   else if (req.body.remove_hero === 'on') values.hero_image_id = '';
   for (const k of SETTING_FIELDS) values[k] = String(req.body[k] || '').trim().slice(0, 300);
   const tag = (v, re) => { const x = String(v || '').trim(); return re.test(x) ? x : ''; };
-  values.google_site_verification = tag(req.body.google_site_verification, /^[\w-]{10,100}$/);
-  values.bing_site_verification = tag(req.body.bing_site_verification, /^[\w-]{10,100}$/);
+  // Accept either the bare code or the whole <meta ... content="CODE"> tag copied from Google/Bing.
+  const metaContent = (v) => { const m = /content\s*=\s*["']([^"']+)["']/i.exec(String(v || '')); return m ? m[1] : v; };
+  values.google_site_verification = tag(metaContent(req.body.google_site_verification), /^[\w-]{10,100}$/);
+  values.bing_site_verification = tag(metaContent(req.body.bing_site_verification), /^[\w-]{10,100}$/);
   values.ga4_id = tag(req.body.ga4_id, /^G-[A-Z0-9]{4,20}$/);
   values.google_ads_id = tag(req.body.google_ads_id, /^AW-\d{5,15}$/);
   values.shipping_flat_cents = String(lib.toCents(req.body.shipping_flat) ?? 0);
