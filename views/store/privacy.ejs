@@ -12,24 +12,22 @@
     <p>Usamos tus datos para procesar y entregar tus pedidos, enviarte confirmaciones y avisos de envío por correo, responder tus mensajes, y (solo si lo activas) enviarte pedidos recurrentes y recordatorios relacionados con tu cuenta.</p>
 
     <h3>3. Pagos</h3>
-    <p>Los pagos con tarjeta los procesa Clover. Nosotros nunca vemos ni almacenamos el número completo de tu tarjeta; esa información queda directamente con Clover bajo sus propias políticas de seguridad.</p>
+    <p>Los pagos con tarjeta los procesa un procesador de pagos externo. Nosotros nunca vemos ni almacenamos el número completo de tu tarjeta; esa información queda directamente con el procesador bajo sus propias políticas de seguridad.</p>
 
     <h3>4. Correos</h3>
-    <p>Enviamos correos operativos (confirmación de pedido, envío, recordatorios de pago) a través de Twilio SendGrid. No vendemos ni compartimos tu correo con terceros para publicidad.</p>
+    <p>Enviamos correos operativos (confirmación de pedido, envío, recordatorios de pago) a través de un proveedor de correo electrónico. No vendemos ni compartimos tu correo con terceros para publicidad.</p>
 
     <h3>5. Cookies y almacenamiento local</h3>
     <p>Usamos una cookie técnica para mantener tu sesión (carrito, inicio de sesión) y otra para recordar el idioma que prefieres. Tu navegador también guarda localmente si ya viste el aviso de descuento por crear cuenta, para no mostrártelo de nuevo, y un identificador aleatorio anónimo que usamos para contar cuántas personas están en la tienda (sin tu nombre, correo ni dirección IP). <% if (ga4 || adsId) { %>También usamos Google Analytics<%= adsId ? ' y Google Ads' : '' %> para medir visitas y compras de forma agregada; estos servicios de Google colocan sus propias cookies y puedes bloquearlas desde tu navegador.<% } else { %>No usamos cookies de rastreo publicitario.<% } %></p>
 
     <h3>6. Con quién compartimos datos</h3>
-    <p>Solo compartimos la información necesaria con las empresas que nos ayudan a operar la tienda. Cada una la usa únicamente para prestarnos su servicio:</p>
+    <p>Solo compartimos la información necesaria con proveedores de servicios que nos ayudan a operar la tienda, y cada uno la usa únicamente para prestarnos ese servicio:</p>
     <ul>
-      <li><b>Clover</b> (Fiserv, procesamiento de pagos con tarjeta): datos de pago, monto del pedido y datos de contacto necesarios para cobrar.</li>
-      <% if (stripeOn) { %><li><b>Stripe</b> (pagos con tarjeta): datos de pago, monto del pedido y correo.</li><% } %>
-      <li><b>Twilio SendGrid</b> (envío de correos): tu nombre, correo y el contenido del mensaje (confirmaciones, envíos, recordatorios).</li>
-      <li><b>Railway</b> (alojamiento del sitio y base de datos): almacena de forma segura la información de la tienda, incluidos pedidos y cuentas.</li>
-      <li><b>Empresas de transporte</b> (por ejemplo UPS, USPS, FedEx o transporte de carga): tu nombre, dirección de entrega y teléfono para entregar tu pedido.</li>
-      <% if (ga4 || adsId) { %><li><b>Google</b> (Analytics<%= adsId ? ' y Google Ads' : '' %>): datos de navegación y compras de forma agregada, sin tu nombre ni correo.</li><% } %>
-      <% if (settings.whatsapp_number) { %><li><b>WhatsApp</b> (Meta): solo si tú nos escribes por el botón de WhatsApp; esa conversación se rige por la política de WhatsApp.</li><% } %>
+      <li>Procesadores de pagos: datos de pago, monto del pedido y contacto para cobrar.</li>
+      <li>Servicios de correo electrónico: tu nombre, correo y el contenido de los mensajes (confirmaciones, envíos, recordatorios).</li>
+      <li>Alojamiento y almacenamiento de datos: guardan de forma segura la información de la tienda, incluidos pedidos y cuentas.</li>
+      <li>Empresas de transporte: tu nombre, dirección de entrega y teléfono para entregar tu pedido.</li>
+      <% if (ga4 || adsId) { %><li>Google (Analytics<%= adsId ? ' y Google Ads' : '' %>): datos de navegación y compras de forma agregada, sin tu nombre ni correo.</li><% } %>
     </ul>
     <p>También podemos divulgar información si la ley o una autoridad competente lo exige. No vendemos tus datos a nadie.</p>
 
@@ -57,24 +55,22 @@
     <p>We use your data to process and deliver your orders, send order confirmations and shipping notices by email, reply to your messages, and — only if you turn it on — send recurring orders and account-related reminders.</p>
 
     <h3>3. Payments</h3>
-    <p>Card payments are processed by Clover. We never see or store your full card number; that information stays directly with Clover under its own security policies.</p>
+    <p>Card payments are processed by an external payment processor. We never see or store your full card number; that information stays directly with the processor under its own security policies.</p>
 
     <h3>4. Emails</h3>
-    <p>We send operational emails (order confirmation, shipping, payment reminders) through Twilio SendGrid. We do not sell or share your email with third parties for advertising.</p>
+    <p>We send operational emails (order confirmation, shipping, payment reminders) through an email service provider. We do not sell or share your email with third parties for advertising.</p>
 
     <h3>5. Cookies and local storage</h3>
     <p>We use a technical cookie to keep your session (cart, login) and another to remember your preferred language. Your browser also stores locally whether you've already seen the account-discount popup, so it isn't shown again, and a random anonymous ID we use to count how many people are on the store (no name, email or IP address). <% if (ga4 || adsId) { %>We also use Google Analytics<%= adsId ? ' and Google Ads' : '' %> to measure visits and purchases in aggregate; these Google services set their own cookies, which you can block in your browser.<% } else { %>We don't use advertising tracking cookies.<% } %></p>
 
     <h3>6. Who we share data with</h3>
-    <p>We only share the information necessary with the companies that help us run the store. Each one uses it only to provide its service to us:</p>
+    <p>We only share the information necessary with service providers that help us run the store, and each one uses it only to provide that service to us:</p>
     <ul>
-      <li><b>Clover</b> (Fiserv, card payment processing): payment details, order amount and the contact details needed to charge you.</li>
-      <% if (stripeOn) { %><li><b>Stripe</b> (card payments): payment details, order amount and email.</li><% } %>
-      <li><b>Twilio SendGrid</b> (email delivery): your name, email and the content of the message (confirmations, shipping notices, reminders).</li>
-      <li><b>Railway</b> (site hosting and database): securely stores the store's information, including orders and accounts.</li>
-      <li><b>Shipping carriers</b> (for example UPS, USPS, FedEx or freight carriers): your name, delivery address and phone number to deliver your order.</li>
-      <% if (ga4 || adsId) { %><li><b>Google</b> (Analytics<%= adsId ? ' and Google Ads' : '' %>): browsing and purchase data in aggregate, without your name or email.</li><% } %>
-      <% if (settings.whatsapp_number) { %><li><b>WhatsApp</b> (Meta): only if you message us through the WhatsApp button; that conversation is governed by WhatsApp's policy.</li><% } %>
+      <li>Payment processors: payment details, order amount and the contact details needed to charge you.</li>
+      <li>Email delivery services: your name, email and the content of messages (confirmations, shipping notices, reminders).</li>
+      <li>Hosting and data storage: securely store the store's information, including orders and accounts.</li>
+      <li>Shipping carriers: your name, delivery address and phone number to deliver your order.</li>
+      <% if (ga4 || adsId) { %><li>Google (Analytics<%= adsId ? ' and Google Ads' : '' %>): browsing and purchase data in aggregate, without your name or email.</li><% } %>
     </ul>
     <p>We may also disclose information if required by law or a competent authority. We do not sell your data to anyone.</p>
 
