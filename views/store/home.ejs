@@ -37,7 +37,7 @@
       </div>
     </div>
     <% if (settings.hero_image_id) { %>
-      <figure class="art photo"><img src="/img/<%= settings.hero_image_id %>" alt="<%= settings.store_name %>"></figure>
+      <figure class="art photo"><img src="/img/<%= settings.hero_image_id %>" alt="<%= settings.store_name %>" fetchpriority="high"></figure>
     <% } else { %>
       <figure class="art" aria-label="<%= t('art_caption') %>">
         <div class="row-boxes">

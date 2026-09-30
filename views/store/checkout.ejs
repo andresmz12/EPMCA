@@ -78,4 +78,5 @@
   }
 })();
 </script>
+<% if (ga4) { %><script>if (window.gtag) gtag('event', 'begin_checkout', { currency: 'USD', value: <%= (delivery.subtotal / 100).toFixed(2) %>, items: <%- JSON.stringify(delivery.lines.map(function (l) { return { item_id: String(l.product.id), item_name: l.product.name, price: l.unitCents / 100, quantity: l.qty }; })).replace(/</g, '\\u003c') %> });</script><% } %>
 <%- include('_foot') %>

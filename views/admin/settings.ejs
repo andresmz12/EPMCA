@@ -49,6 +49,16 @@
         <div class="hint">Se muestran al cliente en su pedido y en los correos mientras el pago está pendiente.</div></div>
     </div>
     <div class="card">
+      <h2>Google y buscadores (SEO)</h2>
+      <div class="field"><label>Google Search Console: código de verificación</label><input name="google_site_verification" value="<%= settings.google_site_verification %>" placeholder="Solo el código, ej: aBc123...XyZ"><div class="hint">En Search Console elige "Prefijo de URL" → "Etiqueta HTML" y copia solo lo que va dentro de content="...".</div></div>
+      <div class="field"><label>Bing Webmaster: código de verificación</label><input name="bing_site_verification" value="<%= settings.bing_site_verification %>" placeholder="Opcional"></div>
+      <div class="f2">
+        <div class="field"><label>Google Analytics 4 (ID de medición)</label><input name="ga4_id" value="<%= settings.ga4_id %>" placeholder="G-XXXXXXXXXX"><div class="hint">Activa vistas, carrito, checkout y compras.</div></div>
+        <div class="field"><label>Google Ads (opcional)</label><input name="google_ads_id" value="<%= settings.google_ads_id %>" placeholder="AW-XXXXXXXXX"></div>
+      </div>
+      <div class="hint">Enlaces para pegar en Google: <a href="/sitemap.xml" target="_blank" rel="noopener">/sitemap.xml</a> (Search Console) · <a href="/feeds/google.xml" target="_blank" rel="noopener">/feeds/google.xml</a> y <a href="/feeds/google.xml?lang=es" target="_blank" rel="noopener">versión en español</a> (Merchant Center, fichas gratis en Google Shopping).</div>
+    </div>
+    <div class="card">
       <h2>Correos automáticos</h2>
       <label class="check"><input type="checkbox" name="reminder_payment_enabled" <%= settings.reminder_payment_enabled === 'true' ? 'checked' : '' %>> Recordar al cliente si su pedido sigue sin pagar a las 24 horas</label>
       <label class="check"><input type="checkbox" name="cart_reminder_enabled" <%= settings.cart_reminder_enabled === 'true' ? 'checked' : '' %>> Recordar al cliente su carrito si lo deja abandonado (a las 2-3 horas)</label>

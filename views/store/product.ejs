@@ -4,7 +4,7 @@
   <div class="pdp">
     <div>
       <div class="gallery <%= images.length ? 'has-img' : '' %>" id="mainpic">
-        <% if (images.length) { %><img src="/img/<%= images[0] %>" alt="<%= pt(product, 'name') %>" id="mainpic-img">
+        <% if (images.length) { %><img src="/img/<%= images[0] %>" alt="<%= pt(product, 'name') %>" id="mainpic-img" fetchpriority="high">
         <% } else if (product.category === 'supply') { %><%- supplyIcon(product.slug) %>
         <% } else { %><%- boxSvg(product.dimensions) %><% } %>
       </div>
@@ -116,4 +116,5 @@
   update();
 })();
 </script>
+<% if (ga4) { %><script>if (window.gtag) gtag('event', 'view_item', { currency: 'USD', value: <%= (product.price_cents / 100).toFixed(2) %>, items: [{ item_id: '<%= product.id %>', item_name: <%- JSON.stringify(pt(product, 'name')).replace(/</g, '\\u003c') %>, price: <%= (product.price_cents / 100).toFixed(2) %> }] });</script><% } %>
 <%- include('_foot') %>

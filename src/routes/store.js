@@ -41,7 +41,7 @@ r.get('/', async (req, res) => {
   const products = await all('SELECT * FROM products WHERE active ORDER BY sort, id');
   const { siteUrl, settings, t, money } = res.locals;
   res.render('store/home', {
-    products, title: null, jsonld: seo.homeLd({ siteUrl, settings, t, money }),
+    products, title: null, fullTitle: t('seo_home_title'), description: t('seo_home_desc'), jsonld: seo.homeLd({ siteUrl, settings, t, money }),
     callbackSent: req.query.callback === 'ok',
     callbackError: req.query.callback === 'err' ? t(req.query.k === 'too_many' ? 'err_too_many' : 'err_required') : null,
   });
@@ -72,8 +72,9 @@ r.get('/products/:slug', async (req, res, next) => {
   const images = [...(product.image_id ? [product.image_id] : []), ...extra.map((r) => r.image_id)];
   const { siteUrl, settings, pt, t, money, altUrl, lang } = res.locals;
   const name = pt(product, 'name');
-  const description = [pt(product, 'short_desc'), product.dimensions, `${money(product.price_cents)} ${t('per_box')}`, t('info_ship_d')]
-    .filter(Boolean).join(' · ').slice(0, 300);
+  let description = [pt(product, 'short_desc'), product.dimensions, `${money(product.price_cents)} ${t('per_box')}`, t('info_ship_d')]
+    .filter(Boolean).join(' · ');
+  if (description.length > 155) description = `${description.slice(0, 155).replace(/\s+\S*$/, '')}…`;
   res.render('store/product', {
     product, others, images, title: name, description, ogType: 'product',
     ogImage: images.length ? `/img/${images[0]}` : null,
@@ -121,7 +122,7 @@ r.post('/cart/add', async (req, res) => {
     req.session.cart = cart;
     // Reflects the actual per-box price for the cart's new total quantity
     // (wholesale tiers apply per size, not per add-to-cart click).
-    if (req.body.next !== 'cart') req.session.cartAdded = { name: p.name, name_es: p.name_es, qty, price_cents: lib.unitPriceCents(p, newQty), image_id: p.image_id };
+    if (req.body.next !== 'cart') req.session.cartAdded = { id: p.id, name: p.name, name_es: p.name_es, qty, price_cents: lib.unitPriceCents(p, newQty), image_id: p.image_id };
   }
   saveCartSnapshot(req, res.locals.lang);
   res.redirect(req.body.next === 'cart' ? '/cart' : backTo(req));

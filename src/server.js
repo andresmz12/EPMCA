@@ -84,9 +84,14 @@ app.get('/img/:id', async (req, res) => {
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send([
     'User-agent: *',
+    'Allow: /img/',
     'Disallow: /admin',
+    'Disallow: /cart',
     'Disallow: /checkout',
+    'Disallow: /account',
     'Disallow: /order/',
+    'Disallow: /track',
+    'Disallow: /callback',
     '',
     `Sitemap: ${siteUrlOf(req)}/sitemap.xml`,
     '',
@@ -94,17 +99,29 @@ app.get('/robots.txt', (req, res) => {
 });
 
 app.get('/sitemap.xml', async (req, res) => {
-  const products = await all('SELECT slug, updated_at FROM products WHERE active ORDER BY sort, id');
+  const products = await all('SELECT p.slug, p.updated_at, p.image_id, p.name FROM products p WHERE p.active ORDER BY p.sort, p.id');
   const newest = products.reduce((m, p) => (p.updated_at > m ? p.updated_at : m), new Date(0));
   const pages = [
     { path: '/', lastmod: products.length ? newest : null },
-    ...products.map((p) => ({ path: `/products/${p.slug}`, lastmod: p.updated_at })),
-    { path: '/track' },
+    ...products.map((p) => ({ path: `/products/${p.slug}`, lastmod: p.updated_at, image: p.image_id ? { id: p.image_id, title: p.name } : null })),
     { path: '/contact' },
     { path: '/terms' },
     { path: '/privacy' },
   ];
   res.type('application/xml').set('Cache-Control', 'public, max-age=3600').send(seo.sitemap(siteUrlOf(req), pages));
+});
+
+// Google Merchant Center product feed (free listings on Google Shopping).
+// ?lang=es serves the Spanish version.
+app.get('/feeds/google.xml', async (req, res) => {
+  const lang = req.query.lang === 'es' ? 'es' : 'en';
+  const [products, settings] = await Promise.all([all('SELECT * FROM products WHERE active ORDER BY sort, id'), getSettings()]);
+  res.type('application/xml').set('Cache-Control', 'public, max-age=1800').send(seo.googleFeed({ siteUrl: siteUrlOf(req), settings, products, lang }));
+});
+
+app.get('/llms.txt', async (req, res) => {
+  const [products, settings] = await Promise.all([all('SELECT slug, name, dimensions, price_cents FROM products WHERE active ORDER BY sort, id'), getSettings()]);
+  res.type('text/plain').set('Cache-Control', 'public, max-age=3600').send(seo.llmsTxt({ siteUrl: siteUrlOf(req), settings, products }));
 });
 
 app.use(
@@ -136,6 +153,8 @@ app.use(async (req, res, next) => {
   notify.rememberBase(siteUrl);
   Object.assign(res.locals, {
     settings, lang, t: makeT(lang), money: lib.money, path: req.path, siteUrl, assetV: ASSET_V,
+    ga4: /^G-[A-Z0-9]{4,20}$/.test(settings.ga4_id) ? settings.ga4_id : '',
+    adsId: /^AW-\d{5,15}$/.test(settings.google_ads_id) ? settings.google_ads_id : '',
     altUrl: (l) => `${siteUrl}${req.path}${l === 'es' ? '?lang=es' : ''}`,
     cartCount: Object.values(cart).reduce((s, n) => s + (Number(n) || 0), 0),
     flash: req.session.flash || null, payEnabled: clover.enabled || payments.enabled, recurringEnabled: clover.enabled, boxSvg: lib.boxSvg,

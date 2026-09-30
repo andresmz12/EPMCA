@@ -72,4 +72,10 @@
     <p style="margin:24px 0 0;text-align:center"><a class="btn ghost sm" href="/"><%= t('back_home') %></a></p>
   </div>
 </div>
+<% if (ga4 && fresh) { %><script>
+(function () {
+  try { var k = 'ga_purchase_<%= order.number %>'; if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); } catch (e) {}
+  if (window.gtag) gtag('event', 'purchase', { transaction_id: '<%= order.number %>', currency: 'USD', value: <%= (order.total_cents / 100).toFixed(2) %>, tax: <%= ((order.tax_cents || 0) / 100).toFixed(2) %>, shipping: <%= ((order.shipping_cents || 0) / 100).toFixed(2) %>, items: <%- JSON.stringify(items.map(function (it) { return { item_id: String(it.product_id), item_name: it.name, price: it.unit_price_cents / 100, quantity: it.qty }; })).replace(/</g, '\\u003c') %> });
+})();
+</script><% } %>
 <%- include('_foot') %>

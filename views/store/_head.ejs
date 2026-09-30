@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <%
-  const pageTitle = title ? title + ' | ' + settings.store_name : settings.store_name + ' | ' + t('hero_title');
+  const pageTitle = locals.fullTitle || (title ? title + ' | ' + settings.store_name : settings.store_name + ' | ' + t('hero_title'));
   const pageDesc = locals.description || t('hero_sub');
   const indexable = !locals.noindex;
   const ogImg = siteUrl + (locals.ogImage || (settings.hero_image_id ? '/img/' + settings.hero_image_id : '/logo.png'));
@@ -26,9 +26,17 @@
 <meta property="og:url" content="<%= altUrl(lang) %>">
 <meta property="og:image" content="<%= ogImg %>">
 <meta property="og:locale" content="<%= lang === 'es' ? 'es_US' : 'en_US' %>">
+<meta property="og:image:alt" content="<%= locals.title || settings.store_name %>">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<%= pageTitle %>">
+<meta name="twitter:description" content="<%= pageDesc %>">
+<meta name="twitter:image" content="<%= ogImg %>">
 <meta name="theme-color" content="#EEA331">
-<% [].concat(locals.jsonld || []).forEach(function (j) { %><script type="application/ld+json"><%- JSON.stringify(j).replace(/</g, '\\u003c') %></script>
+<% if (settings.google_site_verification) { %><meta name="google-site-verification" content="<%= settings.google_site_verification %>">
+<% } %><% if (settings.bing_site_verification) { %><meta name="msvalidate.01" content="<%= settings.bing_site_verification %>">
+<% } %><% if (ga4 || adsId) { %><script async src="https://www.googletagmanager.com/gtag/js?id=<%= ga4 || adsId %>"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());<% if (ga4) { %>gtag('config','<%= ga4 %>');<% } %><% if (adsId) { %>gtag('config','<%= adsId %>');<% } %></script>
+<% } %><% [].concat(locals.jsonld || []).forEach(function (j) { %><script type="application/ld+json"><%- JSON.stringify(j).replace(/</g, '\\u003c') %></script>
 <% }) %>
 <link rel="icon" href="/logo-mark.png">
 <link rel="apple-touch-icon" href="/logo-mark.png">
@@ -87,6 +95,7 @@
 (function () {
   var m = document.getElementById('added-modal');
   function close() { m.remove(); }
+  <% if (ga4 && cartAdded.id) { %>if (window.gtag) gtag('event', 'add_to_cart', { currency: 'USD', value: <%= (cartAdded.price_cents * cartAdded.qty / 100).toFixed(2) %>, items: [{ item_id: '<%= cartAdded.id %>', item_name: <%- JSON.stringify(cartAdded.name).replace(/</g, '\\u003c') %>, price: <%= (cartAdded.price_cents / 100).toFixed(2) %>, quantity: <%= cartAdded.qty %> }] });<% } %>
   document.getElementById('added-close').addEventListener('click', close);
   document.getElementById('added-continue').addEventListener('click', close);
   m.addEventListener('click', function (e) { if (e.target === m) close(); });
