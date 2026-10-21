@@ -135,6 +135,27 @@ async function cancelOrder(orderId) {
   });
 }
 
+/** Permanently deletes orders (and their lines). With restock, reserved boxes and the coupon use go back, like a cancellation. */
+async function deleteOrders(ids, { restock }) {
+  return tx(async (c) => {
+    let n = 0;
+    for (const id of ids) {
+      const { rows: [o] } = await c.query('SELECT * FROM orders WHERE id=$1 FOR UPDATE', [id]);
+      if (!o) continue;
+      if (restock && o.status !== 'cancelled') {
+        const { rows: items } = await c.query('SELECT product_id, qty FROM order_items WHERE order_id=$1', [id]);
+        for (const it of items) {
+          if (it.product_id) await c.query('UPDATE products SET stock = stock + $1, updated_at = now() WHERE id=$2', [it.qty, it.product_id]);
+        }
+        if (o.coupon_code) await c.query('UPDATE coupons SET uses = GREATEST(uses - 1, 0) WHERE upper(code)=upper($1)', [o.coupon_code]);
+      }
+      await c.query('DELETE FROM orders WHERE id=$1', [id]);
+      n++;
+    }
+    return n;
+  });
+}
+
 /**
  * Creates this cycle's order for a recurring plan. Always 'pending': nothing is
  * charged until the customer clicks the checkout link we email them.
@@ -161,4 +182,4 @@ async function createRecurringOrder(sub) {
   return order;
 }
 
-module.exports = { createOrder, createManualOrder, createRecurringOrder, markPaid, cancelOrder, StockError, CouponUsedError };
+module.exports = { createOrder, createManualOrder, createRecurringOrder, markPaid, cancelOrder, deleteOrders, StockError, CouponUsedError };

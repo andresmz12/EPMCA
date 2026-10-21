@@ -41,6 +41,7 @@
       </dl>
     </div>
   </div>
+  <div class="grid" style="gap:16px;align-content:start">
   <form class="card" method="post" action="/admin/orders/<%= order.id %>" <%= order.status !== 'cancelled' ? 'data-confirm-cancel' : '' %>>
     <h2>Gestionar</h2>
     <div class="field"><label>Estado</label>
@@ -53,6 +54,16 @@
     <button class="btn orange" style="width:100%;justify-content:center">Guardar</button>
     <p class="small muted" style="margin-bottom:0">Enlace del cliente: <a href="/order/<%= order.number %>?t=<%= order.access_token %>" target="_blank" rel="noopener">ver pedido ↗</a></p>
   </form>
+  <% if (can.users) { %>
+  <form class="card" method="post" action="/admin/orders/delete" data-confirm="¿Eliminar el pedido <%= order.number %> para siempre? Esto no se puede deshacer.">
+    <h2>Eliminar pedido</h2>
+    <p class="small muted" style="margin-top:0">Para borrar pedidos de prueba. Desaparece de los reportes y del historial del cliente.</p>
+    <input type="hidden" name="ids" value="<%= order.id %>">
+    <label class="check"><input type="checkbox" name="restock" <%= order.status !== 'cancelled' ? 'checked' : '' %>> Devolver las cajas al inventario</label>
+    <button class="btn danger" style="width:100%;justify-content:center;margin-top:8px">Eliminar pedido</button>
+  </form>
+  <% } %>
+  </div>
 </div>
 <script>
 (function () {

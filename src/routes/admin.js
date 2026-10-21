@@ -468,6 +468,17 @@ r.get('/orders/:id/packing-slip.pdf', async (req, res, next) => {
   reports.packingSlipPdf(res, order, items, res.locals.settings);
 });
 
+// Owner-only: removes orders for good (meant for test orders). Defined before '/orders/:id' so "delete" isn't read as an id.
+r.post('/orders/delete', async (req, res) => {
+  if (!res.locals.can.users) return res.status(403).send('Solo el dueño puede eliminar pedidos.');
+  const ids = [...new Set([].concat(req.body.ids || []).map((v) => lib.int(v)).filter(Boolean))].slice(0, 200);
+  if (!ids.length) { notice(req, 'No seleccionaste ningún pedido.', 'err'); return res.redirect('/admin/orders'); }
+  const n = await orders.deleteOrders(ids, { restock: req.body.restock === 'on' });
+  console.log(`Pedidos eliminados por ${res.locals.admin.email}: ${n} (ids ${ids.join(',')})`);
+  notice(req, `${n} pedido${n === 1 ? '' : 's'} eliminado${n === 1 ? '' : 's'}${req.body.restock === 'on' ? ' y cajas devueltas al inventario' : ''}.`);
+  res.redirect('/admin/orders');
+});
+
 r.post('/orders/:id', async (req, res, next) => {
   const id = lib.int(req.params.id);
   const order = await one('SELECT * FROM orders WHERE id=$1', [id]);
