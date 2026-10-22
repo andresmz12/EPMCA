@@ -60,6 +60,11 @@
         <div class="hint" style="margin-bottom:10px"><%= t('account_address_hint') %></div>
         <button class="btn orange block"><%= t('account_save') %></button>
       </form>
+      <form method="post" action="/account/marketing" class="panel" style="margin-top:16px">
+        <h3 style="margin:0 0 8px"><%= t('marketing_title') %></h3>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:14.5px;color:var(--ink-2);margin-bottom:12px"><input type="checkbox" name="marketing" <%= marketingOn ? 'checked' : '' %> style="width:auto;margin-top:3px"><span><%= t('marketing_check') %></span></label>
+        <button class="btn ghost block"><%= t('account_save') %></button>
+      </form>
     </aside>
   </div>
 </div>

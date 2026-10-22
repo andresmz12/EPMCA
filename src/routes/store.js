@@ -10,6 +10,7 @@ const { limiter } = require('../ratelimit');
 const seo = require('../seo');
 const notify = require('../notify');
 const mail = require('../mail');
+const marketing = require('../marketing');
 const crypto = require('crypto');
 
 const r = express.Router();
@@ -224,6 +225,7 @@ r.post('/checkout', async (req, res) => {
   if (err) return fail(err);
   // Lets a logged-in customer check the box and skip retyping their address next time,
   // instead of the separate "saved address" form in /account being the only way in.
+  if (req.body.marketing === 'on' && form.email) marketing.setConsent(form.email, form.name, 'checkout', true).catch(() => {});
   if (customer && form.fulfillment === 'delivery' && req.body.save_address) {
     q('UPDATE customers SET name=$1, phone=$2, address1=$3, address2=$4, city=$5, state=$6, zip=$7 WHERE id=$8',
       [form.name, form.phone, form.address1, form.address2, form.city, form.state, form.zip, customer.id]).catch(() => {});
@@ -387,6 +389,7 @@ r.post('/account/register', async (req, res, next) => {
     ? await one(`UPDATE customers SET name=$1, password_hash=$2, phone='', account_created_at=now() WHERE id=$3 RETURNING *`, [name, hash, existing.id])
     : await one('INSERT INTO customers(email, name, password_hash, account_created_at) VALUES($1,$2,$3,now()) RETURNING *', [email, name, hash]);
   if (!existing) notify.welcome(customer, res.locals.lang, res.locals.siteUrl);
+  if (req.body.marketing === 'on') marketing.setConsent(email, name, 'registro', true).catch(() => {});
   const cart = req.session.cart, coupon = req.session.coupon, oldSessionId = req.sessionID;
   req.session.regenerate((err) => {
     if (err) return next(err);
@@ -445,8 +448,9 @@ r.get('/account', async (req, res) => {
   const welcomeUsed = await one(
     `SELECT 1 FROM orders WHERE customer_id=$1 AND upper(coupon_code)='WELCOME10' AND status<>'cancelled' LIMIT 1`,
     [res.locals.customer.id]);
+  const mk = await one('SELECT 1 FROM marketing_contacts WHERE email=lower($1) AND opted_out_at IS NULL', [res.locals.customer.email]);
   res.render('store/account', {
-    orders: list, subs, subJustCreated: req.query.sub === 'ok', showWelcomeCoupon: !welcomeUsed, title: res.locals.t('account_title'),
+    marketingOn: !!mk, orders: list, subs, subJustCreated: req.query.sub === 'ok', showWelcomeCoupon: !welcomeUsed, title: res.locals.t('account_title'),
   });
 });
 
@@ -504,6 +508,13 @@ r.post('/account/subscriptions/:id/cancel', async (req, res) => {
   const sub = await one('SELECT * FROM subscriptions WHERE id=$1 AND customer_id=$2', [lib.int(req.params.id), res.locals.customer.id]);
   if (sub) await subscriptions.cancel(sub);
   req.session.flash = { type: 'ok', key: 'sub_cancelled' };
+  res.redirect('/account');
+});
+
+r.post('/account/marketing', async (req, res) => {
+  if (!res.locals.customer) return res.redirect('/account/login');
+  await marketing.setConsent(res.locals.customer.email, res.locals.customer.name, 'cuenta', req.body.marketing === 'on');
+  req.session.flash = { type: 'ok', key: 'marketing_saved' };
   res.redirect('/account');
 });
 

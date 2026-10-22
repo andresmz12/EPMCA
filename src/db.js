@@ -269,6 +269,15 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS order_items_product_idx ON order_items(product_id);
 
+-- People who explicitly agreed to receive offers by email (CAN-SPAM consent record).
+CREATE TABLE IF NOT EXISTS marketing_contacts (
+  email TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT '',
+  opted_in_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  opted_out_at TIMESTAMPTZ
+);
+
 -- Anonymous live-visitor counter: one row per browser (random id), no IP or name.
 CREATE TABLE IF NOT EXISTS site_visitors (
   vid TEXT PRIMARY KEY,

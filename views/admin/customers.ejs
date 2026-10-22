@@ -1,5 +1,5 @@
 <%- include('_head') %>
-<div class="top"><div><h1>Clientes</h1><div class="muted small"><%= list.length %> clientes<%= list.length === 200 ? ' (mostrando los 200 más recientes)' : '' %></div></div><a class="btn ghost" href="/admin/customers.csv">Exportar CSV</a></div>
+<div class="top"><div><h1>Clientes</h1><div class="muted small"><%= list.length %> clientes<%= list.length === 200 ? ' (mostrando los 200 más recientes)' : '' %></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost" href="/admin/marketing.csv" title="Solo quienes aceptaron recibir ofertas">Contactos para marketing (<%= marketingCount %>)</a><a class="btn ghost" href="/admin/customers.csv">Exportar todos</a></div></div>
 <div class="filters"><form method="get" style="margin-left:0"><input name="q" value="<%= search %>" placeholder="Buscar por nombre, correo o teléfono"><button class="btn sm">Buscar</button></form></div>
 <div class="card"><div class="table-wrap"><table>
   <thead><tr><th>Cliente</th><th>Teléfono</th><th>Cliente desde</th><th class="num">Pedidos</th><th class="num">Total gastado</th><th>Último pedido</th></tr></thead>

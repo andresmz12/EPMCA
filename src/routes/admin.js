@@ -506,7 +506,7 @@ r.post('/orders/:id', async (req, res, next) => {
 });
 
 /* ───────────── Customers ───────────── */
-r.use(['/customers', '/customers.csv'], requirePerm('orders'));
+r.use(['/customers', '/customers.csv', '/marketing.csv'], requirePerm('orders'));
 r.get('/customers', async (req, res) => {
   const search = String(req.query.q || '').trim().toLowerCase();
   const params = [];
@@ -518,7 +518,15 @@ r.get('/customers', async (req, res) => {
             max(o.created_at) AS last_order
      FROM customers c LEFT JOIN orders o ON o.customer_id=c.id ${where}
      GROUP BY c.id ORDER BY last_order DESC NULLS LAST LIMIT 200`, params);
-  res.render('admin/customers', { section: 'customers', list, search });
+  const marketingCount = (await one('SELECT count(*)::int AS n FROM marketing_contacts WHERE opted_out_at IS NULL')).n;
+  res.render('admin/customers', { section: 'customers', list, search, marketingCount });
+});
+
+r.get('/marketing.csv', async (req, res) => {
+  const rows = await all('SELECT email, name, source, opted_in_at FROM marketing_contacts WHERE opted_out_at IS NULL ORDER BY opted_in_at');
+  const esc = (s) => { s = String(s ?? ''); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const out = ['email,name,source,agreed_on'].concat(rows.map((r) => [esc(r.email), esc(r.name), esc(r.source), r.opted_in_at.toISOString().slice(0, 10)].join(',')));
+  res.set('Content-Type', 'text/csv; charset=utf-8').set('Content-Disposition', 'attachment; filename="contactos-marketing.csv"').send('\ufeff' + out.join('\n'));
 });
 
 r.get('/customers.csv', async (req, res) => {

@@ -19,6 +19,7 @@
         <div class="field"><label for="email"><%= t('email') %></label><input id="email" type="email" name="email" required autocomplete="email" value="<%= form.email || '' %>"></div>
         <div class="field"><label for="password"><%= t('password') %></label><input id="password" type="password" name="password" required minlength="8" autocomplete="new-password"></div>
         <div class="hint" style="margin:-8px 0 14px"><%= t('account_password_hint') %></div>
+        <label style="display:flex;align-items:flex-start;gap:8px;margin:4px 0 14px;font-size:14.5px;color:var(--ink-2)"><input type="checkbox" name="marketing" style="width:auto;margin-top:3px"><span><%= t('marketing_check') %></span></label>
         <button class="btn orange block"><%= t('account_create') %></button>
       </form>
       <p class="muted small" style="margin-top:16px"><%= t('account_has_account') %> <a class="textlink" href="/account/login"><%= t('account_login') %></a></p>
