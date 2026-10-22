@@ -34,8 +34,12 @@
     </form>
     <aside class="panel gray">
       <h3><%= t('order_summary') %></h3>
-      <% if (priced.freeMin > 0) { const left = priced.freeMin - (priced.subtotal - priced.discount); %>
-        <div class="shipnote"><%= left > 0 ? t('free_ship_left', { amount: money(left) }) : t('free_ship_ok') %></div>
+      <% if (!priced.pickup && priced.lines.length) { %>
+        <% const leftBoxes = priced.freeUnits - priced.boxUnits, leftMoney = priced.freeMin - (priced.subtotal - priced.discount);
+           const freeNow = (priced.freeUnits > 0 && leftBoxes <= 0) || (priced.freeMin > 0 && leftMoney <= 0); %>
+        <% if (freeNow) { %><div class="shipnote"><%= t('free_ship_ok') %></div>
+        <% } else if (priced.freeUnits > 0) { %><div class="shipnote"><%= t(leftBoxes === 1 ? 'free_ship_units_left_1' : 'free_ship_units_left', { n: leftBoxes, units: priced.freeUnits }) %></div>
+        <% } else if (priced.freeMin > 0) { %><div class="shipnote"><%= t('free_ship_left', { amount: money(leftMoney) }) %></div><% } %>
       <% } %>
       <%- include('_summary') %>
       <%- include('_coupon', { back: 'cart' }) %>

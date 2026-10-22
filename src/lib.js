@@ -94,13 +94,15 @@ async function priceCart(cart, couponCode, settings, fulfillment = 'delivery') {
   const afterDiscount = subtotal - discount;
   const flat = int(settings.shipping_flat_cents, 0);
   const freeMin = int(settings.free_shipping_min_cents, 0);
+  const freeUnits = int(settings.free_shipping_min_units, 0);
+  const boxUnits = lines.reduce((s, l) => s + (l.product.category === 'supply' ? 0 : l.qty), 0);
   const pickup = fulfillment === 'pickup' && settings.pickup_enabled === 'true';
-  const shipping = lines.length === 0 || pickup ? 0 : (freeMin > 0 && afterDiscount >= freeMin ? 0 : flat);
+  const shipping = lines.length === 0 || pickup ? 0 : ((freeUnits > 0 && boxUnits >= freeUnits) || (freeMin > 0 && afterDiscount >= freeMin) ? 0 : flat);
   const taxRate = Number(settings.tax_rate_percent || 0);
   const tax = Math.round(afterDiscount * (Number.isFinite(taxRate) ? taxRate : 0) / 100);
   const total = afterDiscount + shipping + tax;
   const count = lines.reduce((s, l) => s + l.qty, 0);
-  return { lines, subtotal, discount, shipping, tax, total, coupon, couponMsg, count, freeMin, pickup };
+  return { lines, subtotal, discount, shipping, tax, total, coupon, couponMsg, count, freeMin, freeUnits, boxUnits, pickup };
 }
 
 const STATUS_ES = { pending: 'Pendiente', paid: 'Pagado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado' };

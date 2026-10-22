@@ -17,7 +17,7 @@ function homeLd({ siteUrl, settings, t, money }) {
   const faq = [1, 2, 3, 4].map((n) => ({
     '@type': 'Question',
     name: t(`faq_${n}_q`),
-    acceptedAnswer: { '@type': 'Answer', text: t(`faq_${n}_a`, { flat: money(settings.shipping_flat_cents), min: money(settings.free_shipping_min_cents) }) },
+    acceptedAnswer: { '@type': 'Answer', text: t(`faq_${n}_a${n === 4 && Number(settings.free_shipping_min_units) > 0 ? '_units' : ''}`, { flat: money(settings.shipping_flat_cents), min: money(settings.free_shipping_min_cents), units: settings.free_shipping_min_units }) },
   }));
   return [
     organization(siteUrl, settings),

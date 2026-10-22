@@ -336,7 +336,9 @@ CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
 const DEFAULT_SETTINGS = {
   store_name: process.env.STORE_NAME || 'EMPACALO',
   shipping_flat_cents: '1500',
-  free_shipping_min_cents: '15000',
+  free_shipping_min_cents: '0',
+  free_shipping_min_units: '100',
+  free_shipping_units_2026_loaded: 'false',
   tax_rate_percent: '0',
   pickup_enabled: 'false',
   pickup_address: '',
@@ -577,6 +579,15 @@ async function migrate() {
     }
     await pool.query("INSERT INTO settings(key,value) VALUES('wholesale_double_small_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
     console.log(`Precios mayoristas cargados para ${Object.keys(WHOLESALE_2026_DOUBLE_SMALL).length} cajas de doble pared adicionales.`);
+  }
+
+  // One-time: free shipping moves from a dollar amount to a box count (100+ boxes).
+  const freeUnitsLoaded = (await pool.query("SELECT value FROM settings WHERE key='free_shipping_units_2026_loaded'")).rows[0];
+  if (!freeUnitsLoaded || freeUnitsLoaded.value !== 'true') {
+    await pool.query("INSERT INTO settings(key,value) VALUES('free_shipping_min_cents','0') ON CONFLICT (key) DO UPDATE SET value='0'");
+    await pool.query("INSERT INTO settings(key,value) VALUES('free_shipping_min_units','100') ON CONFLICT (key) DO UPDATE SET value='100'");
+    await pool.query("INSERT INTO settings(key,value) VALUES('free_shipping_units_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
+    console.log('Envío gratis desde 100 cajas.');
   }
 
   // One-time: size-specific copy for boxes. Only rewrites text that is still the

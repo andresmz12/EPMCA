@@ -616,6 +616,7 @@ r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings')
   values.google_ads_id = tag(req.body.google_ads_id, /^AW-\d{5,15}$/);
   values.shipping_flat_cents = String(lib.toCents(req.body.shipping_flat) ?? 0);
   values.free_shipping_min_cents = String(lib.toCents(req.body.free_shipping_min) ?? 0);
+  values.free_shipping_min_units = String(Math.min(Math.max(lib.int(req.body.free_shipping_min_units) || 0, 0), 100000));
   const tax = Number(String(req.body.tax_rate_percent || '0').replace(',', '.'));
   values.tax_rate_percent = String(Number.isFinite(tax) && tax >= 0 && tax < 50 ? tax : 0);
   values.pickup_enabled = req.body.pickup_enabled === 'on' ? 'true' : 'false';

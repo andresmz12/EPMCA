@@ -28,7 +28,8 @@
       <h2>Envíos e impuestos</h2>
       <div class="f2">
         <div class="field"><label>Costo de envío ($)</label><input name="shipping_flat" inputmode="decimal" value="<%= cents(settings.shipping_flat_cents) %>"></div>
-        <div class="field"><label>Envío gratis desde ($)</label><input name="free_shipping_min" inputmode="decimal" value="<%= cents(settings.free_shipping_min_cents) %>"><div class="hint">0 = nunca gratis.</div></div>
+        <div class="field"><label>Envío gratis desde (cajas)</label><input name="free_shipping_min_units" inputmode="numeric" value="<%= settings.free_shipping_min_units %>"><div class="hint">Cuenta solo cajas, no suministros. 0 = desactivado.</div></div>
+        <div class="field"><label>Envío gratis desde ($) (opcional)</label><input name="free_shipping_min" inputmode="decimal" value="<%= cents(settings.free_shipping_min_cents) %>"><div class="hint">Segunda regla por monto. 0 = no se usa.</div></div>
       </div>
       <div class="field"><label>Impuesto de venta (%)</label><input name="tax_rate_percent" inputmode="decimal" value="<%= settings.tax_rate_percent %>"><div class="hint">Varía según el estado. Consulta a tu contador.</div></div>
       <label class="check"><input type="checkbox" name="pickup_enabled" <%= settings.pickup_enabled === 'true' ? 'checked' : '' %>> Permitir recoger en bodega (gratis)</label>
