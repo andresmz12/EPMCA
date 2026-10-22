@@ -42,7 +42,7 @@ Tecnología: Node.js 20+ · Express · PostgreSQL · (opcional) Stripe.
 5. **Genera el dominio**: servicio → **Settings** → **Networking** → **Generate Domain**.
    Luego puedes conectar tu propio dominio (ej. `shop.empacalo.net`) en la misma sección.
 
-6. Entra a `https://TU-DOMINIO/admin` con tu correo y contraseña. La primera vez se cargan 5 cajas de ejemplo y el cupón `WELCOME10`. **Cambia los precios y el stock** desde *Productos* y sube tus fotos.
+6. Entra a `https://TU-DOMINIO/admin` con tu correo y contraseña. La primera vez se cargan 5 cajas de ejemplo y el cupón `WELCOME5`. **Cambia los precios y el stock** desde *Productos* y sube tus fotos.
 
 Cada vez que hagas `git push`, Railway vuelve a desplegar solo.
 
@@ -86,7 +86,7 @@ Sin `ADMIN_EMAIL`/`ADMIN_PASSWORD`, en desarrollo el acceso es `admin@empacalo.n
 
 Sin SendGrid la tienda funciona igual, pero no envía correos. Con SendGrid se envían:
 
-- Al cliente: confirmación del pedido, pago recibido, "va en camino"/"listo para recoger" (con número de rastreo), entregado y cancelado; bienvenida con el cupón `WELCOME10`; enlace para recuperar la contraseña.
+- Al cliente: confirmación del pedido, pago recibido, "va en camino"/"listo para recoger" (con número de rastreo), entregado y cancelado; bienvenida con el cupón `WELCOME5`; enlace para recuperar la contraseña.
 - A la tienda: aviso de cada pedido nuevo y de cada mensaje del formulario de contacto (se puede responder directo al cliente). Llegan al "Correo para avisos de pedidos" de *Configuración* (o al correo de contacto).
 
 Pasos:
@@ -113,7 +113,7 @@ Pasos:
 | Todos los días a las 8 a.m. (Chicago) | Tienda | Resumen: por despachar, sin pagar, inventario bajo y ventas de ayer (se apaga en Configuración) |
 | Unos días antes de un cobro recurrente | Cliente | Aviso con fecha y monto (evento `invoice.upcoming` de Stripe) |
 | Cada cobro recurrente | Cliente + tienda | Pago recibido / aviso de pedido nuevo |
-| Registro / olvidó contraseña / formulario de contacto | Cliente / cliente / tienda | Bienvenida con `WELCOME10` / enlace de 1 hora / mensaje con "responder" al cliente |
+| Registro / olvidó contraseña / formulario de contacto | Cliente / cliente / tienda | Bienvenida con `WELCOME5` / enlace de 1 hora / mensaje con "responder" al cliente |
 
 Los clientes sin cuenta rastrean su pedido en `/track` con el número de pedido y su correo o teléfono.
 

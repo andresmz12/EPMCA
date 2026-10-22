@@ -362,8 +362,9 @@ const DEFAULT_SETTINGS = {
   lowstock_alert_enabled: 'true',
   cart_reminder_enabled: 'true',
   payment_instructions: '',
-  announcement_en: 'We ship anywhere in the USA · Free shipping on orders over $150',
-  announcement_es: 'Enviamos a todo Estados Unidos · Envío gratis en pedidos desde $150',
+  announcement_en: 'We ship anywhere in the USA · Free shipping on orders of 100+ boxes',
+  announcement_es: 'Enviamos a todo Estados Unidos · Envío gratis en pedidos de 100 o más cajas',
+  welcome5_2026_loaded: 'false',
 };
 
 // Precios de ejemplo: cámbialos desde el panel de administración.
@@ -519,7 +520,7 @@ async function migrate() {
       );
     }
     await pool.query(
-      `INSERT INTO coupons(code,type,value,min_subtotal_cents,once_per_customer) VALUES('WELCOME10','percent',10,0,true) ON CONFLICT DO NOTHING`
+      `INSERT INTO coupons(code,type,value,min_subtotal_cents,once_per_customer) VALUES('WELCOME5','percent',5,0,true) ON CONFLICT DO NOTHING`
     );
     console.log('Base de datos inicializada con productos de ejemplo.');
   }
@@ -588,6 +589,24 @@ async function migrate() {
     await pool.query("INSERT INTO settings(key,value) VALUES('free_shipping_min_units','100') ON CONFLICT (key) DO UPDATE SET value='100'");
     await pool.query("INSERT INTO settings(key,value) VALUES('free_shipping_units_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
     console.log('Envío gratis desde 100 cajas.');
+  }
+
+  // One-time: the top banner still advertised the old dollar-based free shipping; only
+  // replaced when it is still the original default text (hand-edited banners are left alone).
+  await pool.query(
+    `UPDATE settings SET value='We ship anywhere in the USA · Free shipping on orders of 100+ boxes'
+     WHERE key='announcement_en' AND value='We ship anywhere in the USA · Free shipping on orders over $150'`);
+  await pool.query(
+    `UPDATE settings SET value='Enviamos a todo Estados Unidos · Envío gratis en pedidos de 100 o más cajas'
+     WHERE key='announcement_es' AND value='Enviamos a todo Estados Unidos · Envío gratis en pedidos desde $150'`);
+
+  // One-time: welcome discount goes from 10% (WELCOME10) to 5% (WELCOME5).
+  const welcome5Loaded = (await pool.query("SELECT value FROM settings WHERE key='welcome5_2026_loaded'")).rows[0];
+  if (!welcome5Loaded || welcome5Loaded.value !== 'true') {
+    await pool.query("INSERT INTO coupons(code,type,value,min_subtotal_cents,once_per_customer) VALUES('WELCOME5','percent',5,0,true) ON CONFLICT DO NOTHING");
+    await pool.query("UPDATE coupons SET active=false WHERE upper(code)='WELCOME10'");
+    await pool.query("INSERT INTO settings(key,value) VALUES('welcome5_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
+    console.log('Cupón de bienvenida: WELCOME5 (5%).');
   }
 
   // One-time: size-specific copy for boxes. Only rewrites text that is still the

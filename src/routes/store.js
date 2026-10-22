@@ -396,7 +396,7 @@ r.post('/account/register', async (req, res, next) => {
     clearCartSnapshot({ sessionID: oldSessionId });
     req.session.customer = customerSession(customer);
     req.session.cart = cart;
-    req.session.coupon = existing ? coupon : (coupon || 'WELCOME10');
+    req.session.coupon = existing ? coupon : (coupon || 'WELCOME5');
     saveCartSnapshot(req, res.locals.lang);
     // Explicit save: without it, the browser's very next request can arrive
     // before the new session finishes writing and look logged out.
@@ -446,7 +446,7 @@ r.get('/account', async (req, res) => {
      ORDER BY o.created_at DESC`, [res.locals.customer.id]);
   const subs = await all('SELECT * FROM subscriptions WHERE customer_id=$1 ORDER BY created_at DESC', [res.locals.customer.id]);
   const welcomeUsed = await one(
-    `SELECT 1 FROM orders WHERE customer_id=$1 AND upper(coupon_code)='WELCOME10' AND status<>'cancelled' LIMIT 1`,
+    `SELECT 1 FROM orders WHERE customer_id=$1 AND upper(coupon_code) IN ('WELCOME5','WELCOME10') AND status<>'cancelled' LIMIT 1`,
     [res.locals.customer.id]);
   const mk = await one('SELECT 1 FROM marketing_contacts WHERE email=lower($1) AND opted_out_at IS NULL', [res.locals.customer.email]);
   res.render('store/account', {
