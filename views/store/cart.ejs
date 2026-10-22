@@ -34,7 +34,7 @@
     </form>
     <aside class="panel gray">
       <h3><%= t('order_summary') %></h3>
-      <% if (!priced.pickup && priced.lines.length) { %>
+      <% if (!priced.pickup && priced.lines.length && (priced.freeUnits > 0 || priced.freeMin > 0) && (shippingInfo(settings).priced)) { %>
         <% const leftBoxes = priced.freeUnits - priced.boxUnits, leftMoney = priced.freeMin - (priced.subtotal - priced.discount);
            const freeNow = (priced.freeUnits > 0 && leftBoxes <= 0) || (priced.freeMin > 0 && leftMoney <= 0); %>
         <% if (freeNow) { %><div class="shipnote"><%= t('free_ship_ok') %></div>

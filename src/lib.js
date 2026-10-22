@@ -67,6 +67,51 @@ function couponError(c, subtotal) {
  * Turns the session cart ({productId: qty}) into priced lines + totals,
  * always reading current prices/stock from the DB (never trust the client).
  */
+/** Shipping-by-box-count table (settings.shipping_tiers, JSON), ascending by min boxes. */
+function shippingTiers(settings) {
+  let raw = [];
+  try { raw = JSON.parse(settings.shipping_tiers || '[]'); } catch { raw = []; }
+  return (Array.isArray(raw) ? raw : [])
+    .map((t) => ({ min: Math.floor(Number(t.min)), cents: Math.round(Number(t.cents)) }))
+    .filter((t) => t.min > 0 && Number.isFinite(t.cents) && t.cents >= 0)
+    .sort((a, b) => a.min - b.min);
+}
+
+/** Price of shipping for a cart with this many boxes, before the free-shipping rules. */
+function shippingFor(settings, boxUnits) {
+  const flat = int(settings.shipping_flat_cents, 0);
+  const tiers = shippingTiers(settings);
+  if (!tiers.length || boxUnits <= 0) return flat;
+  let cents = tiers[0].cents;
+  for (const t of tiers) if (boxUnits >= t.min) cents = t.cents;
+  return cents;
+}
+
+/** "1–9 boxes $25 · 10–49 boxes $40 · 100+ boxes free" for the FAQ/info text. '' when no tiers. */
+function shippingTiersText(settings, lang) {
+  const freeUnits = int(settings.free_shipping_min_units, 0);
+  const tiers = shippingTiers(settings).filter((t) => !freeUnits || t.min < freeUnits);
+  if (!tiers.length) return '';
+  const word = lang === 'es' ? 'cajas' : 'boxes', free = lang === 'es' ? 'gratis' : 'free';
+  const parts = tiers.map((t, i) => {
+    const from = i === 0 ? 1 : t.min;
+    const next = tiers[i + 1] ? tiers[i + 1].min : freeUnits;
+    const range = next ? (next - 1 === from ? `${from}` : `${from}–${next - 1}`) : `${from}+`;
+    return `${range} ${word} ${money(t.cents)}`;
+  });
+  if (freeUnits) parts.push(`${freeUnits}+ ${word} ${free}`);
+  return parts.join(' · ');
+}
+
+/** Which FAQ/info wording fits the shipping setup. */
+function shippingInfo(settings) {
+  const tiers = shippingTiers(settings);
+  const flat = int(settings.shipping_flat_cents, 0);
+  const freeUnits = int(settings.free_shipping_min_units, 0);
+  const priced = tiers.length > 0 || flat > 0;
+  return { tiers, flat, freeUnits, priced, faqSuffix: tiers.length ? '_tiers' : (flat > 0 && freeUnits > 0 ? '_units' : (flat > 0 ? '' : '_generic')) };
+}
+
 async function priceCart(cart, couponCode, settings, fulfillment = 'delivery') {
   const ids = Object.keys(cart || {}).map(Number).filter(Boolean);
   const products = ids.length
@@ -92,12 +137,11 @@ async function priceCart(cart, couponCode, settings, fulfillment = 'delivery') {
       : Math.min(coupon.value, subtotal);
   }
   const afterDiscount = subtotal - discount;
-  const flat = int(settings.shipping_flat_cents, 0);
   const freeMin = int(settings.free_shipping_min_cents, 0);
   const freeUnits = int(settings.free_shipping_min_units, 0);
   const boxUnits = lines.reduce((s, l) => s + (l.product.category === 'supply' ? 0 : l.qty), 0);
   const pickup = fulfillment === 'pickup' && settings.pickup_enabled === 'true';
-  const shipping = lines.length === 0 || pickup ? 0 : ((freeUnits > 0 && boxUnits >= freeUnits) || (freeMin > 0 && afterDiscount >= freeMin) ? 0 : flat);
+  const shipping = lines.length === 0 || pickup ? 0 : ((freeUnits > 0 && boxUnits >= freeUnits) || (freeMin > 0 && afterDiscount >= freeMin) ? 0 : shippingFor(settings, boxUnits));
   const taxRate = Number(settings.tax_rate_percent || 0);
   const tax = Math.round(afterDiscount * (Number.isFinite(taxRate) ? taxRate : 0) / 100);
   const total = afterDiscount + shipping + tax;
@@ -124,7 +168,7 @@ function trackingUrl(tracking) {
   return null;
 }
 
-module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN, PAYMENT_ES, MANUAL_PAYMENTS, LOW_STOCK_THRESHOLD, trackingUrl, unitPriceCents, wholesaleTiers };
+module.exports = { money, toCents, int, slugify, orderNumber, token, US_STATES, priceCart, findCoupon, couponError, STATUS_ES, STATUS_EN, PAYMENT_ES, MANUAL_PAYMENTS, LOW_STOCK_THRESHOLD, trackingUrl, unitPriceCents, wholesaleTiers, shippingTiers, shippingFor, shippingTiersText, shippingInfo };
 
 /**
  * Draws an isometric cardboard box to scale from a "24 × 30 × 36" style string.

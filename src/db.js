@@ -338,6 +338,7 @@ const DEFAULT_SETTINGS = {
   shipping_flat_cents: '1500',
   free_shipping_min_cents: '0',
   free_shipping_min_units: '100',
+  shipping_tiers: '[]',
   free_shipping_units_2026_loaded: 'false',
   tax_rate_percent: '0',
   pickup_enabled: 'false',

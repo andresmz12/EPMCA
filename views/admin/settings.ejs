@@ -31,6 +31,13 @@
         <div class="field"><label>Envío gratis desde (cajas)</label><input name="free_shipping_min_units" inputmode="numeric" value="<%= settings.free_shipping_min_units %>"><div class="hint">Cuenta solo cajas, no suministros. 0 = desactivado.</div></div>
         <div class="field"><label>Envío gratis desde ($) (opcional)</label><input name="free_shipping_min" inputmode="decimal" value="<%= cents(settings.free_shipping_min_cents) %>"><div class="hint">Segunda regla por monto. 0 = no se usa.</div></div>
       </div>
+      <div class="field"><label>Costo de envío por cantidad de cajas</label>
+        <% const tiersNow = shippingTiers; const rows = tiersNow.concat(Array.from({ length: Math.max(0, 5 - tiersNow.length) }, () => null)); %>
+        <% rows.forEach(function (t) { %>
+        <div class="f2" style="margin-bottom:6px"><input name="tier_min" inputmode="numeric" placeholder="Desde (cajas), ej: 10" value="<%= t ? t.min : '' %>"><input name="tier_price" inputmode="decimal" placeholder="Precio ($), ej: 40.00" value="<%= t ? cents(t.cents) : '' %>"></div>
+        <% }) %>
+        <div class="hint">Cada fila: "desde cuántas cajas" y su precio de envío. Ejemplo: 1 caja → $25, 10 cajas → $40, 50 cajas → $60. Aplica la fila más alta que alcance el pedido (solo cuentan cajas, no suministros). Deja todo vacío para usar el costo fijo de arriba. El envío gratis (cajas) sigue mandando.</div>
+      </div>
       <div class="field"><label>Impuesto de venta (%)</label><input name="tax_rate_percent" inputmode="decimal" value="<%= settings.tax_rate_percent %>"><div class="hint">Varía según el estado. Consulta a tu contador.</div></div>
       <label class="check"><input type="checkbox" name="pickup_enabled" <%= settings.pickup_enabled === 'true' ? 'checked' : '' %>> Permitir recoger en bodega (gratis)</label>
       <div class="field" style="margin-top:10px"><label>Dirección de recogida</label><input name="pickup_address" value="<%= settings.pickup_address %>" placeholder="Dirección y horario de la bodega"></div>

@@ -51,7 +51,7 @@ r.get('/', async (req, res, next) => {
   if (hit && Date.now() - hit.at < HOME_TTL_MS) return res.send(hit.html);
   const products = await all('SELECT * FROM products WHERE active ORDER BY sort, id');
   res.render('store/home', {
-    products, title: null, fullTitle: t('seo_home_title'), description: t('seo_home_desc'), jsonld: seo.homeLd({ siteUrl, settings, t, money }),
+    products, title: null, fullTitle: t('seo_home_title'), description: t('seo_home_desc'), jsonld: seo.homeLd({ siteUrl, settings, t, money, lang }),
     callbackSent: req.query.callback === 'ok',
     callbackError: req.query.callback === 'err' ? t(req.query.k === 'too_many' ? 'err_too_many' : 'err_required') : null,
   }, (err, html) => {

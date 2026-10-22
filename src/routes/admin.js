@@ -600,7 +600,7 @@ r.post('/coupons/:id/delete', async (req, res) => {
 /* ───────────── Settings ───────────── */
 r.use('/settings', requirePerm('settings'));
 const SETTING_FIELDS = ['store_name', 'support_email', 'support_phone', 'pickup_address', 'business_address', 'announcement_en', 'announcement_es', 'notify_email'];
-r.get('/settings', (req, res) => res.render('admin/settings', { section: 'settings' }));
+r.get('/settings', (req, res) => res.render('admin/settings', { section: 'settings', shippingTiers: lib.shippingTiers(res.locals.settings) }));
 r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings'), async (req, res) => {
   const values = {};
   const oldHero = res.locals.settings.hero_image_id;
@@ -616,6 +616,15 @@ r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings')
   values.google_ads_id = tag(req.body.google_ads_id, /^AW-\d{5,15}$/);
   values.shipping_flat_cents = String(lib.toCents(req.body.shipping_flat) ?? 0);
   values.free_shipping_min_cents = String(lib.toCents(req.body.free_shipping_min) ?? 0);
+  {
+    const mins = [].concat(req.body.tier_min || []), prices = [].concat(req.body.tier_price || []);
+    const byMin = new Map();
+    mins.forEach((m, i) => {
+      const min = lib.int(m), cents = String(prices[i] ?? '').trim() === '' ? null : lib.toCents(prices[i]);
+      if (min > 0 && cents != null) byMin.set(min, cents);
+    });
+    values.shipping_tiers = JSON.stringify([...byMin].sort((a, b) => a[0] - b[0]).slice(0, 8).map(([min, cents]) => ({ min, cents })));
+  }
   values.free_shipping_min_units = String(Math.min(Math.max(lib.int(req.body.free_shipping_min_units) || 0, 0), 100000));
   const tax = Number(String(req.body.tax_rate_percent || '0').replace(',', '.'));
   values.tax_rate_percent = String(Number.isFinite(tax) && tax >= 0 && tax < 50 ? tax : 0);

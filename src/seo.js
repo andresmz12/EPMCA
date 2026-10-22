@@ -13,11 +13,11 @@ function organization(siteUrl, settings) {
   return org;
 }
 
-function homeLd({ siteUrl, settings, t, money }) {
+function homeLd({ siteUrl, settings, t, money, lang }) {
   const faq = [1, 2, 3, 4].map((n) => ({
     '@type': 'Question',
     name: t(`faq_${n}_q`),
-    acceptedAnswer: { '@type': 'Answer', text: t(`faq_${n}_a${n === 4 && Number(settings.free_shipping_min_units) > 0 ? '_units' : ''}`, { flat: money(settings.shipping_flat_cents), min: money(settings.free_shipping_min_cents), units: settings.free_shipping_min_units }) },
+    acceptedAnswer: { '@type': 'Answer', text: t(`faq_${n}_a${n === 4 ? lib.shippingInfo(settings).faqSuffix : ''}`, { flat: money(settings.shipping_flat_cents), min: money(settings.free_shipping_min_cents), units: settings.free_shipping_min_units, tiers: lib.shippingTiersText(settings, lang) }) },
   }));
   return [
     organization(siteUrl, settings),
@@ -36,7 +36,7 @@ function productLd({ siteUrl, settings, product, images, pt, url }) {
     seller: { '@id': `${siteUrl}/#organization` },
     shippingDetails: {
       '@type': 'OfferShippingDetails',
-      shippingRate: { '@type': 'MonetaryAmount', value: price(Number(settings.shipping_flat_cents || 0)), currency: 'USD' },
+      shippingRate: { '@type': 'MonetaryAmount', value: price(lib.shippingFor(settings, 1)), currency: 'USD' },
       shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'US' },
     },
   };
@@ -95,7 +95,7 @@ function sitemap(siteUrl, pages) {
 function googleFeed({ siteUrl, settings, products, lang }) {
   const pt = (p, f) => (lang === 'es' && p[f + '_es']) || p[f];
   const suffix = lang === 'es' ? '?lang=es' : '';
-  const ship = `${(Number(settings.shipping_flat_cents || 0) / 100).toFixed(2)} USD`;
+  const ship = `${(lib.shippingFor(settings, 1) / 100).toFixed(2)} USD`;
   const tag = (name, v) => (v ? `<g:${name}>${xml(v)}</g:${name}>` : '');
   const items = products.filter((p) => p.image_id).map((p) => {
     const name = pt(p, 'name');

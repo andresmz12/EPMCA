@@ -6,6 +6,7 @@
   const supplies = products.filter(p => p.category === 'supply');
   const minPrice = boxes.length ? Math.min(...boxes.map(p => p.price_cents)) : 0;
   const flat = Number(settings.shipping_flat_cents || 0), freeMin = Number(settings.free_shipping_min_cents || 0), freeUnits = Number(settings.free_shipping_min_units || 0);
+  const shipInfo = shippingInfo(settings), tiersTxt = shippingTiersText(settings, lang);
   const dimsOf = (p) => (String(p.dimensions).match(/\d+(\.\d+)?/g) || []).map(Number);
   const vol = (p) => dimsOf(p).reduce((x, y) => x * y, 1);
   const allHero = boxes.filter(p => dimsOf(p).length >= 3).slice().sort((a, b) => vol(a) - vol(b));
@@ -144,7 +145,7 @@
 <section class="block" id="shipping">
   <div class="wrap">
     <div class="info">
-      <div><h3><%= t('info_ship_t') %></h3><p><%= t('info_ship_d') %><% if (freeUnits) { %> <%= t('info_ship_free_units', { units: freeUnits }) %><% } else if (freeMin) { %> <%= t('info_ship_free', { min: money(freeMin) }) %><% } %></p></div>
+      <div><h3><%= t('info_ship_t') %></h3><p><%= t('info_ship_d') %><% if (tiersTxt) { %> <%= t('info_ship_tiers', { tiers: tiersTxt }) %><% } else if (freeUnits && shipInfo.priced) { %> <%= t('info_ship_free_units', { units: freeUnits }) %><% } else if (freeMin) { %> <%= t('info_ship_free', { min: money(freeMin) }) %><% } %></p></div>
       <div><h3><%= t('info_pay_t') %></h3><p><%= payEnabled ? t('info_pay_d_stripe') : t('info_pay_d_manual') %></p></div>
       <div><h3><%= t('info_bulk_t') %></h3><p><%= t('info_bulk_d', { email: settings.support_email }) %></p></div>
     </div>
@@ -178,7 +179,7 @@
       <% [1,2,3,4,5,6].forEach(function (n, i) { %>
       <details class="faq-item" <%= i === 0 ? 'open' : '' %>>
         <summary><%= t('faq_' + n + '_q') %></summary>
-        <p><%= t('faq_' + n + '_a' + (n === 4 && freeUnits ? '_units' : ''), { flat: money(flat), min: money(freeMin), units: freeUnits }) %></p>
+        <p><%= t('faq_' + n + '_a' + (n === 4 ? shipInfo.faqSuffix : ''), { flat: money(flat), min: money(freeMin), units: freeUnits, tiers: tiersTxt }) %></p>
       </details>
       <% }) %>
     </div>
