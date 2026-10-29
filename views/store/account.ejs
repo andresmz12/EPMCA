@@ -7,7 +7,6 @@
   <div class="two">
     <div>
       <% if (subJustCreated) { %><div class="flash ok"><%= t('sub_created') %></div><% } %>
-      <% if (showWelcomeCoupon) { %><div class="flash ok"><%= t('account_welcome_coupon') %></div><% } %>
       <% if (subs.length) { %>
       <h2 style="font-size:20px"><%= t('sub_my_subs') %></h2>
       <% subs.forEach(function (s) { %>

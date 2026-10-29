@@ -28,6 +28,7 @@
       <h2>Envíos e impuestos</h2>
       <div class="f2">
         <div class="field"><label>Costo de envío ($)</label><input name="shipping_flat" inputmode="decimal" value="<%= cents(settings.shipping_flat_cents) %>"></div>
+        <div class="field"><label>Mínimo de cajas para envío por paquetería</label><input name="min_delivery_boxes" inputmode="numeric" value="<%= settings.min_delivery_boxes %>"><div class="hint">Palet: el cliente puede mezclar tamaños, pero necesita al menos esta cantidad de cajas (solo cajas, no suministros). Con menos solo puede recoger en bodega. 0 = sin mínimo.</div></div>
         <div class="field"><label>Envío gratis desde (cajas)</label><input name="free_shipping_min_units" inputmode="numeric" value="<%= settings.free_shipping_min_units %>"><div class="hint">Cuenta solo cajas, no suministros. 0 = desactivado.</div></div>
         <div class="field"><label>Envío gratis desde ($) (opcional)</label><input name="free_shipping_min" inputmode="decimal" value="<%= cents(settings.free_shipping_min_cents) %>"><div class="hint">Segunda regla por monto. 0 = no se usa.</div></div>
       </div>

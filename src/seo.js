@@ -17,7 +17,7 @@ function homeLd({ siteUrl, settings, t, money, lang }) {
   const faq = [1, 2, 3, 4].map((n) => ({
     '@type': 'Question',
     name: t(`faq_${n}_q`),
-    acceptedAnswer: { '@type': 'Answer', text: t(`faq_${n}_a${n === 4 ? lib.shippingInfo(settings).faqSuffix : ''}`, { flat: money(settings.shipping_flat_cents), min: money(settings.free_shipping_min_cents), units: settings.free_shipping_min_units, tiers: lib.shippingTiersText(settings, lang) }) },
+    acceptedAnswer: { '@type': 'Answer', text: t(`faq_${n}_a${n === 4 ? lib.shippingInfo(settings).faqSuffix : ''}`, { flat: money(settings.shipping_flat_cents), min: money(settings.free_shipping_min_cents), units: settings.free_shipping_min_units, tiers: lib.shippingTiersText(settings, lang), minb: lib.shippingInfo(settings).minBoxes }) },
   }));
   return [
     organization(siteUrl, settings),

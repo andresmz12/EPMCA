@@ -33,13 +33,13 @@ const dict = {
     faq_1_q: 'What does "275 lb double wall" mean?', faq_1_a: 'The board has two layers of corrugated fluting instead of one, and passes a 275 lb per square inch bursting test. In practice: the box stays square when stacked and doesn\'t buckle with heavy items inside.',
     faq_2_q: 'Do boxes come assembled?', faq_2_a: 'No, they ship flat. Folding one takes a few seconds; tape the bottom seam and it\'s ready.',
     faq_3_q: 'Where do you ship?', faq_3_a: 'Anywhere in the United States. When your order ships we email you the tracking number.',
-    faq_4_q: 'How much is shipping?', faq_4_a: 'A flat {flat} per order, and free on orders over {min}. You see the exact total before paying.', faq_4_a_units: 'A flat {flat} per order, and free on orders of {units} or more boxes. You see the exact total before paying.', faq_4_a_tiers: 'Shipping depends on the number of boxes: {tiers}. You see the exact total before paying.', faq_4_a_generic: 'You see the exact shipping cost in your cart before paying.', info_ship_tiers: 'Shipping by quantity: {tiers}.',
+    faq_4_q: 'How much is shipping?', faq_4_a: 'A flat {flat} per order, and free on orders over {min}. You see the exact total before paying.', faq_4_a_units: 'A flat {flat} per order, and free on orders of {units} or more boxes. You see the exact total before paying.', faq_4_a_tiers: 'Shipping depends on the number of boxes: {tiers}. You see the exact total before paying.', faq_4_a_generic: 'You see the exact shipping cost in your cart before paying.', faq_4_a_min: 'Orders ship by courier on pallets, with a minimum of {minb} boxes per order — you can mix any sizes. You see the exact total before paying.', faq_4_a_min_flat: 'Orders ship by courier on pallets, with a minimum of {minb} boxes per order — you can mix any sizes. Shipping is {flat} per order. You see the exact total before paying.', info_ship_tiers: 'Shipping by quantity: {tiers}.',
     faq_5_q: 'How do I pay?', faq_5_a: 'By card on our secure checkout page. If online payment isn\'t enabled yet, we\'ll email you to arrange payment (Zelle, bank transfer, etc.).',
     faq_6_q: 'Do you have wholesale pricing?', faq_6_a: 'Yes — the price per box drops automatically once you order 50 or more of the same size. Message us from the Wholesale section for exact pricing on your volume.',
     cart_title: 'Your cart', cart_empty: 'Your cart is empty.', continue_shopping: 'Continue shopping',
     update: 'Update', remove: 'Remove', subtotal: 'Subtotal', discount: 'Discount', shipping: 'Shipping', tax: 'Tax', total: 'Total',
     free: 'Free', coupon: 'Promo code', apply: 'Apply', coupon_applied: 'Code {code} applied.', remove_coupon: 'Remove',
-    checkout: 'Checkout', free_ship_left: 'Add {amount} more for free shipping.', free_ship_ok: 'Your order ships free.', free_ship_units_left: 'Add {n} more boxes for free shipping ({units}+ boxes).', free_ship_units_left_1: 'Add 1 more box for free shipping ({units}+ boxes).',
+    checkout: 'Checkout', err_min_boxes: 'Courier delivery is by the pallet: minimum {min} boxes per order (you can mix any sizes). For fewer boxes, pick up at our warehouse or contact us.', min_boxes_note: 'Courier delivery is by the pallet: minimum {min} boxes per order — mix any sizes. You have {n}; add {left} more, or choose pickup / contact us for smaller orders.', min_boxes_ok: 'You reach the {min}-box minimum for courier delivery.', info_ship_min: 'Courier delivery ships by the pallet: minimum {min} boxes per order, mixing any sizes.', free_ship_left: 'Add {amount} more for free shipping.', free_ship_ok: 'Your order ships free.', free_ship_units_left: 'Add {n} more boxes for free shipping ({units}+ boxes).', free_ship_units_left_1: 'Add 1 more box for free shipping ({units}+ boxes).',
     stock_warning: 'Only {n} available — please lower the quantity.',
     contact_info: 'Contact', full_name: 'Full name', email: 'Email', phone: 'Phone',
     fulfillment: 'Shipping method', delivery: 'Ship to my address', pickup: 'Warehouse pickup',
@@ -75,7 +75,7 @@ const dict = {
     account_title: 'My account', account_orders: 'Your orders', account_no_orders: "You haven't placed any orders yet.",
     account_profile: 'Saved address', account_address_hint: 'Used to pre-fill checkout next time.',
     save_address_check: 'Save this address to my account for next time',
-    account_welcome_coupon: "You have a 5% discount on your first order — it's applied automatically at checkout.",
+
     reorder: 'Order again', reorder_ok: 'Added to your cart.', reorder_partial: "Added to your cart — some items aren't available anymore.",
     account_save: 'Save', account_logout: 'Sign out', account_saved: 'Your info was saved.',
     close: 'Close', modal_added_title: 'Added to your cart', modal_continue: 'Continue shopping', modal_view_cart: 'View cart ({n})',
@@ -87,7 +87,7 @@ const dict = {
     sub_cancel_confirm: 'Cancel this recurring order? Future charges will stop.',
     perks_title: 'Why create an account?', perks_track: 'Track every order and see its status in real time.',
     perks_fast: 'Checkout faster next time — your address is saved.', perks_recurring: 'Set up recurring orders and skip reordering every time.',
-    promo_pct: '5% off', promo_new_account_hidden: "on your first order — we'll email you the code once your account is ready.",
+
     account_login_sub: 'Access your orders, address and recurring plans.',
     nav_contact: 'Contact', contact_title: 'Contact us', contact_sub: "Questions about sizes, bulk orders, or your delivery? Send us a message and we'll get back to you.",
     contact_message: 'Message', contact_send: 'Send message', contact_sent: "Thanks! We got your message and will reply soon.",
@@ -103,7 +103,7 @@ const dict = {
     email_subj_ready: 'Your order {number} is ready for pickup', email_intro_ready: 'Your order is ready for pickup.',
     email_subj_delivered: 'Order {number} delivered', email_intro_delivered: 'Your order was marked as delivered. Thanks for buying from us!',
     email_subj_cancelled: 'Order {number} was cancelled', email_intro_cancelled: 'Your order was cancelled. If you already paid, your refund is on its way. Questions? Just reply to this email.',
-    email_welcome_subj: 'Welcome to {store} — 5% off your first order', email_welcome_body: 'Your account is ready. Use this code at checkout for 5% off your first order:', email_welcome_cta: 'Shop boxes',
+    email_welcome_subj: 'Welcome to {store}', email_welcome_body: 'Your account is ready. Save your address and track all your orders from your account.', email_welcome_cta: 'Shop boxes',
     email_reset_subj: 'Reset your password', email_reset_body: 'We got a request to reset your password. The link works for 1 hour.', email_reset_cta: 'Choose a new password',
     email_reset_ignore: "If you didn't ask for this, you can ignore this email — your password stays the same.",
     forgot_link: 'Forgot your password?', forgot_title: 'Reset your password', forgot_sub: "Enter your email and we'll send you a link to choose a new one.",
@@ -130,8 +130,8 @@ const dict = {
     email_intro_reminder: "We're holding your boxes, but we haven't received your payment yet. As soon as it arrives we'll prepare your order:",
     email_subj_upcoming: 'Time to reorder — confirm and pay', email_upcoming_cta: 'Confirm and pay',
     email_upcoming_body: "It's time for your recurring order ({items}) — total {amount}. Nothing is charged until you confirm. Click below to review and pay; if you don't need it this time, just ignore this email or cancel it from your account.",
-    promo_popup_title: 'Get 5% off your first order', promo_popup_body: "Create a free account and we'll email you a 5% discount code to use at checkout.",
-    promo_popup_cta: 'Create my account', promo_popup_dismiss: 'No thanks',
+
+
   },
   es: {
     nav_shop: 'Cajas', nav_wholesale: 'Mayorista', nav_supplies: 'Suministros', nav_shipping: 'Envíos', nav_faq: 'Preguntas', nav_cart: 'Carrito',
@@ -166,13 +166,13 @@ const dict = {
     faq_1_q: '¿Qué significa "doble pared, 275 lb"?', faq_1_a: 'El cartón tiene dos capas de onda en vez de una y pasa una prueba de estallido de 275 lb por pulgada cuadrada. En la práctica: la caja no se deforma al apilarla ni con peso adentro.',
     faq_2_q: '¿Vienen armadas?', faq_2_a: 'No, llegan planas. Armar una toma unos segundos: le pones cinta abajo y lista.',
     faq_3_q: '¿A dónde envían?', faq_3_a: 'A cualquier dirección en Estados Unidos. Cuando tu pedido sale te mandamos el número de rastreo por correo.',
-    faq_4_q: '¿Cuánto cuesta el envío?', faq_4_a: '{flat} por pedido, y gratis en pedidos desde {min}. Ves el total exacto antes de pagar.', faq_4_a_units: '{flat} por pedido, y gratis en pedidos de {units} o más cajas. Ves el total exacto antes de pagar.', faq_4_a_tiers: 'El envío depende de la cantidad de cajas: {tiers}. Ves el total exacto antes de pagar.', faq_4_a_generic: 'Ves el costo exacto del envío en tu carrito antes de pagar.', info_ship_tiers: 'Envío según cantidad: {tiers}.',
+    faq_4_q: '¿Cuánto cuesta el envío?', faq_4_a: '{flat} por pedido, y gratis en pedidos desde {min}. Ves el total exacto antes de pagar.', faq_4_a_units: '{flat} por pedido, y gratis en pedidos de {units} o más cajas. Ves el total exacto antes de pagar.', faq_4_a_tiers: 'El envío depende de la cantidad de cajas: {tiers}. Ves el total exacto antes de pagar.', faq_4_a_generic: 'Ves el costo exacto del envío en tu carrito antes de pagar.', faq_4_a_min: 'Los pedidos se envían por paquetería en palets, con un mínimo de {minb} cajas por pedido — puedes mezclar los tamaños que quieras. Ves el total exacto antes de pagar.', faq_4_a_min_flat: 'Los pedidos se envían por paquetería en palets, con un mínimo de {minb} cajas por pedido — puedes mezclar los tamaños que quieras. El envío cuesta {flat} por pedido. Ves el total exacto antes de pagar.', info_ship_tiers: 'Envío según cantidad: {tiers}.',
     faq_5_q: '¿Cómo pago?', faq_5_a: 'Con tarjeta en nuestra página segura de pago. Si el pago en línea aún no está activo, te escribimos para coordinar el pago (Zelle, transferencia, etc.).',
     faq_6_q: '¿Tienen precios de mayoreo?', faq_6_a: 'Sí — el precio por caja baja automáticamente desde 50 unidades del mismo tamaño. Escríbenos desde la sección de Mayorista y te damos el precio exacto según tu volumen.',
     cart_title: 'Tu carrito', cart_empty: 'Tu carrito está vacío.', continue_shopping: 'Seguir comprando',
     update: 'Actualizar', remove: 'Quitar', subtotal: 'Subtotal', discount: 'Descuento', shipping: 'Envío', tax: 'Impuesto', total: 'Total',
     free: 'Gratis', coupon: 'Código de descuento', apply: 'Aplicar', coupon_applied: 'Código {code} aplicado.', remove_coupon: 'Quitar',
-    checkout: 'Pagar', free_ship_left: 'Te faltan {amount} para el envío gratis.', free_ship_ok: 'Tu pedido tiene envío gratis.', free_ship_units_left: 'Agrega {n} cajas más para envío gratis (desde {units} cajas).', free_ship_units_left_1: 'Agrega 1 caja más para envío gratis (desde {units} cajas).',
+    checkout: 'Pagar', err_min_boxes: 'El envío por paquetería es por palet: mínimo {min} cajas por pedido (puedes mezclar los tamaños). Para menos cajas, recoge en bodega o escríbenos.', min_boxes_note: 'El envío por paquetería es por palet: mínimo {min} cajas por pedido, mezclando los tamaños que quieras. Llevas {n}; agrega {left} más, o elige recoger / escríbenos para pedidos más pequeños.', min_boxes_ok: 'Ya llegas al mínimo de {min} cajas para envío por paquetería.', info_ship_min: 'El envío por paquetería es por palet: mínimo {min} cajas por pedido, mezclando los tamaños que quieras.', free_ship_left: 'Te faltan {amount} para el envío gratis.', free_ship_ok: 'Tu pedido tiene envío gratis.', free_ship_units_left: 'Agrega {n} cajas más para envío gratis (desde {units} cajas).', free_ship_units_left_1: 'Agrega 1 caja más para envío gratis (desde {units} cajas).',
     stock_warning: 'Solo hay {n} disponibles — baja la cantidad.',
     contact_info: 'Contacto', full_name: 'Nombre completo', email: 'Correo', phone: 'Teléfono',
     fulfillment: 'Método de envío', delivery: 'Enviar a mi dirección', pickup: 'Recoger en bodega',
@@ -208,7 +208,7 @@ const dict = {
     account_title: 'Mi cuenta', account_orders: 'Tus pedidos', account_no_orders: 'Todavía no has hecho ningún pedido.',
     account_profile: 'Dirección guardada', account_address_hint: 'Se usa para llenar el pago la próxima vez.',
     save_address_check: 'Guardar esta dirección en mi cuenta para la próxima vez',
-    account_welcome_coupon: 'Tienes 5% de descuento en tu primer pedido — se aplica solo al pagar.',
+
     reorder: 'Pedir de nuevo', reorder_ok: 'Se agregó a tu carrito.', reorder_partial: 'Se agregó a tu carrito — algunos productos ya no están disponibles.',
     account_save: 'Guardar', account_logout: 'Cerrar sesión', account_saved: 'Tu información se guardó.',
     close: 'Cerrar', modal_added_title: 'Agregado a tu carrito', modal_continue: 'Seguir comprando', modal_view_cart: 'Ver carrito ({n})',
@@ -220,7 +220,7 @@ const dict = {
     sub_cancel_confirm: '¿Cancelar este pedido recurrente? Se detendrán los próximos cobros.',
     perks_title: '¿Por qué crear una cuenta?', perks_track: 'Sigue el estado de cada pedido en tiempo real.',
     perks_fast: 'Paga más rápido la próxima vez — tu dirección queda guardada.', perks_recurring: 'Activa pedidos recurrentes y olvídate de repetirlos cada vez.',
-    promo_pct: '5% de descuento', promo_new_account_hidden: 'en tu primer pedido — te enviamos el código por correo apenas creas tu cuenta.',
+
     account_login_sub: 'Entra a tus pedidos, dirección y planes recurrentes.',
     nav_contact: 'Contacto', contact_title: 'Contáctanos', contact_sub: '¿Preguntas sobre medidas, pedidos grandes o tu entrega? Escríbenos y te respondemos pronto.',
     contact_message: 'Mensaje', contact_send: 'Enviar mensaje', contact_sent: '¡Gracias! Recibimos tu mensaje y te responderemos pronto.',
@@ -236,7 +236,7 @@ const dict = {
     email_subj_ready: 'Tu pedido {number} está listo para recoger', email_intro_ready: 'Tu pedido está listo para recoger.',
     email_subj_delivered: 'Pedido {number} entregado', email_intro_delivered: 'Tu pedido quedó marcado como entregado. ¡Gracias por tu compra!',
     email_subj_cancelled: 'Pedido {number} cancelado', email_intro_cancelled: 'Tu pedido fue cancelado. Si ya pagaste, tu reembolso está en camino. ¿Preguntas? Responde este correo.',
-    email_welcome_subj: 'Bienvenido a {store} — 5% de descuento en tu primer pedido', email_welcome_body: 'Tu cuenta está lista. Usa este código al pagar para tener 5% de descuento en tu primer pedido:', email_welcome_cta: 'Ver cajas',
+    email_welcome_subj: 'Bienvenido a {store}', email_welcome_body: 'Tu cuenta está lista. Guarda tu dirección y mira todos tus pedidos desde tu cuenta.', email_welcome_cta: 'Ver cajas',
     email_reset_subj: 'Restablece tu contraseña', email_reset_body: 'Recibimos una solicitud para cambiar tu contraseña. El enlace funciona durante 1 hora.', email_reset_cta: 'Elegir nueva contraseña',
     email_reset_ignore: 'Si no lo pediste, ignora este correo: tu contraseña sigue igual.',
     forgot_link: '¿Olvidaste tu contraseña?', forgot_title: 'Recupera tu contraseña', forgot_sub: 'Escribe tu correo y te enviamos un enlace para elegir una nueva.',
@@ -263,8 +263,8 @@ const dict = {
     email_intro_reminder: 'Tenemos tus cajas apartadas, pero aún no recibimos tu pago. Apenas llegue preparamos tu pedido:',
     email_subj_upcoming: 'Es hora de tu pedido — confirma y paga', email_upcoming_cta: 'Confirmar y pagar',
     email_upcoming_body: 'Es hora de tu pedido recurrente ({items}) — total {amount}. No se cobra nada hasta que confirmes. Haz clic abajo para revisarlo y pagar; si esta vez no lo necesitas, ignora este correo o cancélalo desde tu cuenta.',
-    promo_popup_title: 'Ten 5% de descuento en tu primer pedido', promo_popup_body: 'Crea una cuenta gratis y te enviamos por correo un código de 5% de descuento para tu primer pedido.',
-    promo_popup_cta: 'Crear mi cuenta', promo_popup_dismiss: 'No, gracias',
+
+
   },
 };
 

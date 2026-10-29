@@ -233,6 +233,7 @@ r.post('/checkout', async (req, res) => {
   const priced = await lib.priceCart(req.session.cart, req.session.coupon, settings, form.fulfillment);
   if (!priced.lines.length) return fail('err_empty');
   if (priced.lines.some((l) => l.overStock)) return fail('err_stock');
+  if (priced.belowMin) { req.session.checkoutError = t('err_min_boxes', { min: priced.minBoxes }); return res.redirect('/checkout'); }
 
   const paymentMethod = clover.enabled ? 'clover' : (payments.enabled ? 'stripe' : 'manual');
   let order;
@@ -396,7 +397,7 @@ r.post('/account/register', async (req, res, next) => {
     clearCartSnapshot({ sessionID: oldSessionId });
     req.session.customer = customerSession(customer);
     req.session.cart = cart;
-    req.session.coupon = existing ? coupon : (coupon || 'WELCOME5');
+    req.session.coupon = coupon;
     saveCartSnapshot(req, res.locals.lang);
     // Explicit save: without it, the browser's very next request can arrive
     // before the new session finishes writing and look logged out.
@@ -445,12 +446,10 @@ r.get('/account', async (req, res) => {
      WHERE o.customer_id=$1 AND o.created_at >= COALESCE(c.account_created_at, c.created_at)
      ORDER BY o.created_at DESC`, [res.locals.customer.id]);
   const subs = await all('SELECT * FROM subscriptions WHERE customer_id=$1 ORDER BY created_at DESC', [res.locals.customer.id]);
-  const welcomeUsed = await one(
-    `SELECT 1 FROM orders WHERE customer_id=$1 AND upper(coupon_code) IN ('WELCOME5','WELCOME10') AND status<>'cancelled' LIMIT 1`,
-    [res.locals.customer.id]);
+
   const mk = await one('SELECT 1 FROM marketing_contacts WHERE email=lower($1) AND opted_out_at IS NULL', [res.locals.customer.email]);
   res.render('store/account', {
-    marketingOn: !!mk, orders: list, subs, subJustCreated: req.query.sub === 'ok', showWelcomeCoupon: !welcomeUsed, title: res.locals.t('account_title'),
+    marketingOn: !!mk, orders: list, subs, subJustCreated: req.query.sub === 'ok', title: res.locals.t('account_title'),
   });
 });
 
@@ -490,6 +489,7 @@ r.post('/account/subscribe', async (req, res) => {
     address1: full.address1, address2: full.address2, city: full.city, state: full.state, zip: full.zip };
   const priced = await lib.priceCart(req.session.cart, null, settings, 'delivery');
   if (!priced.lines.length) return res.redirect('/cart');
+  if (priced.belowMin) return res.redirect('/cart');
   try {
     // First cycle is paid live, right now, just like a normal checkout; later
     // cycles are unattended and email the customer a link instead (see subscriptions.js).

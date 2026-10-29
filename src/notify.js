@@ -186,7 +186,7 @@ module.exports = {
     const t = makeT(lang);
     const subject = t('email_welcome_subj', { store: settings.store_name });
     const body = `<p>${t('email_hi', { name: esc(customer.name.split(' ')[0]) })}</p><p>${t('email_welcome_body')}</p>
-<p style="font-size:22px;font-weight:bold;letter-spacing:2px;background:#FCEFD9;border:1.5px dashed #D08A1E;padding:12px;text-align:center">WELCOME5</p>${button(siteUrl(base) + '/', t('email_welcome_cta'))}`;
+${button(siteUrl(base) + '/', t('email_welcome_cta'))}`;
     await mail.send({ to: customer.email, subject, html: layout(settings, subject, body, t('email_footer', { email: esc(settings.support_email) })) });
   }),
   passwordReset: safe(async (customer, link, lang) => {

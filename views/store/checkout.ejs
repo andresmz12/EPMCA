@@ -14,6 +14,7 @@
       </fieldset>
       <fieldset>
         <legend><%= t('fulfillment') %></legend>
+        <% if (delivery.belowMin) { %><div class="shipnote" id="minnote" style="background:#FDECEA;border-color:#F3C7C2;color:#8A1F11;margin-bottom:10px"><%= t('min_boxes_note', { min: delivery.minBoxes, n: delivery.boxUnits, left: delivery.minBoxes - delivery.boxUnits }) %> <a class="textlink" href="/contact"><%= t('nav_contact') %></a></div><% } %>
         <div class="choice">
           <label><input type="radio" name="fulfillment" value="delivery" <%= form.fulfillment !== 'pickup' ? 'checked' : '' %>><%= t('delivery') %><span><%= delivery.shipping ? money(delivery.shipping) : t('free') %></span></label>
           <% if (pickup) { %><label><input type="radio" name="fulfillment" value="pickup" <%= form.fulfillment === 'pickup' ? 'checked' : '' %>><%= t('pickup') %><span><%= t('free') %></span></label><% } %>
@@ -64,6 +65,7 @@
     var sd = document.getElementById('sum-d'), sp = document.getElementById('sum-p');
     if (sp) { sd.hidden = pick; sp.hidden = !pick; }
     btn.textContent = pick ? btn.dataset.labelP : btn.dataset.labelD;
+    var mn = document.getElementById('minnote'); if (mn) { mn.hidden = pick; btn.disabled = !pick; }
   }
   f.addEventListener('change', sync); sync();
   f.addEventListener('submit', function () { setTimeout(function () { btn.disabled = true; }, 0); });

@@ -34,7 +34,7 @@
     </form>
     <aside class="panel gray">
       <h3><%= t('order_summary') %></h3>
-      <% if (!priced.pickup && priced.lines.length && (priced.freeUnits > 0 || priced.freeMin > 0) && (shippingInfo(settings).priced)) { %>
+      <% if (!priced.pickup && priced.lines.length && !priced.belowMin && (priced.freeUnits > 0 || priced.freeMin > 0) && (shippingInfo(settings).priced)) { %>
         <% const leftBoxes = priced.freeUnits - priced.boxUnits, leftMoney = priced.freeMin - (priced.subtotal - priced.discount);
            const freeNow = (priced.freeUnits > 0 && leftBoxes <= 0) || (priced.freeMin > 0 && leftMoney <= 0); %>
         <% if (freeNow) { %><div class="shipnote"><%= t('free_ship_ok') %></div>
@@ -43,7 +43,9 @@
       <% } %>
       <%- include('_summary') %>
       <%- include('_coupon', { back: 'cart' }) %>
-      <a class="btn orange block <%= priced.lines.some(l => l.overStock) ? 'disabled' : '' %>" href="/checkout" <%= priced.lines.some(l => l.overStock) ? 'aria-disabled=true style=pointer-events:none;opacity:.45' : '' %>><%= t('checkout') %></a>
+      <% if (priced.belowMin) { %><div class="shipnote" style="background:#FDECEA;border-color:#F3C7C2;color:#8A1F11"><%= t('min_boxes_note', { min: priced.minBoxes, n: priced.boxUnits, left: priced.minBoxes - priced.boxUnits }) %> <a class="textlink" href="/contact"><%= t('nav_contact') %></a></div><% } %>
+      <% const blockedNoPickup = priced.belowMin && !(settings.pickup_enabled === 'true'); %>
+      <a class="btn orange block <%= priced.lines.some(l => l.overStock) || blockedNoPickup ? 'disabled' : '' %>" href="/checkout" <%= priced.lines.some(l => l.overStock) || blockedNoPickup ? 'aria-disabled=true style=pointer-events:none;opacity:.45' : '' %>><%= t('checkout') %></a>
     </aside>
   </div>
   <% if (recurringEnabled && !priced.lines.some(l => l.overStock)) { %>

@@ -625,6 +625,7 @@ r.post('/settings', handleUpload(upload.single('hero'), () => '/admin/settings')
     });
     values.shipping_tiers = JSON.stringify([...byMin].sort((a, b) => a[0] - b[0]).slice(0, 8).map(([min, cents]) => ({ min, cents })));
   }
+  values.min_delivery_boxes = String(Math.min(Math.max(lib.int(req.body.min_delivery_boxes) || 0, 0), 100000));
   values.free_shipping_min_units = String(Math.min(Math.max(lib.int(req.body.free_shipping_min_units) || 0, 0), 100000));
   const tax = Number(String(req.body.tax_rate_percent || '0').replace(',', '.'));
   values.tax_rate_percent = String(Number.isFinite(tax) && tax >= 0 && tax < 50 ? tax : 0);

@@ -184,13 +184,6 @@ ALTER TABLE subscriptions ALTER COLUMN stripe_subscription_id DROP NOT NULL;
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS next_order_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS subscriptions_next_order_idx ON subscriptions(next_order_at) WHERE status='active';
 
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS subscription_id INT REFERENCES subscriptions(id) ON DELETE SET NULL;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_invoice_id TEXT;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'web';
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS lang TEXT NOT NULL DEFAULT 'en';
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_reminder_at TIMESTAMPTZ;
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS lang TEXT NOT NULL DEFAULT 'en';
 
 -- Only a hash of the emailed token is stored.
@@ -200,10 +193,6 @@ CREATE TABLE IF NOT EXISTS password_resets (
   expires_at TIMESTAMPTZ NOT NULL,
   used_at TIMESTAMPTZ
 );
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_by TEXT;
-ALTER TABLE order_items ADD COLUMN IF NOT EXISTS list_price_cents INT;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS clover_checkout_id TEXT;
-CREATE UNIQUE INDEX IF NOT EXISTS orders_stripe_invoice_uidx ON orders(stripe_invoice_id) WHERE stripe_invoice_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS coupons (
   id SERIAL PRIMARY KEY,
@@ -268,6 +257,19 @@ CREATE TABLE IF NOT EXISTS order_items (
 -- degrade to a sequential scan as the orders table grows.
 CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS order_items_product_idx ON order_items(product_id);
+
+-- Added over time; they live after CREATE TABLE so a brand-new database initializes too.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS subscription_id INT REFERENCES subscriptions(id) ON DELETE SET NULL;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_invoice_id TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'web';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS lang TEXT NOT NULL DEFAULT 'en';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_reminder_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS list_price_cents INT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS clover_checkout_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_stripe_invoice_uidx ON orders(stripe_invoice_id) WHERE stripe_invoice_id IS NOT NULL;
 
 -- People who explicitly agreed to receive offers by email (CAN-SPAM consent record).
 CREATE TABLE IF NOT EXISTS marketing_contacts (
@@ -337,7 +339,8 @@ const DEFAULT_SETTINGS = {
   store_name: process.env.STORE_NAME || 'EMPACALO',
   shipping_flat_cents: '1500',
   free_shipping_min_cents: '0',
-  free_shipping_min_units: '100',
+  free_shipping_min_units: '0',
+  min_delivery_boxes: '80',
   shipping_tiers: '[]',
   free_shipping_units_2026_loaded: 'false',
   tax_rate_percent: '0',
@@ -363,9 +366,10 @@ const DEFAULT_SETTINGS = {
   lowstock_alert_enabled: 'true',
   cart_reminder_enabled: 'true',
   payment_instructions: '',
-  announcement_en: 'We ship anywhere in the USA · Free shipping on orders of 100+ boxes',
-  announcement_es: 'Enviamos a todo Estados Unidos · Envío gratis en pedidos de 100 o más cajas',
-  welcome5_2026_loaded: 'false',
+  announcement_en: 'We ship anywhere in the USA · Courier delivery on orders of 80+ boxes (mix any sizes)',
+  announcement_es: 'Enviamos a todo Estados Unidos · Paquetería en pedidos de 80 o más cajas (mezcla los tamaños)',
+  welcome_off_2026_loaded: 'false',
+  pallet_shipping_2026_loaded: 'false',
 };
 
 // Precios de ejemplo: cámbialos desde el panel de administración.
@@ -520,9 +524,6 @@ async function migrate() {
         [p.slug, p.name, p.short, p.desc, p.dims, p.pack, p.price, p.compare, p.stock, p.featured, p.sort, p.name_es, p.short_es, p.desc_es]
       );
     }
-    await pool.query(
-      `INSERT INTO coupons(code,type,value,min_subtotal_cents,once_per_customer) VALUES('WELCOME5','percent',5,0,true) ON CONFLICT DO NOTHING`
-    );
     console.log('Base de datos inicializada con productos de ejemplo.');
   }
 
@@ -601,14 +602,29 @@ async function migrate() {
     `UPDATE settings SET value='Enviamos a todo Estados Unidos · Envío gratis en pedidos de 100 o más cajas'
      WHERE key='announcement_es' AND value='Enviamos a todo Estados Unidos · Envío gratis en pedidos desde $150'`);
 
-  // One-time: welcome discount goes from 10% (WELCOME10) to 5% (WELCOME5).
-  const welcome5Loaded = (await pool.query("SELECT value FROM settings WHERE key='welcome5_2026_loaded'")).rows[0];
-  if (!welcome5Loaded || welcome5Loaded.value !== 'true') {
-    await pool.query("INSERT INTO coupons(code,type,value,min_subtotal_cents,once_per_customer) VALUES('WELCOME5','percent',5,0,true) ON CONFLICT DO NOTHING");
-    await pool.query("UPDATE coupons SET active=false WHERE upper(code)='WELCOME10'");
-    await pool.query("INSERT INTO settings(key,value) VALUES('welcome5_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
-    console.log('Cupón de bienvenida: WELCOME5 (5%).');
+  // One-time: no welcome discount for now (WELCOME10/WELCOME5 off; other coupons are untouched).
+  const welcomeOff = (await pool.query("SELECT value FROM settings WHERE key='welcome_off_2026_loaded'")).rows[0];
+  if (!welcomeOff || welcomeOff.value !== 'true') {
+    await pool.query("UPDATE coupons SET active=false WHERE upper(code) IN ('WELCOME10','WELCOME5')");
+    await pool.query("INSERT INTO settings(key,value) VALUES('welcome_off_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
+    console.log('Descuento de bienvenida desactivado.');
   }
+
+  // One-time: courier shipping is by the pallet (min 80 boxes), so no free-shipping promotion.
+  const palletLoaded = (await pool.query("SELECT value FROM settings WHERE key='pallet_shipping_2026_loaded'")).rows[0];
+  if (!palletLoaded || palletLoaded.value !== 'true') {
+    await pool.query("INSERT INTO settings(key,value) VALUES('free_shipping_min_units','0') ON CONFLICT (key) DO UPDATE SET value='0'");
+    await pool.query("INSERT INTO settings(key,value) VALUES('free_shipping_min_cents','0') ON CONFLICT (key) DO UPDATE SET value='0'");
+    await pool.query("INSERT INTO settings(key,value) VALUES('pallet_shipping_2026_loaded','true') ON CONFLICT (key) DO UPDATE SET value='true'");
+    console.log('Envío por paquetería: mínimo 80 cajas, sin envío gratis.');
+  }
+  // Banner: replace the two earlier default texts (hand-edited banners are left alone).
+  await pool.query(
+    `UPDATE settings SET value='We ship anywhere in the USA · Courier delivery on orders of 80+ boxes (mix any sizes)'
+     WHERE key='announcement_en' AND value IN ('We ship anywhere in the USA · Free shipping on orders over $150','We ship anywhere in the USA · Free shipping on orders of 100+ boxes')`);
+  await pool.query(
+    `UPDATE settings SET value='Enviamos a todo Estados Unidos · Paquetería en pedidos de 80 o más cajas (mezcla los tamaños)'
+     WHERE key='announcement_es' AND value IN ('Enviamos a todo Estados Unidos · Envío gratis en pedidos desde $150','Enviamos a todo Estados Unidos · Envío gratis en pedidos de 100 o más cajas')`);
 
   // One-time: size-specific copy for boxes. Only rewrites text that is still the
   // shared boilerplate (identical on 3+ boxes of the same wall type), so anything

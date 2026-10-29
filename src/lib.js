@@ -109,7 +109,9 @@ function shippingInfo(settings) {
   const flat = int(settings.shipping_flat_cents, 0);
   const freeUnits = int(settings.free_shipping_min_units, 0);
   const priced = tiers.length > 0 || flat > 0;
-  return { tiers, flat, freeUnits, priced, faqSuffix: tiers.length ? '_tiers' : (flat > 0 && freeUnits > 0 ? '_units' : (flat > 0 ? '' : '_generic')) };
+  const minBoxes = int(settings.min_delivery_boxes, 0);
+  const faqSuffix = tiers.length ? '_tiers' : minBoxes > 0 ? (flat > 0 ? '_min_flat' : '_min') : (flat > 0 && freeUnits > 0 ? '_units' : (flat > 0 ? '' : '_generic'));
+  return { tiers, flat, freeUnits, minBoxes, priced, faqSuffix };
 }
 
 async function priceCart(cart, couponCode, settings, fulfillment = 'delivery') {
@@ -140,13 +142,16 @@ async function priceCart(cart, couponCode, settings, fulfillment = 'delivery') {
   const freeMin = int(settings.free_shipping_min_cents, 0);
   const freeUnits = int(settings.free_shipping_min_units, 0);
   const boxUnits = lines.reduce((s, l) => s + (l.product.category === 'supply' ? 0 : l.qty), 0);
+  const minBoxes = int(settings.min_delivery_boxes, 0);
   const pickup = fulfillment === 'pickup' && settings.pickup_enabled === 'true';
+  // Courier freight ships by the pallet: a delivery cart that has boxes needs at least minBoxes of them (any sizes mixed).
+  const belowMin = !pickup && boxUnits > 0 && minBoxes > 0 && boxUnits < minBoxes;
   const shipping = lines.length === 0 || pickup ? 0 : ((freeUnits > 0 && boxUnits >= freeUnits) || (freeMin > 0 && afterDiscount >= freeMin) ? 0 : shippingFor(settings, boxUnits));
   const taxRate = Number(settings.tax_rate_percent || 0);
   const tax = Math.round(afterDiscount * (Number.isFinite(taxRate) ? taxRate : 0) / 100);
   const total = afterDiscount + shipping + tax;
   const count = lines.reduce((s, l) => s + l.qty, 0);
-  return { lines, subtotal, discount, shipping, tax, total, coupon, couponMsg, count, freeMin, freeUnits, boxUnits, pickup };
+  return { lines, subtotal, discount, shipping, tax, total, coupon, couponMsg, count, freeMin, freeUnits, boxUnits, minBoxes, belowMin, pickup };
 }
 
 const STATUS_ES = { pending: 'Pendiente', paid: 'Pagado', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado' };
